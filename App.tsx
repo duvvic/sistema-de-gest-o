@@ -245,7 +245,7 @@ function App() {
   const handleDeleteTask = async (taskId: string) => {
     try {
       // Deleta no Supabase
-      const { deleteTask } = await import('./services/taskService');
+      const { deleteTask } = await import('./services/taskService.ts');
       await deleteTask(taskId);
       
       // Remove do state local
@@ -265,12 +265,12 @@ function App() {
       
       if (exists) {
         // UPDATE no Supabase
-        const { updateTask } = await import('./services/taskService');
+        const { updateTask } = await import('./services/taskService.ts');
         await updateTask(updatedTask.id, updatedTask);
         setTasks(prev => prev.map(t => (t.id === updatedTask.id ? updatedTask : t)));
       } else {
         // CREATE no Supabase
-        const { createTask } = await import('./services/taskService');
+        const { createTask } = await import('./services/taskService.ts');
         const newId = await createTask(updatedTask);
         const taskWithRealId = { ...updatedTask, id: String(newId) };
         setTasks(prev => [...prev, taskWithRealId]);
@@ -304,7 +304,7 @@ function App() {
   const handleSaveProject = async (newProject: Project) => {
     try {
       // Salva no Supabase e obtém o ID real
-      const { createProject } = await import('./services/projectService');
+      const { createProject } = await import('./services/projectService.ts');
       const newId = await createProject(newProject);
       
       // Atualiza o state local com o ID do banco
