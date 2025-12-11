@@ -6,8 +6,13 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
+        // Forçar porta 3001 para evitar mismatch quando 3000 estiver ocupada
+        port: 3001,
         host: '0.0.0.0',
+        hmr: {
+          // garante que o cliente HMR se conecta na mesma porta
+          port: 3001,
+        }
       },
       plugins: [react()],
       define: {
