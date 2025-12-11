@@ -304,7 +304,14 @@ function App() {
   const handleSaveProject = async (newProject: Project) => {
     try {
       // Salva no Supabase e obtém o ID real
-      const { createProject } = await import('./services/projectService.ts');
+      const projectModule = await import('./services/projectService.ts');
+      console.log('📦 Módulo projectService importado:', projectModule);
+      // Compatibilidade: procura por export nomeada ou dentro de default
+      const createProject = (projectModule as any).createProject ?? (projectModule as any).default?.createProject ?? (projectModule as any).default;
+      if (typeof createProject !== 'function') {
+        console.error('❌ createProject não é uma função no módulo importado', projectModule);
+        throw new Error('createProject is not a function');
+      }
       const newId = await createProject(newProject);
       
       // Atualiza o state local com o ID do banco
