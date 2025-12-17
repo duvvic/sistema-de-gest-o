@@ -155,7 +155,7 @@ export function useAppData(): AppData {
 
     async function loadData() {
       try {
-        console.log("🔄 Iniciando carregamento do Supabase...");
+
         setLoading(true);
         setError(null);
 
@@ -168,13 +168,6 @@ export function useAppData(): AppData {
         ]);
 
         if (!isMounted) return;
-
-        console.log("✅ Dados carregados:", {
-          users: usersData.length,
-          clients: clientsData.length,
-          projects: projectsData.length,
-          tasks: tasksData.length,
-        });
 
         // =====================================================
         // MAPEAMENTO DE TAREFAS - CRÍTICO!
@@ -233,30 +226,32 @@ export function useAppData(): AppData {
 
         // Faz um mapeamento flexível dos campos para o formato do front
         const timesheetMapped: TimesheetEntry[] = (rawTimesheets || []).map((r: any) => ({
-          id: String(r.id || r.ID || r.id_apontamento || crypto.randomUUID()),
-          userId: String(r.userId || r.user_id || r.ID_Colaborador || r.colaborador || r.usuario || ''),
-          userName: r.userName || r.user_name || r.NomeColaborador || r.usuario_nome || '',
-          clientId: String(r.clientId || r.client_id || r.ID_Cliente || r.cliente || ''),
-          projectId: String(r.projectId || r.project_id || r.ID_Projeto || r.projeto || ''),
-          taskId: String(r.taskId || r.task_id || r.ID_Tarefa || r.tarefa || ''),
-          date: r.date || r.data || r.dia || (new Date()).toISOString().split('T')[0],
+          id: String(
+            // Prioriza o id específico da tabela horas_trabalhadas
+            r.ID_Horas_Trabalhadas || r.id || r.ID || r.id_apontamento || crypto.randomUUID()
+          ),
+          userId: String(r.ID_Colaborador || r.userId || r.user_id || r.colaborador || r.usuario || ''),
+          userName: r.NomeColaborador || r.userName || r.user_name || r.usuario_nome || '',
+          clientId: String(r.ID_Cliente || r.clientId || r.client_id || r.cliente || ''),
+          projectId: String(r.ID_Projeto || r.projectId || r.project_id || r.projeto || ''),
+          taskId: String(r.id_tarefa_novo || r.ID_Tarefa || r.taskId || r.task_id || r.tarefa || ''),
+          date: r.Data || r.date || r.data || r.dia || (new Date()).toISOString().split('T')[0],
+          // A tabela atual não tem start/end time — mantém defaults
           startTime: r.startTime || r.start_time || r.hora_inicio || '09:00',
           endTime: r.endTime || r.end_time || r.hora_fim || '18:00',
-          totalHours: Number(r.totalHours || r.total_hours || r.horas || 0),
-          description: r.description || r.descricao || r.notas || r.obs || undefined,
+          totalHours: Number(r.Horas_Trabalhadas || r.totalHours || r.total_hours || r.horas || 0),
+          description: r.descricao || r.description || r.notas || r.obs || undefined,
         }));
 
-        // Atualiza os states
+        // Atualiza os states (retorna todos, filtragem no componente)
         setUsers(usersData);
         setClients(clientsData);
         setProjects(projectsData);
         setTasks(tasksMapped);
         setTimesheetEntries(timesheetMapped);
 
-        console.log("✅ Mapeamento concluído com sucesso!");
-
       } catch (err) {
-        console.error("❌ Erro ao carregar dados:", err);
+
         if (isMounted) {
           setError(err instanceof Error ? err.message : "Falha ao carregar dados do banco.");
         }

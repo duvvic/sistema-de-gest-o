@@ -15,6 +15,7 @@ export interface User {
   role: Role;
   avatarUrl?: string;
   cargo?: string; // Campo adicional do banco
+  active?: boolean;
 }
 
 export interface Client {

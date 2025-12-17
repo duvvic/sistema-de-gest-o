@@ -16,6 +16,7 @@ export interface DbUserRow {
   "E-mail": string;
   avatar_url: string | null;
   papel: string | null;
+  ativo?: boolean | null;
 }
 
 // dim_clientes
@@ -24,6 +25,9 @@ export interface DbClientRow {
   NomeCliente: string;
   NewLogo: string | null;
   ativo: boolean | null;
+  Criado?: string | null;
+  Contrato?: string | null;
+  Desativado?: string | null;
 }
 
 // dim_projetos
@@ -69,37 +73,68 @@ export interface DbTaskRow {
  */
 export async function fetchUsers(): Promise<User[]> {
   try {
-    console.log("📥 Buscando usuários...");
+
     const { data, error } = await supabase
       .from("dim_colaboradores")
-      .select("ID_Colaborador, NomeColaborador, Cargo, \"E-mail\", avatar_url, papel");
+      .select("ID_Colaborador, NomeColaborador, Cargo, \"E-mail\", avatar_url, papel, ativo");
 
     if (error) {
-      console.error("❌ Erro ao buscar usuários:", error.message);
-      console.error("   Código de erro:", error.code);
-      console.error("   Detalhes:", error);
+
+
+
       throw error;
     }
 
     if (!data || data.length === 0) {
-      console.warn("⚠️ Nenhum usuário encontrado no banco");
+
       return [];
     }
-    
-    console.log(`✅ ${data.length} usuários encontrados`);
-    
-    return data.map((row: DbUserRow): User => ({
+
+    const mapped = data.map((row: DbUserRow): User => ({
       id: String(row.ID_Colaborador),
       name: row.NomeColaborador || "Sem nome",
       email: row["E-mail"] || "",
       avatarUrl: row.avatar_url || undefined,
       cargo: row.Cargo || undefined,
       role: normalizeRole(row.papel),
+      active: row.ativo === false ? false : true, // NULL ou true = ativo, só false = inativo
     }));
+
+    const activeCount = mapped.filter(u => u.active === true).length;
+    const inactiveCount = mapped.filter(u => u.active === false).length;
+    
+    return mapped;
   } catch (err) {
-    console.error("❌ Exceção ao buscar usuários:", err);
+
     throw err;
   }
+}
+
+// Soft delete de colaborador (marca ativo = false) e confirma linha afetada
+export async function deactivateUser(userId: string): Promise<boolean> {
+
+  const numericId = Number(userId);
+  if (Number.isNaN(numericId)) {
+    throw new Error(`ID de colaborador inválido: ${userId}`);
+  }
+
+  const { data, error } = await supabase
+    .from("dim_colaboradores")
+    .update({ ativo: false })
+    .eq("ID_Colaborador", numericId)
+    .select("ID_Colaborador");
+
+  if (error) {
+
+    throw error;
+  }
+
+  const updated = !!(data && data.length);
+  if (!updated) {
+    throw new Error("Nenhum registro atualizado em dim_colaboradores (verifique RLS ou ID)");
+  }
+
+  return true;
 }
 
 /**
@@ -107,32 +142,37 @@ export async function fetchUsers(): Promise<User[]> {
  */
 export async function fetchClients(): Promise<Client[]> {
   try {
-    console.log("📥 Buscando clientes...");
+
     const { data, error } = await supabase
       .from("dim_clientes")
-      .select("ID_Cliente, NomeCliente, NewLogo, ativo");
+      .select("ID_Cliente, NomeCliente, NewLogo, ativo, Criado, Contrato, Desativado");
 
     if (error) {
-      console.error("❌ Erro ao buscar clientes:", error.message);
-      console.error("   Código de erro:", error.code);
+
+
       throw error;
     }
 
     if (!data || data.length === 0) {
-      console.warn("⚠️ Nenhum cliente encontrado no banco");
+
       return [];
     }
-    
-    console.log(`✅ ${data.length} clientes encontrados`);
 
-    return data.map((row: DbClientRow): Client => ({
-      id: String(row.ID_Cliente),
-      name: row.NomeCliente || "Sem nome",
-      logoUrl: row.NewLogo || "https://via.placeholder.com/150?text=Logo",
-      active: row.ativo ?? true,
-    }));
+    return data.map((row: DbClientRow): Client => {
+      const clientBase: any = {
+        id: String(row.ID_Cliente),
+        name: row.NomeCliente || "Sem nome",
+        logoUrl: row.NewLogo || "https://via.placeholder.com/150?text=Logo",
+        active: row.ativo ?? true,
+      };
+      // Anexa campos extras vindos do banco para uso em telas de informações
+      clientBase.Criado = row.Criado ?? null;
+      clientBase.Contrato = row.Contrato ?? null;
+      clientBase.Desativado = row.Desativado ?? null;
+      return clientBase as Client;
+    });
   } catch (err) {
-    console.error("❌ Exceção ao buscar clientes:", err);
+
     throw err;
   }
 }
@@ -142,23 +182,21 @@ export async function fetchClients(): Promise<Client[]> {
  */
 export async function fetchProjects(): Promise<Project[]> {
   try {
-    console.log("📥 Buscando projetos...");
+
     const { data, error } = await supabase
       .from("dim_projetos")
       .select("ID_Projeto, NomeProjeto, ID_Cliente, StatusProjeto, ativo");
 
     if (error) {
-      console.error("❌ Erro ao buscar projetos:", error.message);
-      console.error("   Código de erro:", error.code);
+
+
       throw error;
     }
 
     if (!data || data.length === 0) {
-      console.warn("⚠️ Nenhum projeto encontrado no banco");
+
       return [];
     }
-    
-    console.log(`✅ ${data.length} projetos encontrados`);
 
     return data.map((row: DbProjectRow): Project => ({
       id: String(row.ID_Projeto),
@@ -168,7 +206,7 @@ export async function fetchProjects(): Promise<Project[]> {
       active: row.ativo ?? true,
     }));
   } catch (err) {
-    console.error("❌ Exceção ao buscar projetos:", err);
+
     throw err;
   }
 }
@@ -179,7 +217,13 @@ export async function fetchProjects(): Promise<Project[]> {
  */
 export async function fetchTasks(): Promise<DbTaskRow[]> {
   try {
-    console.log("📥 Buscando tarefas...");
+
+    // USANDO DIRETAMENTE A TABELA fato_tarefas (view comentada para testes)
+    const { data, error } = await supabase
+      .from("fato_tarefas")
+      .select("*");
+    
+    /* LÓGICA ANTIGA COM VIEW - COMENTADA PARA TESTES
     // Tenta primeiro a view, se não existir tenta a tabela direta
     let { data, error } = await supabase
       .from("fato_tarefas_view")
@@ -187,27 +231,27 @@ export async function fetchTasks(): Promise<DbTaskRow[]> {
 
     // Se a view não existir, tenta a tabela
     if (error && error.code === "42P01") {
-      console.warn("⚠️ View fato_tarefas_view não encontrada, tentando tabela fato_tarefas");
+
       const result = await supabase.from("fato_tarefas").select("*");
       data = result.data;
       error = result.error;
     }
+    */
 
     if (error) {
-      console.error("❌ Erro ao buscar tarefas:", error.message);
-      console.error("   Código de erro:", error.code);
+
+
       throw error;
     }
 
     if (!data || data.length === 0) {
-      console.warn("⚠️ Nenhuma tarefa encontrada no banco");
+
       return [];
     }
-    
-    console.log(`✅ ${data.length} tarefas encontradas`);
+
     return data as DbTaskRow[];
   } catch (err) {
-    console.error("❌ Exceção ao buscar tarefas:", err);
+
     throw err;
   }
 }
@@ -235,29 +279,28 @@ function normalizeRole(papel: string | null): "admin" | "developer" | "gestor" {
  * Suporta múltiplos nomes de tabela para facilitar integração com diferentes schemas.
  */
 export async function fetchTimesheets(): Promise<any[]> {
-  const candidates = ['timesheet_entries', 'apontamentos', 'fato_apontamentos', 'timesheets'];
+  // Prioriza a tabela brasileira encontrada no banco
+  const candidates = ['horas_trabalhadas', 'timesheet_entries', 'apontamentos', 'fato_apontamentos', 'timesheets'];
   for (const table of candidates) {
     try {
-      console.log(`📥 Tentando buscar apontamentos na tabela '${table}'`);
+
       const { data, error } = await supabase.from(table).select('*');
       if (error) {
         // Se tabela não existir, continue para próxima
-        console.warn(`⚠️ Erro ao buscar ${table}:`, error.message || error);
+
         continue;
       }
       if (!data || data.length === 0) {
-        console.log(`ℹ️ Nenhum apontamento encontrado em ${table}`);
+
         return [];
       }
 
-      console.log(`✅ ${data.length} apontamentos encontrados em ${table}`);
       return data;
     } catch (err) {
-      console.error(`❌ Exceção lendo ${table}:`, err);
+
       continue;
     }
   }
 
-  console.warn('⚠️ Nenhuma tabela de apontamentos encontrada');
   return [];
 }

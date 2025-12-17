@@ -10,8 +10,11 @@ interface TeamMemberDetailProps {
   onTaskClick: (taskId: string) => void;
 }
 
+type TaskFilter = 'all' | 'delayed' | 'completed';
+
 const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projects, onBack, onTaskClick }) => {
-   const [taskFilter, setTaskFilter] = useState<'all' | 'delayed' | 'completed'>('all');
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
+  
   // Logic: Get tasks for this user by ID (não por nome)
   let userTasks = tasks.filter(t => t.developerId === user.id);
   
@@ -58,16 +61,17 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
   // Apply Sorting
   userTasks.sort((a, b) => getTaskPriority(a) - getTaskPriority(b));
 
-   // Metrics
-   const totalTasks = userTasks.length;
-   const delayedTasks = userTasks.filter(t => getDelayDays(t) > 0);
-   const completedTasks = userTasks.filter(t => t.status === 'Done');
-
-   const filteredTasks = taskFilter === 'all'
-      ? userTasks
-      : taskFilter === 'delayed'
-         ? delayedTasks
-         : completedTasks;
+  // Count metrics
+  const totalTasks = userTasks.length;
+  const delayedTasks = userTasks.filter(t => getDelayDays(t) > 0);
+  const completedTasks = userTasks.filter(t => t.status === 'Done');
+  
+  // Filter tasks based on selection
+  const filteredTasks = taskFilter === 'all' 
+    ? userTasks 
+    : taskFilter === 'delayed' 
+      ? delayedTasks 
+      : completedTasks;
 
   return (
     <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -87,43 +91,65 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
             
             {/* Left Column: Summary */}
             <div className="space-y-6">
-               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+               <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
                   <h3 className="font-bold text-slate-800 mb-4">Resumo</h3>
                   <div className="space-y-3">
-                     <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100">
-                        <span className="text-sm text-slate-600">Projetos Ativos</span>
-                        <span className="font-bold text-[#4c1d95] text-lg">{userProjects.length}</span>
-                     </div>
-                     <button
+                     <button 
                        onClick={() => setTaskFilter('all')}
-                       className={`w-full flex justify-between items-center p-3 rounded-xl border transition-all ${taskFilter === 'all' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-100 hover:border-[#4c1d95]'}`}
+                       className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all cursor-pointer group ${
+                         taskFilter === 'all' 
+                           ? 'bg-[#4c1d95] border-[#4c1d95] shadow-lg transform scale-[1.02]' 
+                           : 'bg-white border-slate-200 hover:border-[#4c1d95] hover:shadow-md'
+                       }`}
                      >
-                        <span className="text-sm">Total de Tarefas</span>
-                        <span className="font-bold text-lg">{totalTasks}</span>
+                        <span className={`text-sm font-medium ${taskFilter === 'all' ? 'text-white' : 'text-slate-600 group-hover:text-[#4c1d95]'}`}>
+                          Total de Tarefas
+                        </span>
+                        <span className={`font-bold text-xl ${taskFilter === 'all' ? 'text-white' : 'text-slate-800 group-hover:text-[#4c1d95]'}`}>
+                          {totalTasks}
+                        </span>
                      </button>
-                     <button
+                     
+                     <button 
                        onClick={() => setTaskFilter('delayed')}
-                       className={`w-full flex justify-between items-center p-3 rounded-xl border transition-all ${taskFilter === 'delayed' ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-slate-100 hover:border-red-300'}`}
+                       className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all cursor-pointer group ${
+                         taskFilter === 'delayed' 
+                           ? 'bg-red-500 border-red-500 shadow-lg transform scale-[1.02]' 
+                           : 'bg-white border-slate-200 hover:border-red-300 hover:shadow-md'
+                       }`}
                      >
-                        <span className="text-sm">Tarefas Atrasadas</span>
-                        <span className="font-bold text-lg">{delayedTasks.length}</span>
+                        <span className={`text-sm font-medium ${taskFilter === 'delayed' ? 'text-white' : 'text-slate-600 group-hover:text-red-600'}`}>
+                          Tarefas Atrasadas
+                        </span>
+                        <span className={`font-bold text-xl ${taskFilter === 'delayed' ? 'text-white' : 'text-red-600'}`}>
+                          {delayedTasks.length}
+                        </span>
                      </button>
-                     <button
+                     
+                     <button 
                        onClick={() => setTaskFilter('completed')}
-                       className={`w-full flex justify-between items-center p-3 rounded-xl border transition-all ${taskFilter === 'completed' ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-slate-100 hover:border-green-300'}`}
+                       className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all cursor-pointer group ${
+                         taskFilter === 'completed' 
+                           ? 'bg-green-500 border-green-500 shadow-lg transform scale-[1.02]' 
+                           : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-md'
+                       }`}
                      >
-                        <span className="text-sm">Concluídas</span>
-                        <span className="font-bold text-lg">{completedTasks.length}</span>
+                        <span className={`text-sm font-medium ${taskFilter === 'completed' ? 'text-white' : 'text-slate-600 group-hover:text-green-600'}`}>
+                          Concluídas
+                        </span>
+                        <span className={`font-bold text-xl ${taskFilter === 'completed' ? 'text-white' : 'text-green-600'}`}>
+                          {completedTasks.length}
+                        </span>
                      </button>
                   </div>
                </div>
                
-               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+               <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
                    <h3 className="font-bold text-slate-800 mb-4">Projetos Envolvidos</h3>
                    {userProjects.length > 0 ? (
                       <div className="space-y-3">
                          {userProjects.map(p => (
-                            <div key={p.id} className="flex items-center gap-3">
+                            <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors">
                                <div className="w-2 h-2 rounded-full bg-[#4c1d95]"></div>
                                <span className="text-sm font-medium text-slate-700">{p.name}</span>
                             </div>
@@ -137,16 +163,20 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
 
             {/* Right Column: Task List (Editable via click) */}
             <div className="lg:col-span-2">
-                      <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-between">
-                           <span className="flex items-center gap-2">
-                              Tarefas Alocadas
-                              {taskFilter !== 'all' && (
-                                 <span className={`text-xs font-semibold px-2 py-1 rounded-full ${taskFilter === 'delayed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                    {taskFilter === 'delayed' ? 'Atrasadas' : 'Concluídas'}
-                                 </span>
-                              )}
-                           </span>
-                           <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+               <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    Tarefas Alocadas
+                    {taskFilter !== 'all' && (
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        taskFilter === 'delayed' 
+                          ? 'bg-red-100 text-red-700 border border-red-200' 
+                          : 'bg-green-100 text-green-700 border border-green-200'
+                      }`}>
+                        {taskFilter === 'delayed' ? `${delayedTasks.length} Atrasadas` : `${completedTasks.length} Concluídas`}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
                     Clique para editar
                   </span>
                </h3>
@@ -198,9 +228,13 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
                   })}
                   
                   {filteredTasks.length === 0 && (
-                     <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl">
-                        <p className="text-slate-400">
-                          {taskFilter === 'all' ? 'Nenhuma tarefa alocada para este colaborador.' : taskFilter === 'delayed' ? 'Nenhuma tarefa atrasada.' : 'Nenhuma tarefa concluída.'}
+                     <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                        <p className="text-slate-400 font-medium">
+                          {taskFilter === 'all' 
+                            ? 'Nenhuma tarefa alocada para este colaborador.' 
+                            : taskFilter === 'delayed'
+                              ? '🎉 Nenhuma tarefa atrasada!'
+                              : '📋 Nenhuma tarefa concluída ainda.'}
                         </p>
                      </div>
                   )}

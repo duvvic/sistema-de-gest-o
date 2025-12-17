@@ -10,6 +10,7 @@ interface DeveloperProjectsProps {
   clients: Client[];
   onNewProject?: () => void;
   onTaskClick: (taskId: string) => void;
+  onClientSelect?: (clientId: string | null) => void;
 }
 
 type ViewType = 'clients' | 'projects' | 'tasks';
@@ -20,32 +21,44 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
   projects,
   clients,
   onNewProject,
-  onTaskClick
+  onTaskClick,
+  onClientSelect
 }) => {
   const [currentView, setCurrentView] = useState<ViewType>('clients');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  // Filtra tarefas do usuário
+  // Mostra todas as tarefas para todos os usuários
   const myTasks = useMemo(
-    () => tasks.filter((t) => t.developerId === user.id),
-    [tasks, user.id]
+    () => tasks,
+    [tasks]
   );
 
-  // Agrupa tarefas por empresa
+  // Agrupa tarefas e projetos por empresa
   const clientStats = useMemo(() => {
-    const stats = new Map<string, { totalHours: number; taskCount: number }>();
+    const stats = new Map<string, { totalHours: number; taskCount: number; projectCount: number }>();
     
+    // Adiciona clientes que têm projetos
+    projects.forEach(project => {
+      const current = stats.get(project.clientId) || { totalHours: 0, taskCount: 0, projectCount: 0 };
+      stats.set(project.clientId, {
+        ...current,
+        projectCount: current.projectCount + 1
+      });
+    });
+    
+    // Adiciona estatísticas de tarefas
     myTasks.forEach(task => {
-      const current = stats.get(task.clientId) || { totalHours: 0, taskCount: 0 };
+      const current = stats.get(task.clientId) || { totalHours: 0, taskCount: 0, projectCount: 0 };
       stats.set(task.clientId, {
-        totalHours: current.totalHours + (task.progress || 0), // Aproximado
+        ...current,
+        totalHours: current.totalHours + (task.progress || 0),
         taskCount: current.taskCount + 1
       });
     });
 
     return stats;
-  }, [myTasks]);
+  }, [myTasks, projects]);
 
   // Projetos do cliente selecionado
   const clientProjects = useMemo(() => {
@@ -79,21 +92,27 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
         <>
           <div className="px-8 py-6 border-b border-slate-100 bg-white flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Meus Projetos</h1>
-              <p className="text-slate-500 mt-1">Empresas e projetos que você trabalha</p>
+              <h1 className="text-2xl font-bold text-slate-800">Projetos</h1>
+              <p className="text-slate-500 mt-1">Todos os projetos da empresa</p>
             </div>
             <div>
-              <button onClick={() => onNewProject?.()} className="px-4 py-2 bg-[#4c1d95] text-white rounded-xl shadow hover:bg-[#3b1675] flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  onClientSelect?.(null);
+                  onNewProject?.();
+                }} 
+                className="px-4 py-2 bg-[#4c1d95] text-white rounded-xl shadow hover:bg-[#3b1675] flex items-center gap-2"
+              >
                 <span className="text-sm font-medium">Novo Projeto</span>
               </button>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            {myTasks.length === 0 ? (
+            {projects.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400">
                 <Building2 className="w-12 h-12 mb-4 text-slate-300" />
-                <p>Nenhum projeto atribuído.</p>
+                <p>Nenhum projeto cadastrado.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -106,6 +125,7 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
                         key={client.id}
                         onClick={() => {
                           setSelectedClientId(client.id);
+                          onClientSelect?.(client.id);
                           setCurrentView('projects');
                         }}
                         className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-lg hover:border-[#4c1d95]/30 transition-all text-left group"
@@ -123,7 +143,7 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
                         <div className="pt-4 border-t border-slate-100 space-y-2">
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <FolderKanban className="w-4 h-4 text-[#4c1d95]" />
-                            {clientProjects.filter(p => myTasks.some(t => t.projectId === p.id)).length} Projetos
+                            {projects.filter(p => p.clientId === client.id).length} Projetos
                           </div>
                         </div>
                       </button>
@@ -143,6 +163,7 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
               onClick={() => {
                 setCurrentView('clients');
                 setSelectedClientId(null);
+                onClientSelect?.(null);
               }}
               className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
             >
@@ -162,7 +183,7 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
           </div>
 
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            {clientProjects.filter(p => myTasks.some(t => t.projectId === p.id)).length === 0 ? (
+            {clientProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400">
                 <FolderKanban className="w-12 h-12 mb-4 text-slate-300" />
                 <p>Nenhum projeto nesta empresa.</p>
@@ -170,7 +191,6 @@ const DeveloperProjects: React.FC<DeveloperProjectsProps> = ({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {clientProjects
-                  .filter(p => myTasks.some(t => t.projectId === p.id))
                   .map(project => {
                     const projectTasks = myTasks.filter(t => t.projectId === project.id);
                     const completedTasks = projectTasks.filter(t => t.status === 'Done').length;

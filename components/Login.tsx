@@ -31,9 +31,6 @@ async function hashPassword(password: string): Promise<string> {
   }
 
   // Fallback apenas para DESENVOLVIMENTO em HTTP (como 192.168.x.x)
-  console.warn(
-    '[NIC Labs Manager] WebCrypto indisponível neste contexto. Usando hash simples apenas para desenvolvimento.'
-  );
 
   let hash = 0;
   for (let i = 0; i < password.length; i++) {
@@ -58,7 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
 
   // Só pra debug mesmo
   useEffect(() => {
-    console.log('Users recebidos no Login:', users);
+
   }, [users]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +93,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Erro ao buscar credenciais:', error);
+
         alert('Erro ao validar credenciais. Tente novamente em alguns instantes.');
         return;
       }
@@ -165,7 +162,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
       });
 
       if (error) {
-        console.error('Erro ao salvar senha:', error);
+
         alert('Não foi possível salvar a senha. Tente novamente.');
         return;
       }
@@ -179,11 +176,45 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
     }
   };
 
-  // 3) Esqueci minha senha (vamos deixar só um placeholder por enquanto)
-  const handleForgotPassword = () => {
-    alert(
-      'Fluxo de "Esqueci minha senha" ainda será configurado. Por enquanto, fale com o administrador.'
+  // 3) Esqueci minha senha - envia email de reset
+  const handleForgotPassword = async () => {
+    const emailInput = prompt('Digite seu e-mail para recuperar a senha:');
+    
+    if (!emailInput) return;
+    
+    const normalizedEmail = emailInput.trim().toLowerCase();
+    
+    // Verifica se o email existe na base de usuários
+    const foundUser = users.find(
+      (u) => (u.email || '').trim().toLowerCase() === normalizedEmail
     );
+    
+    if (!foundUser) {
+      alert('E-mail não encontrado no sistema.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Envia email de reset usando Supabase Auth
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}`,
+      });
+      
+      if (error) {
+
+        alert('Erro ao enviar email de recuperação. Tente novamente ou contate o administrador.');
+        return;
+      }
+      
+      alert(`Email de recuperação enviado para ${normalizedEmail}. Verifique sua caixa de entrada.`);
+    } catch (error) {
+
+      alert('Erro ao processar solicitação. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isSetPassword = mode === 'set-password';
@@ -298,25 +329,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
               </>
             )}
           </div>
-
-          {/* Dica apenas no modo login */}
-          {!isSetPassword && (
-            <div className="text-xs text-slate-400 bg-slate-50 p-2 rounded-lg">
-              <p className="font-bold">Dica para teste:</p>
-              <p>
-                Admin:{' '}
-                <span className="text-slate-600">
-                  fernanda.nicacio@nic-labs.com.br
-                </span>
-              </p>
-              <p>
-                Dev:{' '}
-                <span className="text-slate-600">
-                  jonatas.freire@nic-labs.com.br
-                </span>
-              </p>
-            </div>
-          )}
 
           <div className="flex items-center justify-end">
             {!isSetPassword && (

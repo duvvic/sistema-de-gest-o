@@ -1,130 +1,259 @@
-import React, { useState } from 'react';
-import { Client, Project } from '../types';
-import { Building2, Plus, ArrowRight, FolderKanban, Search, Trash2 } from 'lucide-react';
-import ConfirmationModal from './ConfirmationModal';
+import React, { useState, useMemo } from "react";
+import { Client, Project, Task } from "../types";
+import { Plus, Building2, ArrowDownAZ, Briefcase } from "lucide-react";
+import { supabase } from "../services/supabaseClient";
 
 interface AdminDashboardProps {
   clients: Client[];
   projects: Project[];
-  onSelectClient: (clientId: string) => void;
+  tasks: Task[];
+  onSelectClient: (id: string) => void;
+  onSelectClientProjects?: (id: string) => void;
   onAddClient: () => void;
-  onDeleteClient?: (clientId: string) => void;
+  onDeleteClient?: (clientId: string) => void; // Mantém compatibilidade com App.tsx
+  loadClients?: () => void; 
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, projects, onSelectClient, onAddClient, onDeleteClient }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+type SortOption = 'recent' | 'alphabetical' | 'creation';
 
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase())
+const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  clients,
+  projects,
+  tasks,
+  onSelectClient,
+  onSelectClientProjects,
+  onAddClient,
+  onDeleteClient,
+  loadClients
+}) => {
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+
+  // Log inicial para diagnosticar props na tela de Admin
+  React.useEffect(() => {
+      clientsCount: (clients || []).length,
+      projectsCount: (projects || []).length,
+      tasksCount: (tasks || []).length,
+      hasOnAddClient: typeof onAddClient === 'function',
+      hasOnSelectClient: typeof onSelectClient === 'function',
+      hasOnSelectClientProjects: typeof onSelectClientProjects === 'function',
+      hasOnDeleteClient: typeof onDeleteClient === 'function',
+    });
+  }, [clients, projects, tasks, onAddClient, onSelectClient, onSelectClientProjects, onDeleteClient]);
+
+  // --------- PROTEÇÃO CONTRA UNDEFINED ---------
+  const safeClients = clients || [];
+  const safeProjects = projects || [];
+  const safeTasks = tasks || [];
+
+  // Separar clientes ativos e inativos
+  const activeClients = useMemo(() => 
+    safeClients.filter(c => c.active !== false), 
+    [safeClients]
+  );
+  
+  const inactiveClients = useMemo(() => 
+    safeClients.filter(c => c.active === false), 
+    [safeClients]
   );
 
-  const handleDeleteClick = (e: React.MouseEvent, client: Client) => {
-    e.stopPropagation();
-    setClientToDelete(client);
-    setDeleteModalOpen(true);
+  // Função auxiliar para obter a tarefa mais recente de um cliente
+  const getMostRecentTaskDate = (clientId: string): Date | null => {
+    const clientTasks = safeTasks.filter(t => t.clientId === clientId);
+    if (clientTasks.length === 0) return null;
+    
+    const dates = clientTasks
+      .map(t => t.actualStart)
+      .filter(Boolean)
+      .map(d => new Date(d!));
+    
+    if (dates.length === 0) return null;
+    return new Date(Math.max(...dates.map(d => d.getTime())));
   };
 
-  const confirmDelete = () => {
-    if (clientToDelete && onDeleteClient) {
-      onDeleteClient(clientToDelete.id);
-    }
-    setDeleteModalOpen(false);
-    setClientToDelete(null);
-  };
+  // Ordenar clientes com base no filtro selecionado
+  const sortedClients = useMemo(() => {
+    const clientsToSort = activeTab === 'active' ? activeClients : inactiveClients;
+    
+    return [...clientsToSort].sort((a, b) => {
+      switch (sortBy) {
+        case 'alphabetical':
+          return a.name.localeCompare(b.name);
+        
+        case 'creation':
+          // Assumindo que clients não têm campo de data, usar ID como proxy
+          return a.id.localeCompare(b.id);
+        
+        case 'recent':
+        default:
+          const dateA = getMostRecentTaskDate(a.id);
+          const dateB = getMostRecentTaskDate(b.id);
+          
+          // Clientes sem tarefas vão pro final
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          
+          // Mais recente primeiro
+          return dateB.getTime() - dateA.getTime();
+      }
+    });
+  }, [activeClients, inactiveClients, activeTab, sortBy, safeTasks]);
+
+  const displayedClients = sortedClients;
 
   return (
-    <div className="h-full flex flex-col p-2">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="h-full flex flex-col">
+      
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Gerenciamento de Clientes</h1>
-          <p className="text-slate-500 mt-1">Visão administrativa de empresas e portfólios</p>
+          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-[#4c1d95]" />
+            Gerenciamento de Clientes
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            {activeClients.length} ativos • {inactiveClients.length} desativados
+          </p>
         </div>
-        
-        <div className="flex gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-            <input 
-              type="text"
-              placeholder="Pesquisar cliente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm shadow-sm"
-            />
-          </div>
-          <button 
-            onClick={onAddClient}
-            className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-5 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+
+        <button
+          className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow"
+          onClick={onAddClient}
+        >
+          <Plus size={18} />
+          Novo Cliente
+        </button>
+      </div>
+
+      {/* Aviso de fluxo de criação de projeto */}
+      <div className="mb-4 rounded-lg border border-purple-100 bg-purple-50 text-slate-800 px-3 py-2.5 flex items-start gap-2 shadow-sm">
+        <div className="mt-0.5">
+          <Briefcase className="w-4 h-4 text-[#4c1d95]" />
+        </div>
+        <div className="text-sm leading-relaxed">
+          Para criar um projeto, primeiro selecione o cliente e abra seus detalhes; lá o botão "+ Novo Projeto" já vem no contexto correto.
+        </div>
+      </div>
+
+      {/* FILTRO DE ORDENAÇÃO */}
+      <div className="flex items-center gap-3 mb-4">
+        <ArrowDownAZ className="w-5 h-5 text-slate-500" />
+        <span className="text-sm font-medium text-slate-600">Ordenar por:</span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSortBy('recent')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              sortBy === 'recent'
+                ? 'bg-[#4c1d95] text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
           >
-            <Plus className="w-5 h-5" />
-            <span className="hidden md:inline">Cadastrar Nova Empresa</span>
-            <span className="md:hidden">Novo</span>
+            Recentes
+          </button>
+          <button
+            onClick={() => setSortBy('alphabetical')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              sortBy === 'alphabetical'
+                ? 'bg-[#4c1d95] text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Alfabética
+          </button>
+          <button
+            onClick={() => setSortBy('creation')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              sortBy === 'creation'
+                ? 'bg-[#4c1d95] text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Data de Criação
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pb-4 custom-scrollbar">
-        {filteredClients.map((client) => {
-          const clientProjects = projects.filter(p => p.clientId === client.id);
-          
-          return (
-            <div 
-              key={client.id}
-              onClick={() => onSelectClient(client.id)}
-              className="bg-white rounded-2xl border border-slate-200 p-6 cursor-pointer hover:shadow-lg hover:border-[#4c1d95]/30 transition-all group flex flex-col h-full relative"
-            >
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 p-2 flex items-center justify-center">
-                  <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />
-                </div>
-                <div className="flex gap-2">
-                   {onDeleteClient && (
-                     <button 
-                       onClick={(e) => handleDeleteClick(e, client)}
-                       className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors z-10"
-                       title="Excluir Cliente"
-                     >
-                        <Trash2 className="w-4 h-4" />
-                     </button>
-                   )}
-                   <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-[#4c1d95] transition-colors">
-                     <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white" />
-                   </div>
-                </div>
-              </div>
-
-              <h3 className="text-lg font-bold text-slate-800 mb-2">{client.name}</h3>
-              
-              <div className="mt-auto pt-4 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                  <FolderKanban className="w-4 h-4 text-[#4c1d95]" />
-                  <span>{clientProjects.length} Projetos Ativos</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        
-        {/* Placeholder Card for Adding */}
+      {/* TABS */}
+      <div className="flex gap-4 mb-6">
         <button
-          onClick={onAddClient}
-          className="rounded-2xl border-2 border-dashed border-slate-300 p-6 flex flex-col items-center justify-center gap-4 text-slate-400 hover:text-[#4c1d95] hover:border-[#4c1d95] hover:bg-purple-50 transition-all min-h-[200px]"
+          onClick={() => setActiveTab('active')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'active'
+              ? 'bg-[#4c1d95] text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
         >
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-            <Plus className="w-6 h-6" />
-          </div>
-          <span className="font-medium">Cadastrar Empresa</span>
+          Ativos ({activeClients.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('inactive')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'inactive'
+              ? 'bg-[#4c1d95] text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          Desativados ({inactiveClients.length})
         </button>
       </div>
 
-      <ConfirmationModal 
-        isOpen={deleteModalOpen}
-        title="Excluir Empresa"
-        message={`Tem certeza que deseja deletar o cliente "${clientToDelete?.name}"? Esta ação não pode ser desfeita.`}
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteModalOpen(false)}
-      />
+      {/* LOADING STATE */}
+      {displayedClients.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-slate-400">
+            <Building2 className="w-16 h-16 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-medium">
+              {activeTab === 'active' ? 'Nenhum cliente ativo' : 'Nenhum cliente desativado'}
+            </p>
+            <p className="text-sm">
+              {activeTab === 'active' && 'Clique em "Novo Cliente" para começar'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* LISTA DE CLIENTES */
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4 overflow-y-auto">
+          {displayedClients.map((client) => (
+            <div
+              key={client.id}
+              className="group bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-[#4c1d95] transition-all duration-300 cursor-pointer flex flex-col h-[280px]"
+              onClick={() => onSelectClientProjects?.(client.id)}
+            >
+              {/* LOGO CONTAINER */}
+              <div className="w-full h-[180px] bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center border-b-2 border-slate-100 group-hover:from-purple-50 group-hover:to-purple-100 transition-all duration-300">
+                <img
+                  src={client.logoUrl}
+                  alt={client.name}
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) =>
+                    (e.currentTarget.src =
+                      "https://placehold.co/200x200?text=Logo")
+                  }
+                />
+              </div>
+
+              {/* INFO CONTAINER */}
+              <div className="p-4 flex-1 flex flex-col justify-between bg-white">
+                <div className="flex-1 flex flex-col justify-center">
+                  <h2 className="text-sm font-bold text-slate-800 mb-2 line-clamp-2 leading-tight group-hover:text-[#4c1d95] transition-colors text-center">
+                    {client.name}
+                  </h2>
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span className="font-semibold text-[#4c1d95]">
+                      {safeProjects.filter((p) => p.clientId === client.id).length}
+                    </span>
+                    <span>
+                      {safeProjects.filter((p) => p.clientId === client.id).length === 1 ? 'projeto' : 'projetos'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

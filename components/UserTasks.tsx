@@ -1,7 +1,7 @@
 // components/UserTasks.tsx
 import React, { useMemo, useState } from "react";
 import { Task, Project, Client, User, TimesheetEntry } from "../types";
-import { ArrowLeft, Plus, FolderKanban, Calendar, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, FolderKanban, Calendar, Building2, TrendingUp, Clock } from "lucide-react";
 
 interface UserTasksProps {
   user: User;
@@ -85,62 +85,82 @@ const UserTasks: React.FC<UserTasksProps> = ({
   // 4) Render
   // ================================
   return (
-    <div className="h-full flex flex-col p-2">
+    <div className="h-full flex flex-col p-2 bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Minhas Tarefas</h1>
-          <p className="text-slate-500">
-            {filterProjectId
-              ? "Tarefas do projeto selecionado"
-              : "Todas as suas tarefas"}
-          </p>
-        </div>
+      <div className="bg-gradient-to-r from-[#4c1d95] to-purple-600 rounded-2xl px-8 py-6 mb-6 shadow-lg border-2 border-slate-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+              📋 Minhas Tarefas
+            </h1>
+            <p className="text-purple-100 text-sm mt-2">
+              {filterProjectId
+                ? "Tarefas do projeto selecionado"
+                : "Todas as suas tarefas atribuídas"}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          {onBack && (
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="px-4 py-2.5 rounded-xl border-2 border-white text-white hover:bg-white/10 transition-all flex items-center gap-2 font-semibold"
+              >
+                <ArrowLeft size={18} />
+                Voltar
+              </button>
+            )}
+
             <button
-              onClick={onBack}
-              className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 transition flex items-center gap-2"
+              onClick={onNewTask}
+              className="px-5 py-2.5 rounded-xl bg-white text-[#4c1d95] hover:bg-slate-100 transition-all flex items-center gap-2 shadow-lg font-bold transform hover:scale-105"
             >
-              <ArrowLeft size={18} />
-              Voltar
+              <Plus size={20} />
+              Nova Tarefa
             </button>
-          )}
-
-          <button
-            onClick={onNewTask}
-            className="px-4 py-2 rounded-xl bg-[#4c1d95] text-white hover:bg-[#3b1675] transition flex items-center gap-2 shadow"
-          >
-            <Plus size={20} />
-            Nova Tarefa
-          </button>
+          </div>
         </div>
       </div>
 
       {/* Top status cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <button onClick={() => setViewFilter('inprogress')} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-left">
-          <div className="text-sm text-slate-500">Em Progresso</div>
-          <div className="text-2xl font-bold text-slate-800 mt-2">{tasksByStatus.InProgress.length}</div>
-        </button>
+        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Em Progresso</div>
+              <div className="text-3xl font-black text-blue-600 mt-2">⚙️ {tasksByStatus.InProgress.length}</div>
+            </div>
+            <TrendingUp className="w-8 h-8 text-blue-300" />
+          </div>
+        </div>
 
-        <button onClick={() => setViewFilter('delayed')} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-left">
-          <div className="text-sm text-slate-500">Atrasadas</div>
-          <div className="text-2xl font-bold text-red-600 mt-2">{tasksByStatus.Delayed.length}</div>
-        </button>
+        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Atrasadas</div>
+              <div className="text-3xl font-black text-red-600 mt-2">⏰ {tasksByStatus.Delayed.length}</div>
+            </div>
+            <Clock className="w-8 h-8 text-red-300" />
+          </div>
+        </div>
 
-        <button onClick={() => setViewFilter('concluded')} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-left">
-          <div className="text-sm text-slate-500">Concluídas</div>
-          <div className="text-2xl font-bold text-green-600 mt-2">{tasksByStatus.Concluded.length}</div>
-        </button>
+        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Concluídas</div>
+              <div className="text-3xl font-black text-emerald-600 mt-2">✅ {tasksByStatus.Concluded.length}</div>
+            </div>
+            <TrendingUp className="w-8 h-8 text-emerald-300" />
+          </div>
+        </div>
       </div>
 
       {/* Empty State */}
       {filteredTasks.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl p-8">
-          <FolderKanban className="w-12 h-12 mb-4 text-slate-300" />
-          <p>Nenhuma tarefa encontrada.</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-2xl p-8 bg-white">
+          <FolderKanban className="w-16 h-16 mb-4 text-slate-300" />
+          <p className="text-lg font-semibold">Nenhuma tarefa encontrada.</p>
+          <p className="text-sm mt-2">Crie uma nova tarefa para começar</p>
         </div>
       )}
 
@@ -298,16 +318,18 @@ const TaskColumn: React.FC<{
                 ) : null;
               })()}
 
-              <div className="mt-3 flex items-center gap-2">
-                {onCreateTimesheetForTask && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onCreateTimesheetForTask(task); }}
-                    className="px-3 py-1 rounded-lg bg-[#4c1d95] text-white text-sm hover:bg-[#3b1675] transition"
-                  >
-                    Apontar Hoje
-                  </button>
-                )}
-              </div>
+              {task.status !== 'Done' && task.actualDelivery == null && (
+                <div className="mt-3 flex items-center gap-2">
+                  {onCreateTimesheetForTask && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onCreateTimesheetForTask(task); }}
+                      className="px-3 py-1 rounded-lg bg-[#4c1d95] text-white text-sm hover:bg-[#3b1675] transition"
+                    >
+                      Apontar Hoje
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

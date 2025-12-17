@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { TimesheetEntry, Client, Project, User } from '../types';
-import { ArrowLeft, Edit2, Calendar, Clock, Users, Briefcase, ChevronDown, ChevronUp } from 'lucide-react';
+import { TimesheetEntry, Client, Project, User, Task } from '../types';
+import { ArrowLeft, Edit2, Calendar, Clock, Users, Briefcase, ChevronDown, ChevronUp, CheckSquare } from 'lucide-react';
 
 interface TimesheetAdminDetailProps {
   client: Client;
   projects: Project[];
   entries: TimesheetEntry[];
   users: User[];
+  tasks: Task[];
   onBack: () => void;
   onEditEntry: (entry: TimesheetEntry) => void;
 }
@@ -14,12 +15,14 @@ interface TimesheetAdminDetailProps {
 const TimesheetAdminDetail: React.FC<TimesheetAdminDetailProps> = ({ 
   client, 
   projects, 
-  entries, 
+  entries,
+  tasks,
   onBack,
   onEditEntry
 }) => {
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
   const clientProjects = projects.filter(p => p.clientId === client.id);
   const clientEntries = entries.filter(e => e.clientId === client.id);
@@ -58,6 +61,16 @@ const TimesheetAdminDetail: React.FC<TimesheetAdminDetailProps> = ({
       newSet.add(projectId);
     }
     setExpandedProjects(newSet);
+  };
+
+  const toggleTaskExpand = (taskId: string) => {
+    const newSet = new Set(expandedTasks);
+    if (newSet.has(taskId)) {
+      newSet.delete(taskId);
+    } else {
+      newSet.add(taskId);
+    }
+    setExpandedTasks(newSet);
   };
 
   return (
@@ -171,33 +184,77 @@ const TimesheetAdminDetail: React.FC<TimesheetAdminDetailProps> = ({
                   </div>
                 </button>
 
-                {/* Expandido: Detalhes do Projeto */}
+                {/* Expandido: Tarefas do Projeto */}
                 {expandedProjects.has(project.projectId) && (
-                  <div className="bg-white border-t border-slate-200 p-4 space-y-3">
-                    {project.entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(entry => (
-                      <div 
-                        key={entry.id}
-                        className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
-                        onClick={() => onEditEntry(entry)}
-                      >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="text-slate-600 font-medium w-32">{entry.userName}</div>
-                          <div className="flex items-center gap-1.5 w-24 text-slate-500">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {new Date(entry.date).toLocaleDateString('pt-BR')}
-                          </div>
-                          <div className="flex items-center gap-1.5 w-32 text-slate-500">
-                            <Clock className="w-3.5 h-3.5" />
-                            {entry.startTime} - {entry.endTime}
-                          </div>
-                          <span className="text-slate-600 italic truncate max-w-[200px]">{entry.description || '-'}</span>
+                  <div className="bg-white border-t border-slate-200 p-4 space-y-2">
+                    {(() => {
+                      // Agrupar apontamentos por tarefa
+                      const taskGroups = Array.from(new Set(project.entries.map(e => e.taskId))).map(taskId => {
+                        const taskEntries = project.entries.filter(e => e.taskId === taskId);
+                        const taskInfo = tasks.find(t => t.id === taskId);
+                        const totalHours = taskEntries.reduce((acc, curr) => acc + curr.totalHours, 0);
+                        return { 
+                          taskId, 
+                          taskTitle: taskInfo?.title || 'Tarefa sem título',
+                          totalHours, 
+                          entries: taskEntries 
+                        };
+                      }).sort((a, b) => b.totalHours - a.totalHours);
+
+                      return taskGroups.map(taskGroup => (
+                        <div key={taskGroup.taskId} className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                          <button
+                            onClick={() => toggleTaskExpand(taskGroup.taskId)}
+                            className="w-full px-4 py-2.5 flex justify-between items-center hover:bg-slate-100 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-3">
+                              <CheckSquare className="w-4 h-4 text-purple-600" />
+                              <div>
+                                <p className="font-semibold text-slate-700 text-sm">{taskGroup.taskTitle}</p>
+                                <p className="text-xs text-slate-500">{taskGroup.entries.length} apontamentos</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold text-purple-600">{taskGroup.totalHours.toFixed(1)}h</span>
+                              {expandedTasks.has(taskGroup.taskId) ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Expandido: Apontamentos da Tarefa */}
+                          {expandedTasks.has(taskGroup.taskId) && (
+                            <div className="bg-white border-t border-slate-200 p-3 space-y-2">
+                              {taskGroup.entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(entry => (
+                                <div 
+                                  key={entry.id}
+                                  className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
+                                  onClick={() => onEditEntry(entry)}
+                                >
+                                  <div className="flex items-center gap-4 flex-1">
+                                    <div className="text-slate-600 font-medium w-32">{entry.userName}</div>
+                                    <div className="flex items-center gap-1.5 w-24 text-slate-500">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                      {new Date(entry.date).toLocaleDateString('pt-BR')}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 w-32 text-slate-500">
+                                      <Clock className="w-3.5 h-3.5" />
+                                      {entry.startTime} - {entry.endTime}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-bold text-slate-700 w-16 text-right">{entry.totalHours.toFixed(1)}h</span>
+                                    <Edit2 className="w-4 h-4 text-slate-300 group-hover:text-[#4c1d95]" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-slate-700 w-16 text-right">{entry.totalHours.toFixed(1)}h</span>
-                          <Edit2 className="w-4 h-4 text-slate-300 group-hover:text-[#4c1d95]" />
-                        </div>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>

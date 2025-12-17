@@ -8,13 +8,27 @@ import { Client } from '../types';
 // CREATE
 // ===========================
 export async function createClient(data: Partial<Client>): Promise<number> {
-  const payload = {
+  // Datas: Criado (sempre hoje). Contrato (opcional: hoje + N meses se informado)
+  const extra: any = data as any;
+  const now = new Date();
+  const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
+
+  let contratoDateStr: string | null = null;
+  const choice = extra?.contractChoice as 'sim' | 'nao' | undefined;
+  const months = Number(extra?.contractMonths);
+  if (choice === 'sim' && months && months > 0) {
+    const d = new Date(now);
+    d.setMonth(d.getMonth() + months);
+    contratoDateStr = toDateStr(d);
+  }
+
+  const payload: Record<string, any> = {
     NomeCliente: data.name || "(Sem nome)",
     NewLogo: data.logoUrl || "https://via.placeholder.com/150?text=Logo",
     ativo: true,
+    Criado: toDateStr(now),
   };
-
-  console.log("📤 Criando cliente:", payload);
+  if (contratoDateStr) payload.Contrato = contratoDateStr;
 
   const { data: inserted, error } = await supabase
     .from("dim_clientes")
@@ -23,11 +37,10 @@ export async function createClient(data: Partial<Client>): Promise<number> {
     .single();
 
   if (error) {
-    console.error("❌ Erro ao criar cliente:", error);
+
     throw error;
   }
 
-  console.log("✅ Cliente criado com ID:", inserted.ID_Cliente);
   return inserted.ID_Cliente;
 }
 
@@ -41,26 +54,22 @@ export async function updateClient(clientId: string, data: Partial<Client>): Pro
   if (data.logoUrl !== undefined) payload.NewLogo = data.logoUrl;
   if (data.active !== undefined) payload.ativo = data.active;
 
-  console.log("📤 Atualizando cliente", clientId, ":", payload);
-
   const { error } = await supabase
     .from("dim_clientes")
     .update(payload)
     .eq("ID_Cliente", Number(clientId));
 
   if (error) {
-    console.error("❌ Erro ao atualizar cliente:", error);
+
     throw error;
   }
 
-  console.log("✅ Cliente atualizado com sucesso");
 }
 
 // ===========================
 // DELETE (Soft Delete - marca como inativo)
 // ===========================
 export async function deleteClient(clientId: string): Promise<void> {
-  console.log("🗑️ Desativando cliente:", clientId);
 
   // Soft delete: apenas marca como inativo
   const { error } = await supabase
@@ -69,18 +78,16 @@ export async function deleteClient(clientId: string): Promise<void> {
     .eq("ID_Cliente", Number(clientId));
 
   if (error) {
-    console.error("❌ Erro ao desativar cliente:", error);
+
     throw error;
   }
 
-  console.log("✅ Cliente desativado com sucesso");
 }
 
 // ===========================
 // DELETE (Hard Delete - remove do banco)
 // ===========================
 export async function hardDeleteClient(clientId: string): Promise<void> {
-  console.log("🗑️ Deletando cliente permanentemente:", clientId);
 
   const { error } = await supabase
     .from("dim_clientes")
@@ -88,9 +95,8 @@ export async function hardDeleteClient(clientId: string): Promise<void> {
     .eq("ID_Cliente", Number(clientId));
 
   if (error) {
-    console.error("❌ Erro ao deletar cliente:", error);
+
     throw error;
   }
 
-  console.log("✅ Cliente deletado permanentemente");
 }
