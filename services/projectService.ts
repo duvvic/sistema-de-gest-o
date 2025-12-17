@@ -13,6 +13,11 @@ export async function createProject(data: Partial<Project>): Promise<number> {
     ID_Cliente: Number(data.clientId),
     StatusProjeto: data.status || "Em andamento",
     ativo: true,
+    budget: data.budget || null,
+    description: data.description || null,
+    estimatedDelivery: data.estimatedDelivery || null,
+    manager: data.manager || null,
+    startDate: data.startDate || null,
   };
 
   const { data: inserted, error } = await supabase
@@ -38,6 +43,11 @@ export async function updateProject(projectId: string, data: Partial<Project>): 
   if (data.name !== undefined) payload.NomeProjeto = data.name;
   if (data.clientId !== undefined) payload.ID_Cliente = Number(data.clientId);
   if (data.status !== undefined) payload.StatusProjeto = data.status;
+  if (data.budget !== undefined) payload.budget = data.budget;
+  if (data.description !== undefined) payload.description = data.description;
+  if (data.estimatedDelivery !== undefined) payload.estimatedDelivery = data.estimatedDelivery;
+  if (data.manager !== undefined) payload.manager = data.manager;
+  if (data.startDate !== undefined) payload.startDate = data.startDate;
 
   const { error } = await supabase
     .from("dim_projetos")

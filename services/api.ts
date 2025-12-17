@@ -37,6 +37,11 @@ export interface DbProjectRow {
   ID_Cliente: number;
   StatusProjeto: string | null;
   ativo: boolean | null;
+  budget: number | null;
+  description: string | null;
+  estimatedDelivery: string | null;
+  manager: string | null;
+  startDate: string | null;
 }
 
 // fato_tarefas (ou fato_tarefas_view)
@@ -183,7 +188,7 @@ export async function fetchProjects(): Promise<Project[]> {
 
     const { data, error } = await supabase
       .from("dim_projetos")
-      .select("ID_Projeto, NomeProjeto, ID_Cliente, StatusProjeto, ativo");
+      .select("ID_Projeto, NomeProjeto, ID_Cliente, StatusProjeto, ativo, budget, description, estimatedDelivery, manager, startDate");
 
     if (error) {
 
@@ -202,6 +207,11 @@ export async function fetchProjects(): Promise<Project[]> {
       clientId: String(row.ID_Cliente),
       status: row.StatusProjeto || undefined,
       active: row.ativo ?? true,
+      budget: row.budget || undefined,
+      description: row.description || undefined,
+      estimatedDelivery: row.estimatedDelivery || undefined,
+      manager: row.manager || undefined,
+      startDate: row.startDate || undefined,
     }));
   } catch (err) {
 
