@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Upload, Trash2, Camera } from 'lucide-react';
+import { Save, User as UserIcon, Mail, Briefcase, Upload, Trash2, Camera } from 'lucide-react';
+import BackButton from './BackButton';
 
 interface UserProfileProps {
   user: User;
@@ -26,12 +27,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onBack, onSave }) => {
     <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 bg-gradient-to-r from-[#4c1d95] to-purple-600 flex items-center gap-4">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        <BackButton onClick={onBack} variant="white" />
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">Meu Perfil</h1>
           <p className="text-purple-100 mt-1">Gerencie suas informações pessoais</p>

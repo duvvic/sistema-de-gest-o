@@ -25,6 +25,7 @@ import UserForm from './components/UserForm';
 import UserProfile from './components/UserProfile';
 import ResetPassword from './components/ResetPassword';
 import ConfirmationModal from './components/ConfirmationModal';
+import BackButton from './components/BackButton';
 import { Task, Project, Client, View, User, TimesheetEntry } from './types';
 import { LayoutDashboard, Users, CheckSquare, LogOut, Briefcase, Clock } from 'lucide-react';
 import { useAppData } from './hooks/useAppData';
@@ -124,6 +125,9 @@ function App() {
   // State de autenticação
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<View>('login');
+  
+  // State de navegação com pilha (stack)
+  const [navigationStack, setNavigationStack] = useState<View[]>([]);
 
   // State de dados (local, sincronizado com Supabase)
   const [clients, setClients] = useState<Client[]>([]);
@@ -204,6 +208,7 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentView('login');
+    setNavigationStack([]);
     setSelectedClientId(null);
     setSelectedProjectId(null);
     setSelectedTaskId(null);
@@ -213,6 +218,29 @@ function App() {
     setSelectedTimesheetDate(undefined);
     setTimesheetAdminClient(null);
     setPreviousView(null);
+  };
+
+  // =====================================================
+  // NAVEGAÇÃO COM PILHA (STACK)
+  // =====================================================
+  const navigateTo = (view: View) => {
+    setNavigationStack(prev => [...prev, currentView]);
+    setCurrentView(view);
+  };
+
+  const navigateBack = () => {
+    if (navigationStack.length > 0) {
+      const previousView = navigationStack[navigationStack.length - 1];
+      setNavigationStack(prev => prev.slice(0, -1));
+      setCurrentView(previousView);
+    } else {
+      // Fallback: volta para a tela inicial baseado no role
+      if (currentUser?.role === 'admin') {
+        setCurrentView('admin');
+      } else {
+        setCurrentView('developer-projects');
+      }
+    }
   };
 
   // =====================================================
@@ -1126,7 +1154,7 @@ function App() {
           {currentView === 'client-create' && (
             <ClientForm
               onSave={handleSaveClient}
-              onBack={() => setCurrentView('admin')}
+              onBack={navigateBack}
             />
           )}
 
@@ -1137,7 +1165,7 @@ function App() {
               tasks={tasks}
               onBack={() => {
                 setSelectedClientId(null);
-                setCurrentView('admin');
+                navigateBack();
               }}
               onEdit={handleEditClient}
               onDeactivate={handleDeactivateClient}
@@ -1180,15 +1208,7 @@ function App() {
             <ProjectForm
               clients={clients}
               onSave={handleSaveProject}
-              onBack={() => {
-                // If a developer opened the project form, return to the developer view.
-                if (currentUser?.role === 'developer') {
-                  setCurrentView('developer-projects');
-                } else {
-                  // Admin flow: voltar para detalhes do cliente (menu Clientes), não para Tarefas
-                  setCurrentView('client-details');
-                }
-              }}
+              onBack={navigateBack}
               preSelectedClientId={selectedClientId || undefined}
             />
           )}
@@ -1200,7 +1220,7 @@ function App() {
               clients={clients}
               onBack={() => {
                 setSelectedProjectId(null);
-                setCurrentView('client-details');
+                navigateBack();
               }}
               onTaskClick={(taskId) => {
                 setSelectedTaskId(taskId);
@@ -1259,14 +1279,7 @@ function App() {
           {currentView === 'user-profile' && currentUser && (
             <UserProfile
               user={currentUser}
-              onBack={() => {
-                // Volta para a view apropriada
-                if (currentUser.role === 'admin') {
-                  setCurrentView('admin');
-                } else {
-                  setCurrentView('developer-projects');
-                }
-              }}
+              onBack={navigateBack}
               onSave={handleSaveUserAvatar}
             />
           )}

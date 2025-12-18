@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Project, Client } from '../types';
-import { ArrowLeft, Search, Folder, Filter, Plus } from 'lucide-react';
+import { Search, Folder, Filter, Plus } from 'lucide-react';
+import BackButton from './BackButton';
 
 interface AllProjectsViewProps {
   projects: Project[];
@@ -54,16 +55,7 @@ const AllProjectsView: React.FC<AllProjectsViewProps> = ({
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="px-4 py-2 bg-slate-100 hover:bg-[#4c1d95] text-slate-700 hover:text-white rounded-lg transition-all font-medium flex items-center gap-2"
-              title="Voltar"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Voltar</span>
-            </button>
-          )}
+          {onBack && <BackButton onClick={onBack} />}
           <div>
             <h1 className="text-xl font-bold text-slate-800">Projetos</h1>
             <p className="text-sm text-slate-500">Todos os projetos das empresas</p>

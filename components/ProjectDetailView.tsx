@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Project, Task, Client } from '../types';
-import { ArrowLeft } from 'lucide-react';
+import BackButton from './BackButton';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -61,12 +61,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton onClick={onBack} />
           <div>
             <h1 className="text-xl font-bold text-slate-800">{project.name}</h1>
             <p className="text-sm text-slate-500 mt-1">

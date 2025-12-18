@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Project, Client, Task } from '../types';
-import { ArrowLeft, Plus, Trash2, FileText } from 'lucide-react';
+import { Plus, Trash2, FileText } from 'lucide-react';
+import BackButton from './BackButton';
 
 interface ProjectsViewProps {
   client: Client;
@@ -83,12 +84,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton onClick={onBack} />
           <div>
             <h1 className="text-xl font-bold text-slate-800">Projetos: {client.name}</h1>
             <p className="text-sm text-slate-500">Gerencie os projetos deste cliente</p>
