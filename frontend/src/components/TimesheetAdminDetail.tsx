@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
-import { TimesheetEntry, Client, Project, User, Task } from '../types';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
+import { TimesheetEntry, Client, Project, User, Task } from '../../../types';
 import { ArrowLeft, Edit2, Calendar, Clock, Users, Briefcase, ChevronDown, ChevronUp, CheckSquare } from 'lucide-react';
 
 interface TimesheetAdminDetailProps {

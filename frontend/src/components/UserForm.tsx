@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '../controllers/useDataController';
-import { User } from '../types';
+import { User } from '../../../types';
 import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 

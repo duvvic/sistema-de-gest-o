@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
-import { Client, Project, Task } from '../types';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
+import { Client, Project, Task } from '../../../types';
 import { ArrowLeft, FolderKanban, CheckSquare, Info } from 'lucide-react';
 
 interface ClientDetailViewProps {
@@ -138,22 +138,20 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
       <div className="flex gap-4 px-8 py-4 border-b border-slate-100 bg-slate-50">
         <button
           onClick={() => setActiveTab('projects')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'projects'
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'projects'
               ? 'bg-[#4c1d95] text-white'
               : 'text-slate-600 hover:bg-white'
-          }`}
+            }`}
         >
           <FolderKanban className="w-4 h-4" />
           Projetos ({clientProjects.length})
         </button>
         <button
           onClick={() => setActiveTab('tasks')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === 'tasks'
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'tasks'
               ? 'bg-[#4c1d95] text-white'
               : 'text-slate-600 hover:bg-white'
-          }`}
+            }`}
         >
           <CheckSquare className="w-4 h-4" />
           Tarefas ({clientTasks.length})
@@ -186,11 +184,10 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                         <p className="text-sm text-slate-600 mt-2 line-clamp-2">{project.description}</p>
                       )}
                       <div className="mt-4 flex items-center gap-2">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                          project.status === 'Em andamento'
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${project.status === 'Em andamento'
                             ? 'bg-blue-100 text-blue-700'
                             : 'bg-green-100 text-green-700'
-                        }`}>
+                          }`}>
                           {project.status}
                         </span>
                       </div>
@@ -211,11 +208,10 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                     <button
                       key={filter}
                       onClick={() => setStatusFilter(filter)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        statusFilter === filter
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${statusFilter === filter
                           ? 'bg-[#4c1d95] text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
+                        }`}
                     >
                       {filter === 'all' ? 'Todas' : filter === 'todo' ? 'Todo' : filter === 'inprogress' ? 'Em Progresso' : filter === 'review' ? 'Review' : 'Concluídas'}
                     </button>
@@ -230,7 +226,7 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-auto">
-                  {(statusFilter === 'all' 
+                  {(statusFilter === 'all'
                     ? Object.entries(tasksByStatus)
                     : Object.entries(tasksByStatus).filter(([key]) => {
                       const filterMap = { 'todo': 'Todo', 'inprogress': 'In Progress', 'review': 'Review', 'done': 'Done' };
@@ -239,41 +235,41 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                   ).map(([status, statusTasks]) => {
                     const list = statusTasks as unknown as Task[];
                     return (
-                    <div
-                      key={status}
-                      className={`${getStatusColor(status)} border border-slate-200 rounded-2xl p-4 flex flex-col`}
-                    >
-                      <h3 className={`font-bold text-sm uppercase tracking-wider mb-4 ${getStatusHeaderColor(status)}`}>
-                        {status} ({list.length})
-                      </h3>
-                      <div className="flex-1 space-y-3 overflow-y-auto pr-2">
-                        {list.map(task => (
-                          <div
-                            key={task.id}
-                            onClick={() => onTaskClick(task.id)}
-                            className="bg-white border border-slate-100 rounded-lg p-3 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer group"
-                          >
-                            <h4 className="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-purple-700">
-                              {task.title}
-                            </h4>
-                            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                              <span>{task.progress || 0}%</span>
-                              <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-[#4c1d95]"
-                                  style={{ width: `${task.progress || 0}%` }}
-                                />
+                      <div
+                        key={status}
+                        className={`${getStatusColor(status)} border border-slate-200 rounded-2xl p-4 flex flex-col`}
+                      >
+                        <h3 className={`font-bold text-sm uppercase tracking-wider mb-4 ${getStatusHeaderColor(status)}`}>
+                          {status} ({list.length})
+                        </h3>
+                        <div className="flex-1 space-y-3 overflow-y-auto pr-2">
+                          {list.map(task => (
+                            <div
+                              key={task.id}
+                              onClick={() => onTaskClick(task.id)}
+                              className="bg-white border border-slate-100 rounded-lg p-3 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer group"
+                            >
+                              <h4 className="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-purple-700">
+                                {task.title}
+                              </h4>
+                              <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                                <span>{task.progress || 0}%</span>
+                                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-[#4c1d95]"
+                                    style={{ width: `${task.progress || 0}%` }}
+                                  />
+                                </div>
                               </div>
+                              {task.estimatedDelivery && (
+                                <div className="mt-2 text-xs text-slate-500">
+                                  Entrega: {new Date(task.estimatedDelivery).toLocaleDateString('pt-BR')}
+                                </div>
+                              )}
                             </div>
-                            {task.estimatedDelivery && (
-                              <div className="mt-2 text-xs text-slate-500">
-                                Entrega: {new Date(task.estimatedDelivery).toLocaleDateString('pt-BR')}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
                     );
                   })}
                 </div>

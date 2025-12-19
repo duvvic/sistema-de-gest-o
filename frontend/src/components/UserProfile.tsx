@@ -1,7 +1,7 @@
 // components/UserProfile.tsx - Adaptado para Router
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useDataController } from '../controllers/useDataController';
 import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
@@ -164,8 +164,8 @@ const UserProfile: React.FC = () => {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Função</label>
                 <div className={`p-3 border rounded-xl font-medium ${user.role === 'admin'
-                    ? 'bg-purple-50 border-purple-200 text-purple-700'
-                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                  ? 'bg-purple-50 border-purple-200 text-purple-700'
+                  : 'bg-blue-50 border-blue-200 text-blue-700'
                   }`}>
                   {user.role === 'admin' ? '👑 Administrador' : '💼 Desenvolvedor'}
                 </div>

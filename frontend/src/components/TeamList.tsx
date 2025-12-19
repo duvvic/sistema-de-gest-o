@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataController } from '../controllers/useDataController';
-import { User, Task } from '../types';
+import { User, Task } from '../../../types';
 import { Briefcase, Mail, CheckSquare, ShieldCheck, User as UserIcon, Search, Trash2, AlertCircle, CheckCircle, Plus } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 

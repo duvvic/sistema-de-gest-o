@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Project, Client, Task } from '../types';
+import { Project, Client, Task } from '../../../types';
 import { Plus, Trash2, FileText } from 'lucide-react';
-import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import BackButton from './BackButton';
 
 interface ProjectsViewProps {
@@ -122,7 +122,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
 
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div className="max-w-5xl mx-auto space-y-8">
-          
+
           {/* Form - Novo Projeto */}
           {showForm && (
             <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-6">
@@ -217,7 +217,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
           {/* Lista de Projetos */}
           <div>
             <h2 className="text-lg font-bold text-slate-800 mb-4">Projetos ({clientProjects.length})</h2>
-            
+
             {clientProjects.length === 0 ? (
               <div className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200 text-center">
                 <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -234,79 +234,79 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                 {clientProjects.map((project) => {
                   const projectTasks = tasksByProject(project.id);
                   return (
-                  <div
-                    key={project.id}
-                    className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => onProjectClick?.(project.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-slate-800">{project.name}</h3>
-                        {project.description && (
-                          <p className="text-sm text-slate-600 mt-2">{project.description}</p>
-                        )}
-                        <div className="flex gap-6 mt-4 text-sm text-slate-600">
-                          {project.manager && (
-                            <div>
-                              <span className="font-medium">Gerente:</span> {project.manager}
-                            </div>
+                    <div
+                      key={project.id}
+                      className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => onProjectClick?.(project.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-slate-800">{project.name}</h3>
+                          {project.description && (
+                            <p className="text-sm text-slate-600 mt-2">{project.description}</p>
                           )}
-                          {project.budget && (
-                            <div>
-                              <span className="font-medium">Orçamento:</span> R$ {project.budget.toFixed(2)}
-                            </div>
-                          )}
-                          {project.startDate && (
-                            <div>
-                              <span className="font-medium">Início:</span> {new Date(project.startDate).toLocaleDateString('pt-BR')}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(project.id);
-                        }}
-                        className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Desativar projeto"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-
-                    {/* Tarefas do Projeto */}
-                    <div className="mt-4 bg-slate-50 border border-slate-100 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-semibold text-slate-700">Tarefas ({projectTasks.length})</h4>
-                        <span className="text-xs text-slate-500">Fonte: fato_tarefas</span>
-                      </div>
-                      {projectTasks.length === 0 ? (
-                        <p className="text-sm text-slate-500">Nenhuma tarefa para este projeto.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {projectTasks.slice(0, 5).map((task) => (
-                            <div
-                              key={task.id}
-                              onClick={() => onTaskClick?.(task.id)}
-                              className="flex items-center justify-between text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 hover:border-purple-200 cursor-pointer hover:bg-purple-50 transition-colors"
-                            >
-                              <div className="truncate pr-2">
-                                <div className="font-medium text-slate-800 truncate">{task.title}</div>
-                                <div className="text-xs text-slate-500 truncate">Status: {task.status || 'Sem status'}</div>
+                          <div className="flex gap-6 mt-4 text-sm text-slate-600">
+                            {project.manager && (
+                              <div>
+                                <span className="font-medium">Gerente:</span> {project.manager}
                               </div>
-                              <span className="text-[11px] font-semibold text-[#4c1d95] bg-purple-50 px-2 py-1 rounded-full">
-                                {task.status === 'Done' ? 'Concluída' : 'Em andamento'}
-                              </span>
-                            </div>
-                          ))}
-                          {projectTasks.length > 5 && (
-                            <p className="text-xs text-slate-500">+{projectTasks.length - 5} tarefas adicionais</p>
-                          )}
+                            )}
+                            {project.budget && (
+                              <div>
+                                <span className="font-medium">Orçamento:</span> R$ {project.budget.toFixed(2)}
+                              </div>
+                            )}
+                            {project.startDate && (
+                              <div>
+                                <span className="font-medium">Início:</span> {new Date(project.startDate).toLocaleDateString('pt-BR')}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(project.id);
+                          }}
+                          className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Desativar projeto"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+
+                      {/* Tarefas do Projeto */}
+                      <div className="mt-4 bg-slate-50 border border-slate-100 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold text-slate-700">Tarefas ({projectTasks.length})</h4>
+                          <span className="text-xs text-slate-500">Fonte: fato_tarefas</span>
+                        </div>
+                        {projectTasks.length === 0 ? (
+                          <p className="text-sm text-slate-500">Nenhuma tarefa para este projeto.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {projectTasks.slice(0, 5).map((task) => (
+                              <div
+                                key={task.id}
+                                onClick={() => onTaskClick?.(task.id)}
+                                className="flex items-center justify-between text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 hover:border-purple-200 cursor-pointer hover:bg-purple-50 transition-colors"
+                              >
+                                <div className="truncate pr-2">
+                                  <div className="font-medium text-slate-800 truncate">{task.title}</div>
+                                  <div className="text-xs text-slate-500 truncate">Status: {task.status || 'Sem status'}</div>
+                                </div>
+                                <span className="text-[11px] font-semibold text-[#4c1d95] bg-purple-50 px-2 py-1 rounded-full">
+                                  {task.status === 'Done' ? 'Concluída' : 'Em andamento'}
+                                </span>
+                              </div>
+                            ))}
+                            {projectTasks.length > 5 && (
+                              <p className="text-xs text-slate-500">+{projectTasks.length - 5} tarefas adicionais</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
                   );
                 })}
               </div>

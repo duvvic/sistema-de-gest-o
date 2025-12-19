@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
-import { User } from '../types';
+import { User } from '../../../types';
 import { supabase } from '../services/supabaseClient';
 
 interface LoginProps {
@@ -179,35 +179,35 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
   // 3) Esqueci minha senha - envia email de reset
   const handleForgotPassword = async () => {
     const emailInput = prompt('Digite seu e-mail para recuperar a senha:');
-    
+
     if (!emailInput) return;
-    
+
     const normalizedEmail = emailInput.trim().toLowerCase();
-    
+
     // Verifica se o email existe na base de usuários
     const foundUser = users.find(
       (u) => (u.email || '').trim().toLowerCase() === normalizedEmail
     );
-    
+
     if (!foundUser) {
       alert('E-mail não encontrado no sistema.');
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       // Envia email de reset usando Supabase Auth
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo: `${window.location.origin}`,
       });
-      
+
       if (error) {
 
         alert('Erro ao enviar email de recuperação. Tente novamente ou contate o administrador.');
         return;
       }
-      
+
       alert(`Email de recuperação enviado para ${normalizedEmail}. Verifique sua caixa de entrada.`);
     } catch (error) {
 
@@ -365,8 +365,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, users }) => {
             {loading
               ? 'Aguarde...'
               : isSetPassword
-              ? 'Salvar senha e entrar'
-              : 'Entrar'}
+                ? 'Salvar senha e entrar'
+                : 'Entrar'}
             {!loading && (
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             )}

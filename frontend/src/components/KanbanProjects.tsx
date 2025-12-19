@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, Client, User } from '../types';
+import { Project, Client, User } from '../../../types';
 import { Calendar, User as UserIcon, ArrowLeft, Search, Trash2, Plus, Building2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -82,10 +82,10 @@ const ProjectColumn: React.FC<{
               {/* Cliente */}
               <div className="flex items-center gap-2 mb-3">
                 {client?.logoUrl && (
-                  <img 
-                    src={client.logoUrl} 
+                  <img
+                    src={client.logoUrl}
                     alt={client.name}
-                    className="w-6 h-6 rounded-sm object-contain" 
+                    className="w-6 h-6 rounded-sm object-contain"
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 )}
@@ -138,11 +138,10 @@ const ProjectColumn: React.FC<{
                   </div>
                 </div>
 
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                  status === 'Em andamento' 
-                    ? 'bg-blue-100 text-blue-700' 
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${status === 'Em andamento'
+                    ? 'bg-blue-100 text-blue-700'
                     : 'bg-green-100 text-green-700'
-                }`}>
+                  }`}>
                   {status}
                 </span>
               </div>
@@ -203,7 +202,7 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-white">
-      
+
       {/* HEADER */}
       <div className="shrink-0 bg-white border-b border-slate-100 shadow-sm px-6 py-4">
         <div className="flex flex-col gap-4">
@@ -221,8 +220,8 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
               {currentClient ? (
                 <>
                   {currentClient.logoUrl && (
-                    <img 
-                      src={currentClient.logoUrl} 
+                    <img
+                      src={currentClient.logoUrl}
                       alt={currentClient.name}
                       className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 p-1"
                     />
@@ -232,8 +231,8 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
               ) : 'Board de Projetos'}
             </h1>
             <p className="text-slate-500 text-sm">
-              {currentClient 
-                ? 'Gerencie todos os projetos desta empresa' 
+              {currentClient
+                ? 'Gerencie todos os projetos desta empresa'
                 : `${filteredProjects.length} projetos no total`
               }
             </p>
@@ -253,8 +252,8 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
             />
           </div>
 
-          <button 
-            className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-6 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-2 font-bold text-base whitespace-nowrap" 
+          <button
+            className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-6 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-2 font-bold text-base whitespace-nowrap"
             onClick={onNewProject}
           >
             <Plus size={20} />

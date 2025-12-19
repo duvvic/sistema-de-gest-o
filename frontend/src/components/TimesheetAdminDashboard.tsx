@@ -341,8 +341,8 @@ const TimesheetAdminDashboard: React.FC = () => {
                   <button
                      onClick={() => setActiveTab('projects')}
                      className={`py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'projects'
-                           ? 'border-[#4c1d95] text-[#4c1d95]'
-                           : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-[#4c1d95] text-[#4c1d95]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                   >
                      <Briefcase className="w-4 h-4" />
@@ -352,8 +352,8 @@ const TimesheetAdminDashboard: React.FC = () => {
                   <button
                      onClick={() => setActiveTab('collaborators')}
                      className={`py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'collaborators'
-                           ? 'border-[#4c1d95] text-[#4c1d95]'
-                           : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-[#4c1d95] text-[#4c1d95]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                   >
                      <Users className="w-4 h-4" />

@@ -1,6 +1,6 @@
 // components/UserTasks.tsx
 import React, { useMemo, useState } from "react";
-import { Task, Project, Client, User, TimesheetEntry } from "../types";
+import { Task, Project, Client, User, TimesheetEntry } from "../../../types";
 import { ArrowLeft, Plus, FolderKanban, Calendar, Building2, TrendingUp, Clock } from "lucide-react";
 
 interface UserTasksProps {
@@ -31,7 +31,7 @@ const UserTasks: React.FC<UserTasksProps> = ({
   timesheetEntries
 }) => {
 
-  const [viewFilter, setViewFilter] = useState<'all'|'concluded'|'delayed'|'inprogress'>('all');
+  const [viewFilter, setViewFilter] = useState<'all' | 'concluded' | 'delayed' | 'inprogress'>('all');
 
   // ================================
   // 1) Filtra apenas tarefas do usuário
