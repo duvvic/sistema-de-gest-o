@@ -10,4 +10,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Variáveis do Supabase não configuradas. Verifique o arquivo .env.local");
 }
 
+console.log("[Supabase] Conectado ao projeto:", supabaseUrl.split('//')[1].split('.')[0]);
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

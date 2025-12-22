@@ -22,39 +22,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Carregar usuário do localStorage ao iniciar
     useEffect(() => {
         const loadUser = async () => {
-            // Primeiro tenta carregar da sessão do Supabase
-            const { data: { session } } = await supabase.auth.getSession();
+            try {
+                // Primeiro tenta carregar da sessão do Supabase
+                const { data: { session } } = await supabase.auth.getSession();
 
-            if (session?.user) {
-                // Buscar dados completos do usuário
-                const { data: userData } = await supabase
-                    .from('dim_colaboradores')
-                    .select('*')
-                    .eq('email', session.user.email)
-                    .single();
+                if (session?.user) {
+                    // Buscar dados completos do usuário
+                    const { data: userData } = await supabase
+                        .from('dim_colaboradores')
+                        .select('*')
+                        .eq('E-mail', session.user.email)
+                        .maybeSingle();
 
-                if (userData) {
-                    const user: User = {
-                        id: String(userData.ID_Colaborador),
-                        name: userData.NomeColaborador,
-                        email: userData.email,
-                        role: userData.cargo === 'Admin' ? 'admin' : 'developer',
-                        avatarUrl: userData.avatar_url,
-                        cargo: userData.cargo,
-                        active: userData.ativo ?? true,
-                    };
-                    setCurrentUser(user);
-                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    if (userData) {
+                        const user: User = {
+                            id: String(userData.ID_Colaborador),
+                            name: userData.NomeColaborador,
+                            email: userData['E-mail'] || userData.email,
+                            role: (String(userData.papel || userData.cargo || '')).toLowerCase().includes('admin') ? 'admin' : 'developer',
+                            avatarUrl: userData.avatar_url,
+                            cargo: userData.cargo,
+                            active: userData.ativo ?? true,
+                        };
+                        setCurrentUser(user);
+                        localStorage.setItem('currentUser', JSON.stringify(user));
+                    }
+                } else {
+                    // Fallback para localStorage
+                    const storedUser = localStorage.getItem('currentUser');
+                    if (storedUser) {
+                        setCurrentUser(JSON.parse(storedUser));
+                    }
                 }
-            } else {
-                // Fallback para localStorage
-                const storedUser = localStorage.getItem('currentUser');
-                if (storedUser) {
-                    setCurrentUser(JSON.parse(storedUser));
-                }
+            } catch (error) {
+                console.error('[Auth] Erro ao carregar usuário:', error);
+            } finally {
+                setIsLoading(false);
             }
-
-            setIsLoading(false);
         };
 
         loadUser();
@@ -70,15 +74,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const { data: userData } = await supabase
                     .from('dim_colaboradores')
                     .select('*')
-                    .eq('email', session.user.email)
-                    .single();
+                    .eq('E-mail', session.user.email)
+                    .maybeSingle();
 
                 if (userData) {
                     const user: User = {
                         id: String(userData.ID_Colaborador),
                         name: userData.NomeColaborador,
-                        email: userData.email,
-                        role: userData.cargo === 'Admin' ? 'admin' : 'developer',
+                        email: userData['E-mail'] || userData.email,
+                        role: (String(userData.papel || userData.cargo || '')).toLowerCase().includes('admin') ? 'admin' : 'developer',
                         avatarUrl: userData.avatar_url,
                         cargo: userData.cargo,
                         active: userData.ativo ?? true,

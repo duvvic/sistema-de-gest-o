@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { Lock, ArrowRight, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 
 interface ResetPasswordProps {
@@ -40,6 +40,15 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
   const [userEmail, setUserEmail] = useState<string>('');
   const [isValidToken, setIsValidToken] = useState(false);
 
+  // Estados para visualização temporária de senha
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
+  const peekPassword = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    setter(true);
+    setTimeout(() => setter(false), 1000);
+  };
+
   useEffect(() => {
     // Verifica se há uma sessão de recuperação de senha
     const checkSession = async () => {
@@ -74,8 +83,16 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      alert('A senha deve ter pelo menos 6 caracteres.');
+    if (newPassword.length < 7) {
+      alert('A senha deve ter no mínimo 7 caracteres.');
+      return;
+    }
+
+    const hasLetters = /[a-zA-Z]/.test(newPassword);
+    const hasNumbers = /[0-9]/.test(newPassword);
+
+    if (!hasLetters || !hasNumbers) {
+      alert('A senha deve conter letras e números.');
       return;
     }
 
@@ -203,6 +220,14 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
+            <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 space-y-1 text-left">
+              <p className="text-xs font-semibold text-purple-800 uppercase tracking-wider">Requisitos da senha:</p>
+              <ul className="text-xs text-purple-700 list-disc list-inside space-y-0.5">
+                <li>No mínimo 7 caracteres</li>
+                <li>Deve conter letras e números</li>
+              </ul>
+            </div>
+
             {/* Nova Senha */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -213,14 +238,20 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
                   <Lock className="h-5 w-5" />
                 </div>
                 <input
-                  type="password"
+                  type={showNewPass ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800"
-                  placeholder="Mínimo 6 caracteres"
+                  className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800"
+                  placeholder="Mínimo 7 caracteres"
                   required
-                  minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={() => peekPassword(setShowNewPass)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showNewPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
 
@@ -234,14 +265,20 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
                   <Lock className="h-5 w-5" />
                 </div>
                 <input
-                  type="password"
+                  type={showConfirmPass ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800"
+                  className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800"
                   placeholder="Digite a senha novamente"
                   required
-                  minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={() => peekPassword(setShowConfirmPass)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showConfirmPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
           </div>

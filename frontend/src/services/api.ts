@@ -73,44 +73,35 @@ export interface DbTaskRow {
 /**
  * Busca todos os colaboradores/usuários
  */
-/**
- * Busca todos os colaboradores/usuários
- */
 export async function fetchUsers(): Promise<User[]> {
   try {
-
-    const { data, error } = await supabase
-      .from("dim_colaboradores")
-      .select("ID_Colaborador, NomeColaborador, Cargo, \"E-mail\", avatar_url, papel, ativo");
+    console.log("[API] Buscando...");
+    const { data, error } = await supabase.from("dim_colaboradores").select("*");
 
     if (error) {
-
-
-
+      console.error("[API] Erro Supabase:", error);
       throw error;
     }
 
     if (!data || data.length === 0) {
-
+      console.warn("[API] Tabela vazia ou sem permissão.");
       return [];
     }
 
-    const mapped = data.map((row: DbUserRow): User => ({
+    const mapped: User[] = data.map((row: any) => ({
       id: String(row.ID_Colaborador),
       name: row.NomeColaborador || "Sem nome",
-      email: row["E-mail"] || "",
+      email: String(row["E-mail"] || row["email"] || "").trim().toLowerCase(),
       avatarUrl: row.avatar_url || undefined,
-      cargo: row.Cargo || undefined,
-      role: normalizeRole(row.papel),
-      active: row.ativo === false ? false : true, // NULL ou true = ativo, só false = inativo
+      cargo: row.Cargo || row.cargo || undefined,
+      role: normalizeRole(row.papel || row.cargo),
+      active: row.ativo !== false,
     }));
 
-    const activeCount = mapped.filter(u => u.active === true).length;
-    const inactiveCount = mapped.filter(u => u.active === false).length;
-
+    console.log("[API] Usuarios mapeados:", mapped.length);
     return mapped;
   } catch (err) {
-
+    console.error("[API] Falha no fetchUsers:", err);
     throw err;
   }
 }
@@ -145,19 +136,15 @@ export async function deactivateUser(userId: string): Promise<boolean> {
  */
 export async function fetchClients(): Promise<Client[]> {
   try {
-
     const { data, error } = await supabase
       .from("dim_clientes")
       .select("ID_Cliente, NomeCliente, NewLogo, ativo, Criado, Contrato, Desativado");
 
     if (error) {
-
-
       throw error;
     }
 
     if (!data || data.length === 0) {
-
       return [];
     }
 
@@ -168,14 +155,12 @@ export async function fetchClients(): Promise<Client[]> {
         logoUrl: row.NewLogo || "https://via.placeholder.com/150?text=Logo",
         active: row.ativo ?? true,
       };
-      // Anexa campos extras vindos do banco para uso em telas de informações
       clientBase.Criado = row.Criado ?? null;
       clientBase.Contrato = row.Contrato ?? null;
       clientBase.Desativado = row.Desativado ?? null;
       return clientBase as Client;
     });
   } catch (err) {
-
     throw err;
   }
 }
@@ -185,19 +170,15 @@ export async function fetchClients(): Promise<Client[]> {
  */
 export async function fetchProjects(): Promise<Project[]> {
   try {
-
     const { data, error } = await supabase
       .from("dim_projetos")
       .select("ID_Projeto, NomeProjeto, ID_Cliente, StatusProjeto, ativo, budget, description, estimatedDelivery, manager, startDate");
 
     if (error) {
-
-
       throw error;
     }
 
     if (!data || data.length === 0) {
-
       return [];
     }
 
@@ -214,52 +195,29 @@ export async function fetchProjects(): Promise<Project[]> {
       startDate: row.startDate || undefined,
     }));
   } catch (err) {
-
     throw err;
   }
 }
 
 /**
  * Busca todas as tarefas (raw data)
- * O mapeamento para Task será feito no useAppData
  */
 export async function fetchTasks(): Promise<DbTaskRow[]> {
   try {
-
-    // USANDO DIRETAMENTE A TABELA fato_tarefas (view comentada para testes)
     const { data, error } = await supabase
       .from("fato_tarefas")
       .select("*");
 
-    /* LÓGICA ANTIGA COM VIEW - COMENTADA PARA TESTES
-    // Tenta primeiro a view, se não existir tenta a tabela direta
-    let { data, error } = await supabase
-      .from("fato_tarefas_view")
-      .select("*");
-
-    // Se a view não existir, tenta a tabela
-    if (error && error.code === "42P01") {
-
-      const result = await supabase.from("fato_tarefas").select("*");
-      data = result.data;
-      error = result.error;
-    }
-    */
-
     if (error) {
-
-
       throw error;
     }
 
     if (!data || data.length === 0) {
-
       return [];
     }
 
     return data as DbTaskRow[];
   } catch (err) {
-
     throw err;
   }
 }
@@ -284,7 +242,6 @@ function normalizeRole(papel: string | null): "admin" | "developer" | "gestor" {
 
 /**
  * Tenta buscar os apontamentos/horários no banco.
- * Suporta múltiplos nomes de tabela para facilitar integração com diferentes schemas.
  */
 export async function fetchTimesheets(): Promise<any[]> {
   try {
