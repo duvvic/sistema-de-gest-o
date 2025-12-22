@@ -1,12 +1,12 @@
 // components/TimesheetForm.tsx - Adaptado para Router
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useDataController } from '../controllers/useDataController';
-import { TimesheetEntry } from '../../../types';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataController } from '@/controllers/useDataController';
+import { TimesheetEntry } from '@/types';
 import { ArrowLeft, Save, Clock, Trash2, User as UserIcon, Briefcase, CheckSquare, Calendar, AlertCircle } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
-import { useUnsavedChangesPrompt } from '../../../hooks/useUnsavedChangesPrompt';
+import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt';
 
 const TimesheetForm: React.FC = () => {
   const { entryId } = useParams<{ entryId: string }>();

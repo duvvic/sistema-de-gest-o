@@ -1,31 +1,31 @@
 // routes/AppRoutes.tsx - VERSÃO COMPLETA ADMIN
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Componentes adaptados
-import Login from '../components/Login';
-import AdminDashboard from '../components/AdminDashboard';
-import ClientDetailsView from '../components/ClientDetailsView';
-import ClientForm from '../components/ClientForm';
-import AllProjectsView from '../components/AllProjectsView';
-import ProjectDetailView from '../components/ProjectDetailView';
-import ProjectForm from '../components/ProjectForm';
-import DeveloperProjects from '../components/DeveloperProjects';
-import KanbanBoard from '../components/KanbanBoard';
-import TaskDetail from '../components/TaskDetail';
-import MainLayout from '../components/MainLayout';
+import Login from '@/components/Login';
+import AdminDashboard from '@/components/AdminDashboard';
+import ClientDetailsView from '@/components/ClientDetailsView';
+import ClientForm from '@/components/ClientForm';
+import AllProjectsView from '@/components/AllProjectsView';
+import ProjectDetailView from '@/components/ProjectDetailView';
+import ProjectForm from '@/components/ProjectForm';
+import DeveloperProjects from '@/components/DeveloperProjects';
+import KanbanBoard from '@/components/KanbanBoard';
+import TaskDetail from '@/components/TaskDetail';
+import MainLayout from '@/components/MainLayout';
 
 // Componentes de Equipe
-import TeamList from '../components/TeamList';
-import TeamMemberDetail from '../components/TeamMemberDetail';
-import UserForm from '../components/UserForm';
-import UserProfile from '../components/UserProfile';
+import TeamList from '@/components/TeamList';
+import TeamMemberDetail from '@/components/TeamMemberDetail';
+import UserForm from '@/components/UserForm';
+import UserProfile from '@/components/UserProfile';
 
 // Componentes de Timesheet
-import TimesheetAdminDashboard from '../components/TimesheetAdminDashboard';
-import TimesheetCalendar from '../components/TimesheetCalendar';
-import TimesheetForm from '../components/TimesheetForm';
+import TimesheetAdminDashboard from '@/components/TimesheetAdminDashboard';
+import TimesheetCalendar from '@/components/TimesheetCalendar';
+import TimesheetForm from '@/components/TimesheetForm';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;

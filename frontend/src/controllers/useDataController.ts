@@ -2,10 +2,10 @@
 // Controller hook para gerenciar dados da aplicação (Clients, Projects, Tasks, etc)
 
 import { useState, useEffect } from 'react';
-import { useAppData } from '../hooks/useAppData';
-import { Task, Project, Client, User, TimesheetEntry } from '../types';
-import { supabase } from '../services/supabaseClient';
-import { useAuth } from '../contexts/AuthContext';
+import { useAppData } from '@/hooks/useAppData';
+import { Task, Project, Client, User, TimesheetEntry } from '@/types';
+import { supabase } from '@/services/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useDataController = () => {
     // Verificar se o usuário está autenticado
@@ -73,7 +73,7 @@ export const useDataController = () => {
     };
 
     const createClient = async (clientData: Partial<Client>): Promise<string> => {
-        const { createClient: createClientDb } = await import('../services/clientService');
+        const { createClient: createClientDb } = await import('@/services/clientService');
         const newId = await createClientDb(clientData as Client);
 
         // Buscar o registro completo
@@ -134,7 +134,7 @@ export const useDataController = () => {
     };
 
     const createProject = async (projectData: Partial<Project>): Promise<string> => {
-        const { createProject: createProjectDb } = await import('../services/projectService');
+        const { createProject: createProjectDb } = await import('@/services/projectService');
         const newId = await createProjectDb(projectData);
 
         const newProject = { ...projectData, id: String(newId) } as Project;
@@ -144,7 +144,7 @@ export const useDataController = () => {
     };
 
     const updateProject = async (projectId: string, updates: Partial<Project>): Promise<void> => {
-        const { updateProject: updateProjectDb } = await import('../services/projectService');
+        const { updateProject: updateProjectDb } = await import('@/services/projectService');
         await updateProjectDb(projectId, updates);
 
         setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
@@ -165,7 +165,7 @@ export const useDataController = () => {
     };
 
     const createTask = async (taskData: Partial<Task>): Promise<string> => {
-        const taskModule = await import('../services/taskService');
+        const taskModule = await import('@/services/taskService');
         const createTaskFn = (taskModule as any).createTask ??
             (taskModule as any).default?.createTask ??
             (taskModule as any).default;
@@ -178,7 +178,7 @@ export const useDataController = () => {
     };
 
     const updateTask = async (taskId: string, updates: Partial<Task>): Promise<void> => {
-        const taskModule = await import('../services/taskService');
+        const taskModule = await import('@/services/taskService');
         const updateTaskFn = (taskModule as any).updateTask ??
             (taskModule as any).default?.updateTask ??
             (taskModule as any).default;
@@ -188,7 +188,7 @@ export const useDataController = () => {
     };
 
     const deleteTask = async (taskId: string): Promise<void> => {
-        const taskModule = await import('../services/taskService');
+        const taskModule = await import('@/services/taskService');
         const deleteTaskFn = (taskModule as any).deleteTask ??
             (taskModule as any).default?.deleteTask ??
             (taskModule as any).default;

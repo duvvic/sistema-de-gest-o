@@ -1,9 +1,9 @@
 // components/DeveloperProjects.tsx - Adaptado para Router
 import React, { useMemo, useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useDataController } from '../controllers/useDataController';
-import { Task, Project, Client } from "../../../types";
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataController } from '@/controllers/useDataController';
+import { Task, Project, Client } from "@/types";
 import { ArrowLeft, Building2, FolderKanban, CheckSquare } from "lucide-react";
 
 type ViewType = 'clients' | 'projects' | 'tasks';

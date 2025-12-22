@@ -1,10 +1,10 @@
 // components/UserForm.tsx - Adaptado para Router
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
-import { User } from '../../../types';
+import { useDataController } from '@/controllers/useDataController';
+import { User, Role } from '@/types';
 import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 
 const UserForm: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -19,7 +19,7 @@ const UserForm: React.FC = () => {
     name: '',
     email: '',
     cargo: '',
-    role: 'developer' as 'admin' | 'developer',
+    role: 'developer' as Role,
     active: true,
     avatarUrl: ''
   });
@@ -56,12 +56,12 @@ const UserForm: React.FC = () => {
     try {
       // Preparar payload para dim_colaboradores
       const payload = {
-        Nome: formData.name,
-        Email: formData.email,
+        NomeColaborador: formData.name,
+        "E-mail": formData.email,
         Cargo: formData.cargo,
-        Role: formData.role,
+        papel: formData.role,
         ativo: formData.active,
-        avatar_url: formData.avatarUrl // Assumindo coluna existente ou similar
+        avatar_url: formData.avatarUrl
       };
 
       if (isNew) {

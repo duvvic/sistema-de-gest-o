@@ -1,7 +1,7 @@
 // components/AllProjectsView.tsx - Adaptado para Router
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
+import { useDataController } from '@/controllers/useDataController';
 import { Plus, Briefcase, CheckSquare } from 'lucide-react';
 
 const AllProjectsView: React.FC = () => {

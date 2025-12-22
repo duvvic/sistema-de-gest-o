@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, Client, User } from '../../../types';
+import { Project, Client, User } from '@/types';
 import { Calendar, User as UserIcon, ArrowLeft, Search, Trash2, Plus, Building2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -139,8 +139,8 @@ const ProjectColumn: React.FC<{
                 </div>
 
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${status === 'Em andamento'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-green-100 text-green-700'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-green-100 text-green-700'
                   }`}>
                   {status}
                 </span>

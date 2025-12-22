@@ -1,7 +1,7 @@
 // App.tsx - Versão com React Router
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import AppRoutes from './routes/AppRoutes';
 
 function App() {

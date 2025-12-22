@@ -1,7 +1,7 @@
 // components/ProjectDetailView.tsx - Adaptado para Router
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
+import { useDataController } from '@/controllers/useDataController';
 import { ArrowLeft, Plus, Edit, CheckSquare, Clock } from 'lucide-react';
 
 const ProjectDetailView: React.FC = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, ArrowRight, CheckCircle } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 
 interface ResetPasswordProps {
   onComplete: () => void;
@@ -45,7 +45,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error || !session) {
 
           alert('Link de recuperação inválido ou expirado. Solicite um novo link.');
@@ -129,7 +129,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
       await supabase.auth.signOut();
 
       setSuccess(true);
-      
+
       // Redireciona para login após 3 segundos
       setTimeout(() => {
         onComplete();

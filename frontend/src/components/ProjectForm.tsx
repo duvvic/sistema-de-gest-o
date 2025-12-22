@@ -1,7 +1,7 @@
 // components/ProjectForm.tsx - Adaptado para Router e Project Members
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
+import { useDataController } from '@/controllers/useDataController';
 import { ArrowLeft, Save } from 'lucide-react';
 
 const ProjectForm: React.FC = () => {

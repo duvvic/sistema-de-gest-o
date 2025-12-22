@@ -1,7 +1,7 @@
 // components/TimesheetAdminDashboard.tsx - Adaptado para Router
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
+import { useDataController } from '@/controllers/useDataController';
 import { Building2, ArrowRight, Clock, Briefcase, Users, TrendingUp, BarChart3, CheckSquare, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 
 const TimesheetAdminDashboard: React.FC = () => {

@@ -2,7 +2,7 @@
 // CRUD de Clientes no Supabase
 
 import { supabase } from './supabaseClient';
-import { Client } from '../types';
+import { Client } from '@/types';
 
 // ===========================
 // CREATE
@@ -49,7 +49,7 @@ export async function createClient(data: Partial<Client>): Promise<number> {
 // ===========================
 export async function updateClient(clientId: string, data: Partial<Client>): Promise<void> {
   const payload: Record<string, any> = {};
-  
+
   if (data.name !== undefined) payload.NomeCliente = data.name;
   if (data.logoUrl !== undefined) payload.NewLogo = data.logoUrl;
   if (data.active !== undefined) payload.ativo = data.active;

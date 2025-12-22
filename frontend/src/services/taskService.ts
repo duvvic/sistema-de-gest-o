@@ -2,25 +2,25 @@
 // CRUD de Tarefas no Supabase
 
 import { supabase } from './supabaseClient';
-import { Task } from '../types';
+import { Task } from '@/types';
 
 // ===========================
 // HELPER: Buscar ID do colaborador pelo nome
 // ===========================
 async function getCollaboratorIdByName(name: string | undefined): Promise<number | null> {
   if (!name) return null;
-  
+
   const { data, error } = await supabase
     .from("dim_colaboradores")
     .select("ID_Colaborador")
     .eq("NomeColaborador", name)
     .single();
-  
+
   if (error || !data) {
 
     return null;
   }
-  
+
   return data.ID_Colaborador;
 }
 
@@ -32,7 +32,7 @@ function mapStatusToDb(status: string | undefined): string {
     case 'Done': return 'Concluído';
     case 'In Progress': return 'Em Andamento';
     case 'Review': return 'Revisão';
-    case 'Todo': 
+    case 'Todo':
     default: return 'A Fazer';
   }
 }
@@ -70,7 +70,7 @@ function mapImpactToDb(impact: string | undefined): string | null {
 export async function createTask(data: Partial<Task>): Promise<number> {
   // Busca o ID do colaborador pelo nome (developer)
   const collaboratorId = await getCollaboratorIdByName(data.developer);
-  
+
   const payload = {
     Afazer: data.title || "(Sem título)",
     ID_Projeto: Number(data.projectId),
@@ -109,7 +109,7 @@ export async function createTask(data: Partial<Task>): Promise<number> {
 export async function updateTask(taskId: string, data: Partial<Task>): Promise<void> {
   // Busca o ID do colaborador pelo nome (developer)
   const collaboratorId = await getCollaboratorIdByName(data.developer);
-  
+
   const payload = {
     Afazer: data.title,
     ID_Colaborador: collaboratorId,

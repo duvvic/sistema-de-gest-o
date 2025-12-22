@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
-import { Client, Project, Task } from '../../../types';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { Client, Project, Task } from '@/types';
 import { ArrowLeft, FolderKanban, CheckSquare, Info } from 'lucide-react';
 
 interface ClientDetailViewProps {
@@ -139,8 +139,8 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
         <button
           onClick={() => setActiveTab('projects')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'projects'
-              ? 'bg-[#4c1d95] text-white'
-              : 'text-slate-600 hover:bg-white'
+            ? 'bg-[#4c1d95] text-white'
+            : 'text-slate-600 hover:bg-white'
             }`}
         >
           <FolderKanban className="w-4 h-4" />
@@ -149,8 +149,8 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
         <button
           onClick={() => setActiveTab('tasks')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'tasks'
-              ? 'bg-[#4c1d95] text-white'
-              : 'text-slate-600 hover:bg-white'
+            ? 'bg-[#4c1d95] text-white'
+            : 'text-slate-600 hover:bg-white'
             }`}
         >
           <CheckSquare className="w-4 h-4" />
@@ -185,8 +185,8 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                       )}
                       <div className="mt-4 flex items-center gap-2">
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${project.status === 'Em andamento'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-green-100 text-green-700'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-green-100 text-green-700'
                           }`}>
                           {project.status}
                         </span>
@@ -209,8 +209,8 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                       key={filter}
                       onClick={() => setStatusFilter(filter)}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${statusFilter === filter
-                          ? 'bg-[#4c1d95] text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-[#4c1d95] text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                     >
                       {filter === 'all' ? 'Todas' : filter === 'todo' ? 'Todo' : filter === 'inprogress' ? 'Em Progresso' : filter === 'review' ? 'Review' : 'Concluídas'}

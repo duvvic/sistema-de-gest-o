@@ -2,7 +2,7 @@
 // CRUD de Projetos no Supabase
 
 import { supabase } from './supabaseClient';
-import { Project } from '../types';
+import { Project } from '@/types';
 
 // ===========================
 // CREATE
@@ -39,7 +39,7 @@ export async function createProject(data: Partial<Project>): Promise<number> {
 // ===========================
 export async function updateProject(projectId: string, data: Partial<Project>): Promise<void> {
   const payload: Record<string, any> = {};
-  
+
   if (data.name !== undefined) payload.NomeProjeto = data.name;
   if (data.clientId !== undefined) payload.ID_Cliente = Number(data.clientId);
   if (data.status !== undefined) payload.StatusProjeto = data.status;

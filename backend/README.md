@@ -1,0 +1,1 @@
+# Backend\n\nEste diretório está reservado para o backend (Node.js/API) futuro.

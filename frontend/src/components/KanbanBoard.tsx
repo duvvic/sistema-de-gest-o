@@ -1,8 +1,8 @@
 // components/KanbanBoard.tsx - Adaptado para Router
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useDataController } from '../controllers/useDataController';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataController } from '@/controllers/useDataController';
 import {
   DndContext,
   DragOverlay,
@@ -22,7 +22,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Task, Client, Project, Status } from '../../../types';
+import { Task, Client, Project, Status } from '@/types';
 import { Calendar, User as UserIcon, AlertCircle, Search, Trash2, ArrowLeft, GripVertical } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 

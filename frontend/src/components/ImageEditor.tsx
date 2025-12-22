@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Upload, ArrowRight, Loader2, X } from 'lucide-react';
-import { editImageWithGemini } from '../services/geminiService';
+import { editImageWithGemini } from '@/services/geminiService';
 
 interface ImageEditorProps {
   initialImage?: string;
@@ -51,7 +51,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
             <Sparkles className="w-6 h-6 text-yellow-300" />
             <h2 className="text-xl font-bold">AI Image Studio</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="text-white/80 hover:text-white transition-colors"
           >
@@ -61,15 +61,15 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
             {/* Left: Preview */}
             <div className="flex flex-col gap-4">
               <div className="bg-white rounded-xl border-2 border-dashed border-slate-300 min-h-[300px] flex items-center justify-center relative overflow-hidden group shadow-sm">
                 {currentImage ? (
-                  <img 
-                    src={currentImage} 
-                    alt="Preview" 
+                  <img
+                    src={currentImage}
+                    alt="Preview"
                     className="w-full h-full object-contain max-h-[400px]"
                   />
                 ) : (
@@ -79,7 +79,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
                     <p className="text-slate-400 text-sm">Upload an image to start editing</p>
                   </div>
                 )}
-                
+
                 {isLoading && (
                   <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10">
                     <Loader2 className="w-10 h-10 text-[#4c1d95] animate-spin mb-2" />
@@ -89,24 +89,24 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
               </div>
 
               {!currentImage ? (
-                 <label className="block w-full">
-                 <input 
-                   type="file" 
-                   accept="image/*" 
-                   onChange={handleFileChange}
-                   className="hidden"
-                 />
-                 <div className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-lg text-center cursor-pointer hover:bg-slate-50 transition-colors font-medium shadow-sm flex items-center justify-center gap-2">
-                   <Upload className="w-4 h-4" />
-                   Upload Image
-                 </div>
-               </label>
+                <label className="block w-full">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-lg text-center cursor-pointer hover:bg-slate-50 transition-colors font-medium shadow-sm flex items-center justify-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                  </div>
+                </label>
               ) : (
                 <div className="flex gap-2">
-                   <label className="flex-1">
-                    <input 
-                      type="file" 
-                      accept="image/*" 
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
                       onChange={handleFileChange}
                       className="hidden"
                     />
@@ -114,14 +114,14 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
                       Change Image
                     </div>
                   </label>
-                   {initialImage !== currentImage && (
-                     <button 
-                       onClick={() => setCurrentImage(initialImage || null)}
-                       className="flex-1 bg-white border border-slate-200 text-slate-700 py-2 rounded-lg text-center cursor-pointer hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
-                     >
-                       Reset
-                     </button>
-                   )}
+                  {initialImage !== currentImage && (
+                    <button
+                      onClick={() => setCurrentImage(initialImage || null)}
+                      className="flex-1 bg-white border border-slate-200 text-slate-700 py-2 rounded-lg text-center cursor-pointer hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+                    >
+                      Reset
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -135,13 +135,13 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
                 </p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {[
-                    "Add a retro filter", 
-                    "Remove the person in the background", 
-                    "Make it cyberpunk style", 
+                    "Add a retro filter",
+                    "Remove the person in the background",
+                    "Make it cyberpunk style",
                     "Turn it into a sketch",
                     "Add a neon glow"
                   ].map(hint => (
-                    <button 
+                    <button
                       key={hint}
                       onClick={() => setPrompt(hint)}
                       className="text-xs bg-indigo-50 text-[#4c1d95] px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
@@ -176,13 +176,13 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialImage, onSave, onClose
                   {isLoading ? 'Generating...' : 'Generate Edit'}
                 </button>
                 {currentImage && (
-                   <button
-                   onClick={() => onSave(currentImage)}
-                   className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all shadow-md flex items-center gap-2"
-                 >
-                   Save
-                   <ArrowRight className="w-4 h-4" />
-                 </button>
+                  <button
+                    onClick={() => onSave(currentImage)}
+                    className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all shadow-md flex items-center gap-2"
+                  >
+                    Save
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 )}
               </div>
             </div>

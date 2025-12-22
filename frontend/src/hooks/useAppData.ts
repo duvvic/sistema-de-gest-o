@@ -11,7 +11,7 @@ import {
   Status,
   Priority,
   Impact,
-} from "../types";
+} from "@/types";
 
 import {
   fetchClients,
@@ -20,7 +20,7 @@ import {
   fetchUsers,
   fetchTimesheets,
   DbTaskRow,
-} from "../services/api";
+} from "@/services/api";
 
 // =====================================================
 // INTERFACE DO HOOK
@@ -159,7 +159,7 @@ export function useAppData(): AppData {
         setError(null);
 
         // Verificar se está autenticado no Supabase
-        const { supabase } = await import('../services/supabaseClient');
+        const { supabase } = await import('@/services/supabaseClient');
         const { data: { session } } = await supabase.auth.getSession();
 
         // Se não tiver sessão E não tiver usuário no localStorage, não carregar dados

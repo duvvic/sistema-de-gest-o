@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
-import { User } from '../../../types';
-import { supabase } from '../services/supabaseClient';
-import { useAuth } from '../../../contexts/AuthContext';
+import { User } from '@/types';
+import { supabase } from '@/services/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Mode = 'login' | 'set-password';
 
@@ -52,7 +52,7 @@ const Login: React.FC = () => {
     useEffect(() => {
         const loadUsers = async () => {
             try {
-                const { fetchUsers } = await import('../services/api');
+                const { fetchUsers } = await import('@/services/api');
                 const usersData = await fetchUsers();
                 setUsers(usersData);
             } catch (error) {

@@ -1,8 +1,8 @@
 // components/TeamMemberDetail.tsx - Adaptado para Router
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
-import { Task } from '../../../types';
+import { useDataController } from '@/controllers/useDataController';
+import { Task } from '@/types';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, User as UserIcon } from 'lucide-react';
 
 const TeamMemberDetail: React.FC = () => {

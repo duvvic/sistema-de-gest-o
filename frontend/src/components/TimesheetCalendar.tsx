@@ -1,9 +1,9 @@
 // components/TimesheetCalendar.tsx - Com Busca Dropdown
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
-import { useAuth } from '../../../contexts/AuthContext';
-import { TimesheetEntry } from '../../../types';
+import { useDataController } from '@/controllers/useDataController';
+import { useAuth } from '@/contexts/AuthContext';
+import { TimesheetEntry } from '@/types';
 import {
   ChevronLeft, ChevronRight, Plus, Clock, TrendingUp, Trash2,
   Users, AlertTriangle, CheckCircle, Calendar,

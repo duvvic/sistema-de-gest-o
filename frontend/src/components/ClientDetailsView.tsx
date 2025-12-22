@@ -1,7 +1,7 @@
 // components/ClientDetailsView.tsx - Adaptado para Router
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
+import { useDataController } from '@/controllers/useDataController';
 import { ArrowLeft, Plus, Briefcase, CheckSquare, Clock, Edit, LayoutGrid, ListTodo, Filter } from 'lucide-react';
 
 const ClientDetailsView: React.FC = () => {

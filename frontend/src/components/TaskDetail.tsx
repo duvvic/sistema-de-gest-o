@@ -1,12 +1,12 @@
 // components/TaskDetail.tsx - Adaptado para Router
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useDataController } from '../controllers/useDataController';
-import { Task, Status, Priority, Impact } from '../../../types';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataController } from '@/controllers/useDataController';
+import { Task, Status, Priority, Impact } from '@/types';
 import { ArrowLeft, Save, Sparkles, Calendar, PieChart, Briefcase, Image as ImageIcon, User as UserIcon, StickyNote, AlertTriangle, ShieldAlert, CheckSquare } from 'lucide-react';
 import ImageEditor from './ImageEditor';
-import { useUnsavedChangesPrompt } from '../../../hooks/useUnsavedChangesPrompt';
+import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt';
 import ConfirmationModal from './ConfirmationModal';
 
 const TaskDetail: React.FC = () => {
@@ -52,8 +52,7 @@ const TaskDetail: React.FC = () => {
     actualDelivery: '',
     priority: 'Medium',
     impact: 'Medium',
-    risks: '',
-    active: true
+    risks: ''
   });
 
   const [showImageEditor, setShowImageEditor] = useState(false);
@@ -125,8 +124,7 @@ const TaskDetail: React.FC = () => {
         progress: Number(formData.progress) || 0,
         estimatedDelivery: formData.estimatedDelivery!,
         developerId: formData.developerId || (isDeveloper ? currentUser?.id : undefined),
-        developer: formData.developer || (isDeveloper ? currentUser?.name : undefined),
-        active: true
+        developer: formData.developer || (isDeveloper ? currentUser?.name : undefined)
       };
 
       if (isNew) {

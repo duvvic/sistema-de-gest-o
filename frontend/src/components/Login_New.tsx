@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
-import { User } from '../../../types';
-import { supabase } from '../services/supabaseClient';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useDataController } from '../controllers/useDataController';
+import { User } from '@/types';
+import { supabase } from '@/services/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataController } from '@/controllers/useDataController';
 
 type Mode = 'login' | 'set-password';
 

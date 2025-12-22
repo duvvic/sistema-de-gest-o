@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 
 /**
  * Hook para escutar mudanças em tempo real em uma tabela do Supabase.

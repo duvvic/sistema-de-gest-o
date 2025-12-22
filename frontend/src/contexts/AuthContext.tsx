@@ -2,8 +2,8 @@
 // Context para gerenciar autenticação e usuário logado
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
-import { supabase } from '../services/supabaseClient';
+import { User } from '@/types';
+import { supabase } from '@/services/supabaseClient';
 
 interface AuthContextType {
     currentUser: User | null;

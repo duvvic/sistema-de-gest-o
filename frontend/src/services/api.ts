@@ -2,7 +2,7 @@
 // Funções de comunicação com o Supabase
 
 import { supabase } from "./supabaseClient";
-import { User, Client, Project } from "../types";
+import { User, Client, Project } from "@/types";
 
 // =====================================================
 // INTERFACES DO BANCO DE DADOS (Raw Data)
@@ -107,7 +107,7 @@ export async function fetchUsers(): Promise<User[]> {
 
     const activeCount = mapped.filter(u => u.active === true).length;
     const inactiveCount = mapped.filter(u => u.active === false).length;
-    
+
     return mapped;
   } catch (err) {
 
@@ -230,7 +230,7 @@ export async function fetchTasks(): Promise<DbTaskRow[]> {
     const { data, error } = await supabase
       .from("fato_tarefas")
       .select("*");
-    
+
     /* LÓGICA ANTIGA COM VIEW - COMENTADA PARA TESTES
     // Tenta primeiro a view, se não existir tenta a tabela direta
     let { data, error } = await supabase
@@ -273,12 +273,12 @@ export async function fetchTasks(): Promise<DbTaskRow[]> {
  */
 function normalizeRole(papel: string | null): "admin" | "developer" | "gestor" {
   if (!papel) return "developer";
-  
+
   const p = papel.toLowerCase().trim();
-  
+
   if (p === "admin" || p === "administrador") return "admin";
   if (p === "gestor" || p === "gerente" || p === "manager") return "gestor";
-  
+
   return "developer";
 }
 
@@ -300,11 +300,11 @@ export async function fetchTimesheets(): Promise<any[]> {
         Horas_Trabalhadas,
         dim_colaboradores!inner(NomeColaborador)
       `);
-    
+
     if (error) {
       return [];
     }
-    
+
     return data || [];
   } catch (err) {
     return [];

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Task, Project } from '../../../types';
+import { User, Task, Project } from '@/types';
 import { ArrowLeft, Briefcase, Calendar, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 
 interface TeamMemberDetailProps {
@@ -97,8 +97,8 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
                 <button
                   onClick={() => setTaskFilter('all')}
                   className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all cursor-pointer group ${taskFilter === 'all'
-                      ? 'bg-[#4c1d95] border-[#4c1d95] shadow-lg transform scale-[1.02]'
-                      : 'bg-white border-slate-200 hover:border-[#4c1d95] hover:shadow-md'
+                    ? 'bg-[#4c1d95] border-[#4c1d95] shadow-lg transform scale-[1.02]'
+                    : 'bg-white border-slate-200 hover:border-[#4c1d95] hover:shadow-md'
                     }`}
                 >
                   <span className={`text-sm font-medium ${taskFilter === 'all' ? 'text-white' : 'text-slate-600 group-hover:text-[#4c1d95]'}`}>
@@ -112,8 +112,8 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
                 <button
                   onClick={() => setTaskFilter('delayed')}
                   className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all cursor-pointer group ${taskFilter === 'delayed'
-                      ? 'bg-red-500 border-red-500 shadow-lg transform scale-[1.02]'
-                      : 'bg-white border-slate-200 hover:border-red-300 hover:shadow-md'
+                    ? 'bg-red-500 border-red-500 shadow-lg transform scale-[1.02]'
+                    : 'bg-white border-slate-200 hover:border-red-300 hover:shadow-md'
                     }`}
                 >
                   <span className={`text-sm font-medium ${taskFilter === 'delayed' ? 'text-white' : 'text-slate-600 group-hover:text-red-600'}`}>
@@ -127,8 +127,8 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
                 <button
                   onClick={() => setTaskFilter('completed')}
                   className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all cursor-pointer group ${taskFilter === 'completed'
-                      ? 'bg-green-500 border-green-500 shadow-lg transform scale-[1.02]'
-                      : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-md'
+                    ? 'bg-green-500 border-green-500 shadow-lg transform scale-[1.02]'
+                    : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-md'
                     }`}
                 >
                   <span className={`text-sm font-medium ${taskFilter === 'completed' ? 'text-white' : 'text-slate-600 group-hover:text-green-600'}`}>
@@ -165,8 +165,8 @@ const TeamMemberDetail: React.FC<TeamMemberDetailProps> = ({ user, tasks, projec
                 Tarefas Alocadas
                 {taskFilter !== 'all' && (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${taskFilter === 'delayed'
-                      ? 'bg-red-100 text-red-700 border border-red-200'
-                      : 'bg-green-100 text-green-700 border border-green-200'
+                    ? 'bg-red-100 text-red-700 border border-red-200'
+                    : 'bg-green-100 text-green-700 border border-green-200'
                     }`}>
                     {taskFilter === 'delayed' ? `${delayedTasks.length} Atrasadas` : `${completedTasks.length} Concluídas`}
                   </span>

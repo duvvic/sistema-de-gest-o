@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
-import { User } from '../../../types';
-import { supabase } from '../services/supabaseClient';
+import { User } from '@/types';
+import { supabase } from '@/services/supabaseClient';
 
 interface LoginProps {
   onLogin: (user: User) => void;

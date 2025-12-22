@@ -1,7 +1,7 @@
 // components/ClientForm.tsx - Adaptado para Router
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '../controllers/useDataController';
+import { useDataController } from '@/controllers/useDataController';
 import { ArrowLeft, Save, Upload } from 'lucide-react';
 
 const ClientForm: React.FC = () => {

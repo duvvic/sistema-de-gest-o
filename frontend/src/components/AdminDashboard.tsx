@@ -1,9 +1,9 @@
 // components/AdminDashboard.tsx - Versão adaptada para React Router
 import React, { useState, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
-import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
-import { useDataController } from '../controllers/useDataController';
-import { Client, Project, Task } from "../../../types";
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { useDataController } from '@/controllers/useDataController';
+import { Client, Project, Task } from "@/types";
 import { Plus, Building2, ArrowDownAZ, Briefcase } from "lucide-react";
 
 type SortOption = 'recent' | 'alphabetical' | 'creation';

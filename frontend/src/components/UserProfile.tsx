@@ -1,10 +1,10 @@
 // components/UserProfile.tsx - Adaptado para Router
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useDataController } from '../controllers/useDataController';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataController } from '@/controllers/useDataController';
 import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
