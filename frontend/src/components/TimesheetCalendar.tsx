@@ -292,7 +292,7 @@ const TimesheetCalendar: React.FC = () => {
             </div>
 
             <button
-              onClick={() => navigate(`/timesheet/new?date=${new Date().toISOString().split('T')[0]}`)}
+              onClick={() => navigate(`/timesheet/new?date=${new Date().toISOString().split('T')[0]}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
               className="bg-white text-[#4c1d95] hover:bg-purple-50 px-4 py-2 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -332,7 +332,7 @@ const TimesheetCalendar: React.FC = () => {
               return (
                 <div
                   key={d}
-                  onClick={() => navigate(`/timesheet/new?date=${dateStr}`)}
+                  onClick={() => navigate(`/timesheet/new?date=${dateStr}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
                   className={`
                                     bg-white p-2 relative cursor-pointer min-h-[120px] transition-all group border-transparent hover:z-10 hover:shadow-lg
                                     ${isToday ? 'bg-purple-50/20' : ''}

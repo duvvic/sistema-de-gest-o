@@ -26,6 +26,7 @@ import UserProfile from '@/components/UserProfile';
 import TimesheetAdminDashboard from '@/components/TimesheetAdminDashboard';
 import TimesheetCalendar from '@/components/TimesheetCalendar';
 import TimesheetForm from '@/components/TimesheetForm';
+import ResetPassword from '@/components/ResetPassword';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -59,6 +60,7 @@ const AppRoutes: React.FC = () => {
         <Routes>
             {/* Rota Pública Check */}
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword onComplete={() => window.location.href = '/login'} />} />
 
             {/* Rota Raiz - Redireciona baseado no role */}
             <Route path="/" element={

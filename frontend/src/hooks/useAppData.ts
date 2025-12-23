@@ -32,6 +32,7 @@ interface AppData {
   projects: Project[];
   tasks: Task[];
   timesheetEntries: TimesheetEntry[];
+  projectMembers: { projectId: string; userId: string }[];
   loading: boolean;
   error: string | null;
 }
@@ -146,6 +147,7 @@ export function useAppData(): AppData {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>(MOCK_TIMESHEETS);
+  const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,11 +172,12 @@ export function useAppData(): AppData {
         }
 
         // Carrega todos os dados em paralelo
-        const [usersData, clientsData, projectsData, tasksData] = await Promise.all([
+        const [usersData, clientsData, projectsData, tasksData, membersRes] = await Promise.all([
           fetchUsers(),
           fetchClients(),
           fetchProjects(),
           fetchTasks(),
+          supabase.from('project_members').select('id_projeto, id_colaborador')
         ]);
 
         if (!isMounted) return;
@@ -256,6 +259,13 @@ export function useAppData(): AppData {
         setTasks(tasksMapped);
         setTimesheetEntries(timesheetMapped);
 
+        if (membersRes.data) {
+          setProjectMembers(membersRes.data.map((row: any) => ({
+            projectId: String(row.id_projeto),
+            userId: String(row.id_colaborador)
+          })));
+        }
+
       } catch (err) {
 
         if (isMounted) {
@@ -282,6 +292,7 @@ export function useAppData(): AppData {
     projects,
     tasks,
     timesheetEntries,
+    projectMembers,
     loading,
     error,
   };

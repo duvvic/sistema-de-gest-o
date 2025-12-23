@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 if (session?.user) {
                     // Buscar dados completos do usuário
-                    const { data: userData } = await supabase
+                    const { data: userData, error } = await supabase
                         .from('dim_colaboradores')
                         .select('*')
                         .eq('E-mail', session.user.email)
@@ -46,16 +46,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         };
                         setCurrentUser(user);
                         sessionStorage.setItem('currentUser', JSON.stringify(user));
+                    } else {
+                        // Usuário não encontrado no banco
+                        setCurrentUser(null);
+                        sessionStorage.removeItem('currentUser');
+                        alert('Usuário não encontrado no banco. Faça login novamente.');
                     }
                 } else {
                     // Fallback para sessionStorage
                     const storedUser = sessionStorage.getItem('currentUser');
                     if (storedUser) {
                         setCurrentUser(JSON.parse(storedUser));
+                    } else {
+                        setCurrentUser(null);
                     }
                 }
             } catch (error) {
                 console.error('[Auth] Erro ao carregar usuário:', error);
+                setCurrentUser(null);
+                alert('Erro ao carregar usuário. Faça login novamente.');
             } finally {
                 setIsLoading(false);
             }

@@ -18,6 +18,7 @@ export const useDataController = () => {
         projects: loadedProjects,
         tasks: loadedTasks,
         timesheetEntries: loadedTimesheets,
+        projectMembers: loadedProjectMembers,
         loading: dataLoading,
         error: dataError,
     } = useAppData();
@@ -41,26 +42,43 @@ export const useDataController = () => {
         setTasks(loadedTasks);
         setTimesheetEntries(loadedTimesheets);
 
+        // Sincronizar membros quando o carregamento terminar
+        if (!dataLoading) {
+            setProjectMembers(loadedProjectMembers);
+        }
+
         if (loadedUsers.length > 0) {
             setUsers(loadedUsers);
         }
 
-        // Carregar Membros do Projeto (Tabela Nova)
-        const loadProjectMembers = async () => {
-            const { data, error } = await supabase
-                .from('project_members')
-                .select('id_projeto, id_colaborador');
+    }, [currentUser, authLoading, dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers]);
 
-            if (!error && data) {
-                setProjectMembers(data.map((row: any) => ({
-                    projectId: String(row.id_projeto),
-                    userId: String(row.id_colaborador)
-                })));
-            }
+    // Canais Realtime para Membros
+    useEffect(() => {
+        const channel = supabase
+            .channel('project_members_changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'project_members'
+            }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setProjectMembers(prev => [...prev, {
+                        projectId: String(payload.new.id_projeto),
+                        userId: String(payload.new.id_colaborador)
+                    }]);
+                } else if (payload.eventType === 'DELETE') {
+                    setProjectMembers(prev => prev.filter(pm =>
+                        !(pm.projectId === String(payload.old.id_projeto) && pm.userId === String(payload.old.id_colaborador))
+                    ));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
         };
-        loadProjectMembers();
-
-    }, [currentUser, authLoading, dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets]);
+    }, []);
 
     // === CLIENT CONTROLLERS ===
 
@@ -320,16 +338,28 @@ export const useDataController = () => {
     };
 
     const addProjectMember = async (projectId: string, userId: string): Promise<void> => {
+        // Usar upsert para evitar erro de duplicidade se já existir (mesmo comportamento do trigger)
         const { error } = await supabase
             .from('project_members')
-            .insert({
-                id_projeto: Number(projectId),
-                id_colaborador: Number(userId)
-            });
+            .upsert(
+                {
+                    id_projeto: Number(projectId),
+                    id_colaborador: Number(userId)
+                },
+                { onConflict: 'id_projeto, id_colaborador' }
+            );
 
-        if (error) throw error;
+        if (error) {
+            console.error("[useDataController] Erro ao adicionar membro:", error);
+            throw error;
+        }
 
-        setProjectMembers(prev => [...prev, { projectId, userId }]);
+        // Atualizar state local apenas se não estiver lá
+        setProjectMembers(prev => {
+            const exists = prev.some(pm => pm.projectId === projectId && pm.userId === userId);
+            if (exists) return prev;
+            return [...prev, { projectId, userId }];
+        });
     };
 
     const removeProjectMember = async (projectId: string, userId: string): Promise<void> => {

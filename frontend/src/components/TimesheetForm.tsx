@@ -18,6 +18,7 @@ const TimesheetForm: React.FC = () => {
   const isNew = !entryId || entryId === 'new';
   const initialEntry = !isNew ? timesheetEntries.find(e => e.id === entryId) : null;
   const preSelectedDate = searchParams.get('date');
+  const preSelectedUserId = searchParams.get('userId');
   const user = currentUser;
 
   const isAdmin = currentUser?.role === 'admin';
@@ -48,10 +49,19 @@ const TimesheetForm: React.FC = () => {
   useEffect(() => {
     if (initialEntry) {
       setFormData(initialEntry);
+    } else if (isAdmin && preSelectedUserId) {
+      const targetUser = users.find(u => u.id === preSelectedUserId);
+      if (targetUser) {
+        setFormData(prev => ({
+          ...prev,
+          userId: targetUser.id,
+          userName: targetUser.name
+        }));
+      }
     } else if (user) {
       setFormData(prev => ({ ...prev, userId: user.id, userName: user.name }));
     }
-  }, [initialEntry, user]);
+  }, [initialEntry, user, isAdmin, preSelectedUserId, users]);
 
   // Update progress when task changes
   useEffect(() => {

@@ -12,6 +12,8 @@ interface KanbanProjectsProps {
   onBackToAdmin?: () => void;
   onDeleteProject?: (projectId: string) => void;
   user?: User;
+  users: User[];
+  projectMembers: { projectId: string; userId: string }[];
 }
 
 /* ===========================================================
@@ -22,10 +24,12 @@ const ProjectColumn: React.FC<{
   status: string;
   projects: Project[];
   clients: Client[];
+  users: User[];
+  projectMembers: { projectId: string; userId: string }[];
   onProjectClick: (projectId: string) => void;
   onDeleteClick?: (e: React.MouseEvent, project: Project) => void;
   isAdmin: boolean;
-}> = ({ title, status, projects, clients, onProjectClick, onDeleteClick, isAdmin }) => {
+}> = ({ title, status, projects, clients, users, projectMembers, onProjectClick, onDeleteClick, isAdmin }) => {
 
   const safeProjects = projects || [];
   const safeClients = clients || [];
@@ -145,6 +149,37 @@ const ProjectColumn: React.FC<{
                   {status}
                 </span>
               </div>
+
+              {/* Equipe do Projeto */}
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex -space-x-2 overflow-hidden">
+                  {projectMembers
+                    .filter(pm => pm.projectId === project.id)
+                    .map(pm => {
+                      const member = users.find(u => u.id === pm.userId);
+                      if (!member) return null;
+                      return (
+                        <div
+                          key={member.id}
+                          className="inline-block h-7 w-7 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center overflow-hidden"
+                          title={member.name}
+                        >
+                          {member.avatarUrl ? (
+                            <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-500">
+                              {member.name.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {projectMembers.filter(pm => pm.projectId === project.id).length === 0 && (
+                  <span className="text-[10px] text-slate-400 italic">Sem equipe</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -158,7 +193,8 @@ const ProjectColumn: React.FC<{
 =========================================================== */
 const KanbanProjects: React.FC<KanbanProjectsProps> = ({
   projects, clients, onProjectClick, onNewProject,
-  filteredClientId, onBackToAdmin, onDeleteProject, user
+  filteredClientId, onBackToAdmin, onDeleteProject, user,
+  users, projectMembers
 }) => {
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -272,6 +308,8 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
               status={status}
               projects={filteredProjects}
               clients={safeClients}
+              users={users}
+              projectMembers={projectMembers}
               onProjectClick={onProjectClick}
               onDeleteClick={isAdmin ? handleDeleteClick : undefined}
               isAdmin={isAdmin}

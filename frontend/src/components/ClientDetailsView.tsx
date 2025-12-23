@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Briefcase, CheckSquare, Clock, Edit, LayoutGrid, ListT
 const ClientDetailsView: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { clients, projects, tasks, users, getClientById } = useDataController();
+  const { clients, projects, tasks, users, getClientById, projectMembers } = useDataController();
 
   const [activeTab, setActiveTab] = useState<'projects' | 'tasks'>('projects');
   const [selectedDeveloperId, setSelectedDeveloperId] = useState<string>('');
@@ -151,6 +151,36 @@ const ClientDetailsView: React.FC = () => {
                         <div className="text-xs text-slate-500">
                           Status: <span className="font-medium">{project.status}</span>
                         </div>
+                      )}
+                    </div>
+
+                    {/* Equipe do Projeto */}
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {projectMembers
+                          .filter(pm => pm.projectId === project.id)
+                          .map(pm => {
+                            const member = users.find(u => u.id === pm.userId);
+                            if (!member) return null;
+                            return (
+                              <div
+                                key={member.id}
+                                className="w-6 h-6 rounded-full border border-white bg-slate-100 flex items-center justify-center overflow-hidden"
+                                title={member.name}
+                              >
+                                {member.avatarUrl ? (
+                                  <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-[9px] font-bold text-slate-500">
+                                    {member.name.substring(0, 2).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                      {projectMembers.filter(pm => pm.projectId === project.id).length === 0 && (
+                        <span className="text-[10px] text-slate-400 italic">Sem equipe</span>
                       )}
                     </div>
                   </button>

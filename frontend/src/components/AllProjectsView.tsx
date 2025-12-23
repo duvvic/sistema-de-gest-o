@@ -6,7 +6,7 @@ import { Plus, Briefcase, CheckSquare } from 'lucide-react';
 
 const AllProjectsView: React.FC = () => {
   const navigate = useNavigate();
-  const { projects, clients, tasks } = useDataController();
+  const { projects, clients, tasks, users, projectMembers } = useDataController();
 
   return (
     <div className="h-full flex flex-col p-8">
@@ -81,6 +81,36 @@ const AllProjectsView: React.FC = () => {
                       <div className="text-xs text-slate-500">
                         Status: <span className="font-medium text-slate-700">{project.status}</span>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Equipe do Projeto */}
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex -space-x-2">
+                      {projectMembers
+                        .filter(pm => pm.projectId === project.id)
+                        .map(pm => {
+                          const member = users.find(u => u.id === pm.userId);
+                          if (!member) return null;
+                          return (
+                            <div
+                              key={member.id}
+                              className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden"
+                              title={member.name}
+                            >
+                              {member.avatarUrl ? (
+                                <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[10px] font-bold text-slate-500">
+                                  {member.name.substring(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                    {projectMembers.filter(pm => pm.projectId === project.id).length === 0 && (
+                      <span className="text-[10px] text-slate-400 italic">Sem equipe</span>
                     )}
                   </div>
                 </button>

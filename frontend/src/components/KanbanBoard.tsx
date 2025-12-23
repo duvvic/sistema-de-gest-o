@@ -260,7 +260,7 @@ const KanbanBoard: React.FC = () => {
     return tasks.filter(t => {
       // Se não for admin, mostrar apenas as tarefas do usuário logado
       const userFilter = isAdmin || t.developerId === currentUser?.id;
-      
+
       return userFilter &&
         (!filteredClientId || t.clientId === filteredClientId) &&
         (t.title.toLowerCase().includes(searchTerm.toLowerCase()));

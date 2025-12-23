@@ -151,15 +151,32 @@ const Login: React.FC = () => {
         try {
             setLoading(true);
             const passwordHash = await hashPassword(newPassword);
-
-            const { error } = await supabase.from('user_credentials').insert({
+            // 1. Salva na tabela manual para compatibilidade
+            const { error: dbError } = await supabase.from('user_credentials').insert({
                 colaborador_id: Number(selectedUser.id),
                 password_hash: passwordHash,
             });
 
-            if (error) {
-                alert('Não foi possível salvar a senha. Tente novamente.');
+            if (dbError) {
+                alert('Não foi possível salvar a senha no banco. Tente novamente.');
                 return;
+            }
+
+            // 2. Registra no Supabase Auth para permitir recuperação por e-mail no futuro
+            // Usamos signUp. Se já existir, ele pode retornar erro, mas prosseguimos se o banco manual deu certo.
+            try {
+                await supabase.auth.signUp({
+                    email: selectedUser.email,
+                    password: newPassword,
+                    options: {
+                        data: {
+                            full_name: selectedUser.name,
+                            role: selectedUser.role
+                        }
+                    }
+                });
+            } catch (authErr) {
+                console.warn('[Auth Sync] Erro ao registrar no GoTrue, mas senha salva localmente:', authErr);
             }
 
             alert('Senha criada com sucesso!');
@@ -195,11 +212,16 @@ const Login: React.FC = () => {
             });
 
             if (error) {
-                alert('Erro ao enviar email de recuperação. Tente novamente ou contate o administrador.');
+                console.error('[ResetPassword] Erro:', error);
+                if (error.message.includes('rate limit')) {
+                    alert('Muitas solicitações em pouco tempo. Tente novamente em alguns minutos.');
+                } else {
+                    alert('Erro ao enviar email de recuperação. Verifique se o e-mail está cadastrado no sistema de Autenticação do Supabase.');
+                }
                 return;
             }
 
-            alert(`Email de recuperação enviado para ${normalizedEmail}. Verifique sua caixa de entrada.`);
+            alert(`Solicitação processada para ${normalizedEmail}. Se o e-mail estiver cadastrado no sistema de autenticação, o token de recuperação chegará em instantes. Verifique também sua caixa de spam.`);
         } catch (error) {
             alert('Erro ao processar solicitação. Tente novamente.');
         } finally {

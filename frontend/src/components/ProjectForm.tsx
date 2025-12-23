@@ -45,11 +45,11 @@ const ProjectForm: React.FC = () => {
 
   // Carregar membros separadamente para garantir sincronia
   useEffect(() => {
-    if (isEdit && projectId && projectMembers.length > 0) {
+    if (isEdit && projectId) {
       const currentMembers = getProjectMembers(projectId);
       setSelectedUsers(currentMembers);
     }
-  }, [isEdit, projectId, projectMembers]);
+  }, [isEdit, projectId, projectMembers]); // Re-executa se os membros globais mudarem (ex: ao terminar de carregar)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +101,9 @@ const ProjectForm: React.FC = () => {
         navigate(`/admin/clients/${clientId}`);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar projeto:', error);
-      alert('Erro ao salvar projeto. Tente novamente.');
+      alert(`Erro ao salvar projeto: ${error.message || 'Erro desconhecido'}. Tente novamente.`);
     } finally {
       setLoading(false);
     }

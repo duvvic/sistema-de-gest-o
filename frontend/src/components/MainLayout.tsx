@@ -31,18 +31,18 @@ const MainLayout: React.FC = () => {
     };
 
     // Menu items baseado no role
+
     const adminMenuItems = [
         { path: '/admin/clients', icon: Users, label: 'Clientes' },
         { path: '/tasks', icon: CheckSquare, label: 'Tarefas' },
-
-        { path: '/admin/team', icon: Users, label: 'Funcionários' }, // Atualizado para rota admin correta e label
-        { path: '/timesheet', icon: Clock, label: 'Timesheet' },
+        { path: '/admin/team', icon: Users, label: 'Funcionários' },
+        { path: '/timesheet', icon: Clock, label: 'Folha de Ponto' },
     ];
 
     const developerMenuItems = [
         { path: '/developer/projects', icon: Briefcase, label: 'Projetos' },
         { path: '/developer/tasks', icon: CheckSquare, label: 'Minhas Tarefas' },
-        { path: '/timesheet', icon: Clock, label: 'Timesheet' },
+        { path: '/timesheet', icon: Clock, label: 'Folha de Ponto' },
     ];
 
     const menuItems = currentUser?.role === 'admin' ? adminMenuItems : developerMenuItems;
@@ -76,28 +76,31 @@ const MainLayout: React.FC = () => {
                     )}
                 </div>
 
-                {/* User Info */}
-                <div className="p-6 border-b border-purple-600">
-                    <div className="flex items-center gap-3">
-                        {currentUser?.avatarUrl ? (
-                            <img
-                                src={currentUser.avatarUrl}
-                                alt={currentUser.name}
-                                className="w-10 h-10 rounded-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-lg font-bold">
-                                {currentUser?.name?.charAt(0) || 'U'}
-                            </div>
-                        )}
-                        {sidebarOpen && (
-                            <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">{currentUser?.name}</p>
-                                <p className="text-xs text-purple-200 truncate capitalize">{currentUser?.role}</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                {/* User Info Melhorado e Clicável */}
+                <button
+                    className={`p-6 border-b border-purple-600 w-full bg-gradient-to-r from-[#4c1d95]/80 to-[#5b21b6]/60 hover:from-[#6d28d9]/90 hover:to-[#7c3aed]/70 transition-all flex items-center gap-3 group focus:outline-none`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate('/profile')}
+                    title="Ver/editar perfil"
+                >
+                    {currentUser?.avatarUrl ? (
+                        <img
+                            src={currentUser.avatarUrl}
+                            alt={currentUser.name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform"
+                        />
+                    ) : (
+                        <div className="w-12 h-12 rounded-full bg-purple-700 flex items-center justify-center text-xl font-bold border-2 border-white shadow-md group-hover:scale-105 transition-transform">
+                            {currentUser?.name?.charAt(0) || 'U'}
+                        </div>
+                    )}
+                    {sidebarOpen && (
+                        <div className="flex-1 min-w-0 text-left">
+                            <p className="font-semibold truncate text-white group-hover:underline">{currentUser?.name}</p>
+                            <p className="text-xs text-purple-200 truncate capitalize">{currentUser?.role}</p>
+                        </div>
+                    )}
+                </button>
 
                 {/* Menu Items */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -115,7 +118,7 @@ const MainLayout: React.FC = () => {
                                     } ${!sidebarOpen && 'justify-center'}`}
                             >
                                 <Icon className="w-5 h-5 flex-shrink-0" />
-                                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                                {sidebarOpen && <span className="font-medium" translate="no">{item.label}</span>}
                             </button>
                         );
                     })}

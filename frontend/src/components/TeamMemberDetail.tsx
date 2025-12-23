@@ -1,16 +1,18 @@
 // components/TeamMemberDetail.tsx - Adaptado para Router
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { Task } from '@/types';
-import { ArrowLeft, Calendar, CheckCircle2, Clock, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer } from 'lucide-react';
+
+type ViewTab = 'projects' | 'tasks' | 'delayed' | 'ponto';
 
 const TeamMemberDetail: React.FC = () => {
    const { userId } = useParams<{ userId: string }>();
    const navigate = useNavigate();
-   const { users, tasks, projects } = useDataController();
+   const { users, tasks, projects, projectMembers, timesheetEntries } = useDataController();
 
-   const [taskFilter, setTaskFilter] = useState<'all' | 'delayed' | 'completed'>('all');
+   const [activeTab, setActiveTab] = useState<ViewTab>('projects');
 
    const user = users.find(u => u.id === userId);
 
@@ -39,28 +41,148 @@ const TeamMemberDetail: React.FC = () => {
       }
    };
 
+   // Cálculo de Dias de Ponto Faltantes (Dias úteis sem apontamento no mês atual)
+   const missingPontoDays = useMemo(() => {
+      if (!user) return 0;
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const userEntries = timesheetEntries.filter(e => e.userId === user.id);
+
+      let missingCount = 0;
+      const currentDate = new Date(firstDay);
+
+      while (currentDate < today) {
+         // 0 = Domingo, 6 = Sábado
+         const dayOfWeek = currentDate.getDay();
+         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const hasEntry = userEntries.some(e => e.date.startsWith(dateStr));
+            if (!hasEntry) missingCount++;
+         }
+         currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return missingCount;
+   }, [user, timesheetEntries]);
+
    if (!user) {
       return <div className="p-8">Colaborador não encontrado.</div>;
    }
 
    // Logic
    let userTasks = tasks.filter(t => t.developerId === user.id);
-   const userProjectIds = Array.from(new Set(userTasks.map(t => t.projectId)));
-   const userProjects = projects.filter(p => userProjectIds.includes(p.id));
+   const linkedProjectIds = projectMembers
+      .filter(pm => pm.userId === user.id)
+      .map(pm => pm.projectId);
 
-   // Sort
+   const userProjects = projects.filter(p => linkedProjectIds.includes(p.id) && p.active !== false);
+   const delayedTasks = userTasks.filter(t => getDelayDays(t) > 0);
+   const totalTasks = userTasks.length;
+
    userTasks = [...userTasks].sort((a, b) => getTaskPriority(a) - getTaskPriority(b));
 
-   // Metrics
-   const totalTasks = userTasks.length;
-   const delayedTasks = userTasks.filter(t => getDelayDays(t) > 0);
-   const completedTasks = userTasks.filter(t => t.status === 'Done');
-
-   const filteredTasks = taskFilter === 'all'
-      ? userTasks
-      : taskFilter === 'delayed'
-         ? delayedTasks
-         : completedTasks;
+   const renderContent = () => {
+      switch (activeTab) {
+         case 'projects':
+            return (
+               <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-6">
+                     <Briefcase className="w-5 h-5 text-[#4c1d95]" />
+                     Projetos Vinculados
+                  </h3>
+                  {userProjects.length > 0 ? (
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {userProjects.map(p => (
+                           <button
+                              key={p.id}
+                              onClick={() => navigate(`/admin/projects/${p.id}`)}
+                              className="bg-white border-2 border-slate-100 p-5 rounded-2xl hover:border-[#4c1d95] hover:shadow-lg transition-all text-left flex flex-col justify-between group h-32"
+                           >
+                              <div>
+                                 <h4 className="font-bold text-slate-800 group-hover:text-[#4c1d95] transition-colors">{p.name}</h4>
+                                 <p className="text-xs text-slate-500 mt-1 line-clamp-1">{p.description || 'Sem descrição'}</p>
+                              </div>
+                              <div className="flex items-center gap-2 mt-auto">
+                                 <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded uppercase">
+                                    {p.status || 'Ativo'}
+                                 </span>
+                              </div>
+                           </button>
+                        ))}
+                     </div>
+                  ) : (
+                     <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                        <p className="text-slate-400">Nenhum projeto vinculado.</p>
+                     </div>
+                  )}
+               </div>
+            );
+         case 'tasks':
+         case 'delayed':
+            const displayTasks = activeTab === 'delayed' ? delayedTasks : userTasks;
+            return (
+               <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-6">
+                     {activeTab === 'delayed' ? <AlertCircle className="w-5 h-5 text-red-500" /> : <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                     {activeTab === 'delayed' ? 'Tarefas Atrasadas' : 'Total de Tarefas'}
+                  </h3>
+                  {displayTasks.length > 0 ? (
+                     <div className="space-y-3">
+                        {displayTasks.map(task => {
+                           const delayDays = getDelayDays(task);
+                           const isDelayed = delayDays > 0;
+                           return (
+                              <div
+                                 key={task.id}
+                                 onClick={() => navigate(`/tasks/${task.id}`)}
+                                 className={`border p-4 rounded-xl flex justify-between items-center hover:shadow-md cursor-pointer transition-all group ${isDelayed ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-200 hover:border-[#4c1d95]'}`}
+                              >
+                                 <div className="flex items-center gap-3">
+                                    {task.status === 'Done' ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Clock className={`w-5 h-5 ${isDelayed ? 'text-red-400' : 'text-slate-400'}`} />}
+                                    <div>
+                                       <p className={`font-semibold text-sm group-hover:text-[#4c1d95] ${isDelayed ? 'text-red-900' : 'text-slate-800'}`}>{task.title}</p>
+                                       <div className="flex gap-2 text-xs text-slate-500 mt-1">
+                                          <span className={`px-1.5 py-0.5 rounded border ${isDelayed ? 'bg-red-100 border-red-200 text-red-700' : 'bg-slate-50 border-slate-100'}`}>{task.status}</span>
+                                          <span>•</span>
+                                          <span className={`flex items-center gap-1 ${isDelayed ? 'text-red-600 font-bold' : ''}`}>
+                                             <Calendar className="w-3 h-3" />
+                                             {new Date(task.estimatedDelivery).toLocaleDateString()}
+                                             {isDelayed && ` (+${delayDays}d)`}
+                                          </span>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div className={`text-xs font-bold ${isDelayed ? 'text-red-500' : 'text-slate-400'}`}>{task.progress}%</div>
+                              </div>
+                           );
+                        })}
+                     </div>
+                  ) : (
+                     <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                        <p className="text-slate-400">Nenhuma tarefa encontrada.</p>
+                     </div>
+                  )}
+               </div>
+            );
+         case 'ponto':
+            return (
+               <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-6">
+                     <Timer className="w-5 h-5 text-orange-500" />
+                     Apontamento de Horas (Ponto)
+                  </h3>
+                  <div className="bg-orange-50 border border-orange-100 p-8 rounded-3xl text-center">
+                     <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-orange-100">
+                        <span className="text-3xl font-black text-orange-600">{missingPontoDays}</span>
+                     </div>
+                     <h4 className="text-xl font-bold text-orange-900 mb-2">Dias pendentes no mês</h4>
+                     <p className="text-orange-700 text-sm max-w-sm mx-auto">
+                        Este colaborador ainda não realizou o apontamento de horas em {missingPontoDays} dias úteis do mês vigente.
+                     </p>
+                  </div>
+               </div>
+            );
+      }
+   };
 
    return (
       <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -80,137 +202,80 @@ const TeamMemberDetail: React.FC = () => {
 
             <div className="flex-1">
                <h1 className="text-xl font-bold text-white">{user.name}</h1>
-               <div className="flex items-center gap-3 mt-1">
-                  <p className="text-sm text-purple-100">{user.cargo || 'Cargo não informado'}</p>
-                  <span className="text-purple-200">•</span>
-                  <p className="text-sm text-purple-100">{user.role === 'admin' ? 'Administrador' : 'Desenvolvedor'}</p>
+               <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="text-xs font-bold px-2 py-0.5 bg-white/20 text-white rounded-full uppercase tracking-wider">
+                     {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
+                  </span>
+                  {user.cargo && (
+                     <>
+                        <span className="text-purple-200 opacity-50">•</span>
+                        <p className="text-sm text-purple-100 font-medium">{user.cargo}</p>
+                     </>
+                  )}
                </div>
             </div>
          </div>
 
-         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+         <div className="flex-1 overflow-hidden p-8">
+            <div className="max-w-6xl mx-auto h-full grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-               {/* Left Column: Summary */}
-               <div className="space-y-6">
-                  <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
-                     <h3 className="font-bold text-slate-800 mb-4">Resumo</h3>
-                     <div className="space-y-3">
-                        <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100">
-                           <span className="text-sm text-slate-600">Projetos Ativos</span>
-                           <span className="font-bold text-[#4c1d95] text-lg">{userProjects.length}</span>
-                        </div>
+               {/* Sidebar: Resumo (Tabs) */}
+               <div className="lg:col-span-4 space-y-6">
+                  <div className="bg-slate-50 rounded-3xl p-6 border border-slate-200">
+                     <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        Resumo
+                     </h3>
+                     <div className="space-y-4">
                         <button
-                           onClick={() => setTaskFilter('all')}
-                           className={`w-full flex justify-between items-center p-3 rounded-xl border transition-all ${taskFilter === 'all' ? 'bg-[#4c1d95] border-[#4c1d95] text-white' : 'bg-white border-slate-100 hover:border-[#4c1d95]'}`}
+                           onClick={() => setActiveTab('projects')}
+                           className={`w-full flex justify-between items-center p-4 rounded-2xl border transition-all duration-300 ${activeTab === 'projects' ? 'bg-[#4c1d95] border-[#4c1d95] text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-100 text-slate-600 hover:border-[#4c1d95]'}`}
                         >
-                           <span className="text-sm">Total de Tarefas</span>
-                           <span className="font-bold text-lg">{totalTasks}</span>
+                           <div className="flex items-center gap-3">
+                              <Briefcase className={`w-5 h-5 ${activeTab === 'projects' ? 'text-white' : 'text-[#4c1d95]'}`} />
+                              <span className="text-sm font-bold">Projetos Vinculados</span>
+                           </div>
+                           <span className="font-black text-xl">{userProjects.length}</span>
                         </button>
+
                         <button
-                           onClick={() => setTaskFilter('delayed')}
-                           className={`w-full flex justify-between items-center p-3 rounded-xl border transition-all ${taskFilter === 'delayed' ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-slate-100 hover:border-red-300'}`}
+                           onClick={() => setActiveTab('tasks')}
+                           className={`w-full flex justify-between items-center p-4 rounded-2xl border transition-all duration-300 ${activeTab === 'tasks' ? 'bg-[#4c1d95] border-[#4c1d95] text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-100 text-slate-600 hover:border-[#4c1d95]'}`}
                         >
-                           <span className="text-sm">Tarefas Atrasadas</span>
-                           <span className="font-bold text-lg">{delayedTasks.length}</span>
+                           <div className="flex items-center gap-3">
+                              <Clock className={`w-5 h-5 ${activeTab === 'tasks' ? 'text-white' : 'text-blue-500'}`} />
+                              <span className="text-sm font-bold">Total de Tarefas</span>
+                           </div>
+                           <span className="font-black text-xl">{totalTasks}</span>
                         </button>
+
                         <button
-                           onClick={() => setTaskFilter('completed')}
-                           className={`w-full flex justify-between items-center p-3 rounded-xl border transition-all ${taskFilter === 'completed' ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-slate-100 hover:border-green-300'}`}
+                           onClick={() => setActiveTab('delayed')}
+                           className={`w-full flex justify-between items-center p-4 rounded-2xl border transition-all duration-300 ${activeTab === 'delayed' ? 'bg-red-500 border-red-500 text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-100 text-slate-600 hover:border-red-300'}`}
                         >
-                           <span className="text-sm">Concluídas</span>
-                           <span className="font-bold text-lg">{completedTasks.length}</span>
+                           <div className="flex items-center gap-3">
+                              <AlertCircle className={`w-5 h-5 ${activeTab === 'delayed' ? 'text-white' : 'text-red-500'}`} />
+                              <span className="text-sm font-bold">Tarefas Atrasadas</span>
+                           </div>
+                           <span className="font-black text-xl">{delayedTasks.length}</span>
+                        </button>
+
+                        <button
+                           onClick={() => setActiveTab('ponto')}
+                           className={`w-full flex justify-between items-center p-4 rounded-2xl border transition-all duration-300 ${activeTab === 'ponto' ? 'bg-orange-500 border-orange-500 text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-100 text-slate-600 hover:border-orange-300'}`}
+                        >
+                           <div className="flex items-center gap-3">
+                              <Timer className={`w-5 h-5 ${activeTab === 'ponto' ? 'text-white' : 'text-orange-500'}`} />
+                              <span className="text-sm font-bold">Ponto</span>
+                           </div>
+                           <span className="font-black text-xl">{missingPontoDays}</span>
                         </button>
                      </div>
                   </div>
-
-                  <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
-                     <h3 className="font-bold text-slate-800 mb-4">Projetos Envolvidos</h3>
-                     {userProjects.length > 0 ? (
-                        <div className="space-y-3">
-                           {userProjects.map(p => (
-                              <div key={p.id} className="flex items-center gap-3">
-                                 <div className="w-2 h-2 rounded-full bg-[#4c1d95]"></div>
-                                 <span className="text-sm font-medium text-slate-700">{p.name}</span>
-                              </div>
-                           ))}
-                        </div>
-                     ) : (
-                        <p className="text-sm text-slate-400">Nenhum projeto vinculado.</p>
-                     )}
-                  </div>
                </div>
 
-               {/* Right Column: Task List */}
-               <div className="lg:col-span-2">
-                  <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-between">
-                     <span className="flex items-center gap-2">
-                        Tarefas Alocadas
-                        {taskFilter !== 'all' && (
-                           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${taskFilter === 'delayed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                              {taskFilter === 'delayed' ? 'Atrasadas' : 'Concluídas'}
-                           </span>
-                        )}
-                     </span>
-                     <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
-                        Clique para editar
-                     </span>
-                  </h3>
-
-                  <div className="space-y-3">
-                     {filteredTasks.map(task => {
-                        const delayDays = getDelayDays(task);
-                        const isDelayed = delayDays > 0;
-
-                        return (
-                           <div
-                              key={task.id}
-                              onClick={() => navigate(`/tasks/${task.id}`)}
-                              className={`
-                                   border p-4 rounded-xl flex justify-between items-center hover:shadow-md cursor-pointer transition-all group
-                                   ${isDelayed
-                                    ? 'bg-red-50 border-red-200 hover:border-red-300'
-                                    : 'bg-white border-slate-200 hover:border-[#4c1d95]'}
-                                 `}
-                           >
-                              <div className="flex items-center gap-3">
-                                 {task.status === 'Done' ? (
-                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                 ) : (
-                                    <Clock className={`w-5 h-5 ${isDelayed ? 'text-red-400' : 'text-slate-400'}`} />
-                                 )}
-                                 <div>
-                                    <p className={`font-semibold text-sm group-hover:text-[#4c1d95] ${isDelayed ? 'text-red-900' : 'text-slate-800'}`}>
-                                       {task.title}
-                                    </p>
-                                    <div className="flex gap-2 text-xs text-slate-500 mt-1">
-                                       <span className={`px-1.5 py-0.5 rounded border ${isDelayed ? 'bg-red-100 border-red-200 text-red-700' : 'bg-slate-50 border-slate-100'}`}>
-                                          {task.status}
-                                       </span>
-                                       <span>•</span>
-                                       <span className={`flex items-center gap-1 ${isDelayed ? 'text-red-600 font-bold' : ''}`}>
-                                          <Calendar className="w-3 h-3" />
-                                          {new Date(task.estimatedDelivery).toLocaleDateString()}
-                                          {isDelayed && ` (+${delayDays}d)`}
-                                       </span>
-                                    </div>
-                                 </div>
-                              </div>
-                              <div className={`text-xs font-bold ${isDelayed ? 'text-red-500' : 'text-slate-400'}`}>
-                                 {task.progress}%
-                              </div>
-                           </div>
-                        );
-                     })}
-
-                     {filteredTasks.length === 0 && (
-                        <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl">
-                           <p className="text-slate-400">
-                              {taskFilter === 'all' ? 'Nenhuma tarefa alocada para este colaborador.' : taskFilter === 'delayed' ? 'Nenhuma tarefa atrasada.' : 'Nenhuma tarefa concluída.'}
-                           </p>
-                        </div>
-                     )}
-                  </div>
+               {/* Right Side: Tab Content */}
+               <div className="lg:col-span-8 flex flex-col h-full bg-slate-50/50 rounded-3xl p-8 border border-slate-100 overflow-y-auto custom-scrollbar">
+                  {renderContent()}
                </div>
 
             </div>

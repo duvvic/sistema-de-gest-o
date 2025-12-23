@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Edit, CheckSquare, Clock } from 'lucide-react';
 const ProjectDetailView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects, clients, tasks, users } = useDataController();
+  const { projects, clients, tasks, users, projectMembers } = useDataController();
 
   const project = projects.find(p => p.id === projectId);
   const client = project ? clients.find(c => c.id === project.clientId) : null;
@@ -75,7 +75,36 @@ const ProjectDetailView: React.FC = () => {
             </div>
           )}
           <h1 className="text-2xl font-bold text-slate-800">{project.name}</h1>
-          <p className="text-slate-500">{projectTasks.length} tarefas</p>
+          <div className="flex items-center gap-4 mt-1">
+            <p className="text-slate-500 font-medium text-sm">{projectTasks.length} tarefas</p>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <div className="flex -space-x-1.5 overflow-hidden">
+              {projectMembers
+                .filter(pm => pm.projectId === projectId)
+                .map(pm => {
+                  const member = users.find(u => u.id === pm.userId);
+                  if (!member) return null;
+                  return (
+                    <div
+                      key={member.id}
+                      className="w-6 h-6 rounded-full border border-white bg-slate-100 flex items-center justify-center overflow-hidden"
+                      title={member.name}
+                    >
+                      {member.avatarUrl ? (
+                        <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[9px] font-bold text-slate-500">
+                          {member.name.substring(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              {projectMembers.filter(pm => pm.projectId === projectId).length === 0 && (
+                <span className="text-xs text-slate-400 italic">Sem equipe</span>
+              )}
+            </div>
+          </div>
         </div>
 
         <button

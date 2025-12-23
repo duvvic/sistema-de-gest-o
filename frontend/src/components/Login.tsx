@@ -49,6 +49,7 @@ const Login: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [otpToken, setOtpToken] = useState('');
     const [loading, setLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     // Estados para visualização temporária de senha
     const [showPass, setShowPass] = useState(false);
@@ -79,13 +80,13 @@ const Login: React.FC = () => {
         loadUsers();
     }, []);
 
-    // Redireciona se já estiver logado
+    // Redireciona se já estiver logado (somente no modo normal de login)
     useEffect(() => {
-        if (currentUser) {
+        if (currentUser && mode === 'login') {
             const redirectPath = currentUser.role === 'admin' ? '/admin/clients' : '/developer/projects';
             navigate(redirectPath, { replace: true });
         }
-    }, [currentUser, navigate]);
+    }, [currentUser, navigate, mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -192,16 +193,26 @@ const Login: React.FC = () => {
             });
 
             if (error) {
-                const { error: retryError } = await supabase.auth.verifyOtp({
+                // Tenta como 'recovery' (recuperação de senha)
+                const { error: recoveryError } = await supabase.auth.verifyOtp({
                     email: normalizedEmail,
                     token: otpToken.trim(),
                     type: 'recovery',
                 });
 
-                if (retryError) {
-                    console.error('[Login] Erro OTP:', retryError);
-                    alert('Token inválido ou expirado.');
-                    return;
+                if (recoveryError) {
+                    // Tenta como 'signup' (primeiro acesso)
+                    const { error: signupError } = await supabase.auth.verifyOtp({
+                        email: normalizedEmail,
+                        token: otpToken.trim(),
+                        type: 'signup',
+                    });
+
+                    if (signupError) {
+                        console.error('[Login] Erro OTP (Todos os tipos falharam):', signupError);
+                        alert('Token inválido ou expirado. Verifique o código e tente novamente.');
+                        return;
+                    }
                 }
             }
 
@@ -244,10 +255,15 @@ const Login: React.FC = () => {
 
             if (error) throw error;
 
-            alert('Senha configurada com sucesso!');
-            login(selectedUser);
-            const redirectPath = selectedUser.role === 'admin' ? '/admin/clients' : '/developer/projects';
-            navigate(redirectPath);
+            // Volta para login preenchendo os campos, sem logar automaticamente
+            setMode('login');
+            setEmail(selectedUser.email);
+            setPassword(newPassword);
+            setSelectedUser(null);
+            setNewPassword('');
+            setConfirmPassword('');
+            setOtpToken('');
+            setSuccessMessage('Senha atualizada com sucesso! Faça login abaixo.');
         } catch (error: any) {
             console.error('[Login] Erro ao criar senha:', error);
             alert('Erro ao salvar senha: ' + error.message);
@@ -290,7 +306,7 @@ const Login: React.FC = () => {
             const { error: authError } = await supabase.auth.signInWithOtp({
                 email: normalizedEmail,
                 options: {
-                    shouldCreateUser: false
+                    shouldCreateUser: true
                 }
             });
 
@@ -384,6 +400,11 @@ const Login: React.FC = () => {
                             mode === 'set-password' ? 'Crie sua senha para acessar o NIC Labs Manager.' :
                                 'Acesse sua conta para gerenciar projetos'}
                     </p>
+                    {successMessage && mode === 'login' && (
+                        <div className="mt-4 px-4 py-2 rounded-lg bg-green-100 border border-green-200 text-green-700 text-sm font-semibold">
+                            {successMessage}
+                        </div>
+                    )}
                 </div>
 
                 {/* Form */}
