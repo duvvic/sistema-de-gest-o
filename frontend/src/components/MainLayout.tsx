@@ -23,46 +23,72 @@ const MainLayout: React.FC = () => {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    // Lógica para detectar direção da navegação (iOS Style)
-    const [direction, setDirection] = React.useState<'root' | 'forward' | 'back'>('root');
-    const prevPathRef = React.useRef(location.pathname);
+    // Listamos as rotas "raiz" do menu para forçar a animação de baixo p/ cima
+    const MAIN_PATHS = [
+        '/admin/clients',
+        '/tasks',
+        '/admin/team',
+        '/timesheet',
+        '/developer/projects',
+        '/developer/tasks',
+        '/profile'
+    ];
 
-    React.useEffect(() => {
+    // Ref para guardar o path anterior e calcular direção instantaneamente
+    const prevPathRef = React.useRef(location.pathname);
+    const [direction, setDirection] = useState<'root' | 'forward' | 'back'>('root');
+
+    // UseLayoutEffect roda antes da pintura browser, evitando "flash"
+    React.useLayoutEffect(() => {
         const prevPath = prevPathRef.current;
         const currentPath = location.pathname;
 
-        // Verifica profundidade (número de barras)
-        const prevDepth = prevPath.split('/').filter(Boolean).length;
-        const currentDepth = currentPath.split('/').filter(Boolean).length;
+        if (prevPath === currentPath) return;
 
-        if (currentDepth > prevDepth) {
-            setDirection('forward'); // Entrando em detalhe
-        } else if (currentDepth < prevDepth) {
-            setDirection('back'); // Voltando
+        const isPrevMain = MAIN_PATHS.some(p => prevPath.startsWith(p) && prevPath.split('/').length === p.split('/').length);
+        const isCurrentMain = MAIN_PATHS.some(p => currentPath.startsWith(p) && currentPath.split('/').length === p.split('/').length);
+
+        let newDir: 'root' | 'forward' | 'back' = 'root';
+
+        if (isPrevMain && isCurrentMain) {
+            // De menu para menu => Baixo para cima (Root)
+            newDir = 'root';
         } else {
-            setDirection('root'); // Navegação lateral (menu)
+            // Navegação de detalhes
+            const prevDepth = prevPath.split('/').filter(Boolean).length;
+            const currentDepth = currentPath.split('/').filter(Boolean).length;
+
+            if (currentDepth > prevDepth) {
+                newDir = 'forward'; // Entrando
+            } else if (currentDepth < prevDepth) {
+                newDir = 'back';    // Voltando
+            } else {
+                newDir = 'root';    // Mesmo nível mas não é menu principal? Trata como root ou forward suave
+            }
         }
 
+        setDirection(newDir);
         prevPathRef.current = currentPath;
     }, [location.pathname]);
 
-    // Variantes de animação
+    // Variantes de animação refinadas
     const variants = {
         initial: (dir: string) => {
-            if (dir === 'forward') return { x: '100%', opacity: 1 }; // Entra da direita
-            if (dir === 'back') return { x: '-30%', opacity: 0 };    // Entra da esquerda (efeito paralaxe suave)
-            return { y: 20, opacity: 0 };                            // Menu: vem de baixo
+            if (dir === 'forward') return { x: '100%', opacity: 1, position: 'absolute' };
+            if (dir === 'back') return { x: '-20%', opacity: 0.5, position: 'absolute' };
+            return { y: 100, opacity: 0, position: 'absolute' }; // Baixo para cima mais forte
         },
         animate: {
             x: 0,
             y: 0,
             opacity: 1,
-            transition: { duration: 0.3, ease: [0.25, 1, 0.5, 1] as [number, number, number, number] } // Curva estilo iOS (easeOutQuart aprox)
+            position: 'absolute', // Garante que a página ativa ocupe o topo
+            transition: { duration: 0.4, ease: [0.32, 0.72, 0, 1] } // Curva iOS "Spring-like"
         },
         exit: (dir: string) => {
-            if (dir === 'forward') return { x: '-30%', opacity: 0 };  // Sai para a esquerda
-            if (dir === 'back') return { x: '100%', opacity: 1, zIndex: 10 };     // Sai para a direita (sobrepondo)
-            return { opacity: 0 };                                    // Menu: fade out simples
+            if (dir === 'forward') return { x: '-20%', opacity: 0.5, position: 'absolute' };
+            if (dir === 'back') return { x: '100%', opacity: 1, zIndex: 50, position: 'absolute' };
+            return { opacity: 0, scale: 0.95, position: 'absolute' };
         }
     };
 
