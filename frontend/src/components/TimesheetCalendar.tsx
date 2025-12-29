@@ -302,20 +302,20 @@ const TimesheetCalendar: React.FC = () => {
         </div>
 
         {/* Grid Days Header (Sticky) */}
-        <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100 flex-shrink-0 sticky top-0 z-10">
+        <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 flex-shrink-0 sticky top-0 z-10">
           {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((day, idx) => (
-            <div key={day} className={`py-3 text-center text-[10px] font-black tracking-widest ${idx === 0 || idx === 6 ? 'text-red-400' : 'text-slate-400'}`}>
+            <div key={day} className={`py-3 text-center text-[11px] font-bold tracking-widest ${idx === 0 || idx === 6 ? 'text-red-500/70' : 'text-slate-500'}`}>
               {day}
             </div>
           ))}
         </div>
 
         {/* Grid Body (Scrollable) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 relative">
-          <div className="grid grid-cols-7 min-h-full auto-rows-fr bg-slate-50 gap-px border-b border-slate-200">
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-200 relative">
+          <div className="grid grid-cols-7 min-h-full auto-rows-fr bg-slate-200 gap-[1px] border-b border-slate-200">
             {/* Empty Slots */}
             {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="bg-white min-h-[100px]"></div>
+              <div key={`empty-${i}`} className="bg-slate-50/50 min-h-[100px]"></div>
             ))}
 
             {/* Days */}
@@ -334,22 +334,23 @@ const TimesheetCalendar: React.FC = () => {
                   key={d}
                   onClick={() => navigate(`/timesheet/new?date=${dateStr}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
                   className={`
-                                    bg-white p-2 relative cursor-pointer min-h-[120px] transition-all group border-transparent hover:z-10 hover:shadow-lg
-                                    ${isToday ? 'bg-purple-50/20' : ''}
+                                    p-2 relative cursor-pointer min-h-[120px] transition-all group border-transparent hover:z-10 hover:shadow-xl
+                                    ${isWeekend ? 'bg-slate-50/60' : 'bg-white'}
+                                    ${isToday ? 'bg-purple-50/30' : ''}
                                 `}
                 >
-                  <div className="flex justify-between items-start mb-1.5">
-                    <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full transition-colors ${isToday ? 'bg-[#4c1d95] text-white shadow-md' : 'text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-100'}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full transition-colors ${isToday ? 'bg-[#4c1d95] text-white shadow-md ring-2 ring-purple-200' : 'text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-100'}`}>
                       {d}
                     </span>
                     {hasEntries && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
                         {totalDayHours.toFixed(1)}h
                       </span>
                     )}
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {dayEntries.map(entry => {
                       const task = safeTasks.find(t => t.id === entry.taskId);
                       const title = task?.title || entry.description || 'Horas';
@@ -358,11 +359,11 @@ const TimesheetCalendar: React.FC = () => {
                         <div
                           key={entry.id}
                           onClick={(e) => { e.stopPropagation(); navigate(`/timesheet/${entry.id}`); }}
-                          className="bg-slate-50 border border-slate-100 rounded px-1.5 py-1 text-[10px] text-slate-600 truncate hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-colors flex justify-between items-center group/item"
+                          className="bg-white border border-slate-200 shadow-sm rounded-md px-2 py-1.5 text-[10px] text-slate-600 truncate hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-all flex justify-between items-center group/item"
                         >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <div className={`w-1 h-1 rounded-full shrink-0 ${entry.totalHours >= 8 ? 'bg-emerald-400' : 'bg-purple-400'}`}></div>
-                            <span className="truncate">{title}</span>
+                          <div className="flex items-center gap-2 truncate">
+                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.totalHours >= 8 ? 'bg-emerald-400' : 'bg-purple-400'}`}></div>
+                            <span className="truncate font-medium">{title}</span>
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); setEntryToDelete(entry); setDeleteModalOpen(true); }}
@@ -377,7 +378,9 @@ const TimesheetCalendar: React.FC = () => {
 
                   {!hasEntries && !isWeekend && (
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                      <Plus className="w-8 h-8 text-slate-200" />
+                      <div className="bg-purple-50 p-2 rounded-full shadow-sm">
+                        <Plus className="w-5 h-5 text-purple-400" />
+                      </div>
                     </div>
                   )}
                 </div>
