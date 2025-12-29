@@ -57,6 +57,7 @@ export interface Task {
   priority?: Priority;
   impact?: Impact;
   risks?: string;
+  daysOverdue?: number;
 }
 
 export interface TimesheetEntry {

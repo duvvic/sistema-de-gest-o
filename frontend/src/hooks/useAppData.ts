@@ -237,6 +237,31 @@ export function useAppData(): AppData {
             notes: row["Observações"] || undefined,
             description: undefined, // Não existe no banco atual
             attachment: undefined, // Não existe no banco atual
+            daysOverdue: (() => {
+              if (!row.entrega_estimada) return 0;
+
+              const deadline = new Date(row.entrega_estimada);
+              deadline.setHours(0, 0, 0, 0);
+
+              const now = new Date();
+              now.setHours(0, 0, 0, 0);
+
+              const status = normalizeStatus(row.StatusTarefa);
+
+              if (status === 'Done') {
+                if (row.entrega_real) {
+                  const delivery = new Date(row.entrega_real);
+                  delivery.setHours(0, 0, 0, 0);
+                  return Math.ceil((delivery.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24));
+                }
+                return 0; // Se concluído sem data real, assume no prazo
+              }
+
+              // Se não concluído, atraso é (Hoje - Prazo)
+              // Se hoje > prazo, numero positivo (atrasado)
+              // Se hoje < prazo, numero negativo (adiantado)
+              return Math.ceil((now.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24));
+            })(),
           };
         });
 
