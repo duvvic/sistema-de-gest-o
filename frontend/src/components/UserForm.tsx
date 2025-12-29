@@ -59,7 +59,7 @@ const UserForm: React.FC = () => {
         NomeColaborador: formData.name,
         "E-mail": formData.email,
         Cargo: formData.cargo,
-        papel: formData.role,
+        papel: formData.role === 'admin' ? 'Administrador' : 'Padrão',
         ativo: formData.active,
         avatar_url: formData.avatarUrl
       };
@@ -200,8 +200,8 @@ const UserForm: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'developer' })}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none"
                 >
-                  <option value="developer">Desenvolvedor (Padrão)</option>
-                  <option value="admin">Administrador</option>
+                  <option value="developer">Padrão</option>
+                  <option value="admin">Administrativo</option>
                 </select>
               </div>
             </div>
