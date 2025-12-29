@@ -95,6 +95,7 @@ export async function fetchUsers(): Promise<User[]> {
       email: String(row["E-mail"] || row["email"] || "").trim().toLowerCase(),
       avatarUrl: row.avatar_url || undefined,
       cargo: row.Cargo || row.cargo || undefined,
+      // 'Administrador' -> admin, 'Padrão' ou qualquer outro -> developer
       role: row.papel === 'Administrador' ? 'admin' : 'developer',
       active: row.ativo !== false,
     }));

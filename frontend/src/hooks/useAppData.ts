@@ -317,7 +317,7 @@ export function useAppData(): AppData {
     return () => {
       isMounted = false;
     };
-  }, [currentUser, authLoading]);
+  }, [authLoading]); // Removido currentUser para evitar loop infinito
 
   return {
     users,
