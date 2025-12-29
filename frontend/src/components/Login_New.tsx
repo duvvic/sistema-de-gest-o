@@ -1,7 +1,8 @@
 // components/Login.tsx - Versão adaptada para React Router
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +49,7 @@ const Login: React.FC = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // Redireciona se já estiver logado
@@ -234,147 +236,221 @@ const Login: React.FC = () => {
     const effectiveEmail = isSetPassword && selectedUser ? selectedUser.email : email;
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-8">
-                {/* Header */}
-                <div className="text-center space-y-2">
-                    <div className="flex justify-center mb-4">
-                        <img
-                            src={logoImg}
-                            alt="NIC-LABS"
-                            className="h-20 w-auto object-contain"
-                        />
+        <div className="min-h-screen bg-[#0f0720] flex flex-col justify-center items-center p-4 relative overflow-hidden">
+            {/* Background elements for premium look */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#4c1d95] opacity-20 blur-[120px] rounded-full"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#7c3aed] opacity-20 blur-[120px] rounded-full"></div>
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden z-10"
+            >
+                <div className="p-8 sm:p-10 space-y-8">
+                    {/* Header */}
+                    <div className="text-center space-y-3">
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                            className="flex justify-center mb-6"
+                        >
+                            <img
+                                src={logoImg}
+                                alt="NIC-LABS"
+                                className="h-20 w-auto object-contain"
+                            />
+                        </motion.div>
+                        <motion.h2
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="text-3xl font-extrabold text-[#1e1b4b]"
+                        >
+                            {isSetPassword ? 'Defina sua senha' : 'Bem-vindo colaborador'}
+                        </motion.h2>
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                            className="text-slate-500 text-sm font-medium"
+                        >
+                            {isSetPassword
+                                ? 'Crie sua senha para acessar o NIC-LABS.'
+                                : 'Acesse com seu email@nic-labs.com.br'}
+                        </motion.p>
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        {isSetPassword ? 'Defina sua senha' : 'Bem-vindo de volta'}
-                    </h2>
-                    <p className="text-slate-500 text-sm">
-                        {isSetPassword
-                            ? 'Crie sua senha para acessar o NIC Labs.'
-                            : 'Acesse sua conta para gerenciar projetos'}
-                    </p>
-                </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-4">
-                        {/* E-mail */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">E-mail</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                    <Mail className="h-5 w-5" />
-                                </div>
-                                <input
-                                    type="email"
-                                    value={effectiveEmail}
-                                    onChange={(e) => !isSetPassword && setEmail(e.target.value)}
-                                    disabled={isSetPassword}
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800 placeholder-slate-400 disabled:bg-slate-100"
-                                    placeholder="seu@email.com"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        {/* Senha normal */}
-                        {!isSetPassword && (
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Senha</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                        <Lock className="h-5 h-5" />
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-5">
+                            {/* E-mail */}
+                            <motion.div
+                                initial={{ x: -20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                transition={{ delay: 0.6 }}
+                            >
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">E-mail</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#4c1d95] transition-colors">
+                                        <Mail className="h-5 w-5" />
                                     </div>
                                     <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800 placeholder-slate-400"
-                                        placeholder="••••••••"
+                                        type="email"
+                                        value={effectiveEmail}
+                                        onChange={(e) => !isSetPassword && setEmail(e.target.value)}
+                                        disabled={isSetPassword}
+                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#4c1d95] focus:bg-white outline-none transition-all text-slate-800 placeholder-slate-400 disabled:bg-slate-100 font-medium"
+                                        placeholder="email@nic-labs.com.br"
+                                        required
                                     />
                                 </div>
-                            </div>
-                        )}
+                            </motion.div>
 
-                        {/* Definição de senha */}
-                        {isSetPassword && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Nova senha</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                            <Lock className="h-5 h-5" />
+                            {/* Senha normal */}
+                            {!isSetPassword && (
+                                <motion.div
+                                    initial={{ x: -20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    transition={{ delay: 0.7 }}
+                                >
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Senha</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#4c1d95] transition-colors">
+                                            <Lock className="h-5 w-5" />
                                         </div>
                                         <input
-                                            type="password"
-                                            value={newPassword}
-                                            onChange={(e) => setNewPassword(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800 placeholder-slate-400"
-                                            placeholder="Defina uma senha"
+                                            type={showPassword ? "text" : "password"}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#4c1d95] focus:bg-white outline-none transition-all text-slate-800 placeholder-slate-400 font-medium"
+                                            placeholder="••••••••"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#4c1d95] transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                        </button>
                                     </div>
-                                </div>
+                                </motion.div>
+                            )}
 
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirmar senha</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                            <Lock className="h-5 h-5" />
+                            {/* Definição de senha */}
+                            {isSetPassword && (
+                                <div className="space-y-5">
+                                    <motion.div
+                                        initial={{ x: -20, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        transition={{ delay: 0.7 }}
+                                    >
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Nova senha</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#4c1d95] transition-colors">
+                                                <Lock className="h-5 w-5" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={newPassword}
+                                                onChange={(e) => setNewPassword(e.target.value)}
+                                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#4c1d95] focus:bg-white outline-none transition-all text-slate-800 placeholder-slate-400 font-medium"
+                                                placeholder="Defina uma senha"
+                                            />
                                         </div>
-                                        <input
-                                            type="password"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all text-slate-800 placeholder-slate-400"
-                                            placeholder="Repita a senha"
-                                        />
-                                    </div>
+                                    </motion.div>
+
+                                    <motion.div
+                                        initial={{ x: -20, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        transition={{ delay: 0.8 }}
+                                    >
+                                        <label className="block text-sm font-semibold text-slate-700 mb-2">Confirmar senha</label>
+                                        <div className="relative group">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#4c1d95] transition-colors">
+                                                <Lock className="h-5 w-5" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#4c1d95] focus:bg-white outline-none transition-all text-slate-800 placeholder-slate-400 font-medium"
+                                                placeholder="Repita a senha"
+                                            />
+                                        </div>
+                                    </motion.div>
                                 </div>
-                            </>
-                        )}
-                    </div>
+                            )}
+                        </div>
 
-                    <div className="flex items-center justify-end">
-                        {!isSetPassword && (
-                            <button
-                                type="button"
-                                onClick={handleForgotPassword}
-                                className="text-sm font-medium text-[#4c1d95] hover:underline"
-                            >
-                                Esqueci minha senha
-                            </button>
-                        )}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.9 }}
+                            className="flex items-center justify-end"
+                        >
+                            {!isSetPassword && (
+                                <button
+                                    type="button"
+                                    onClick={handleForgotPassword}
+                                    className="text-sm font-bold text-[#4c1d95] hover:text-[#3b1675] transition-colors"
+                                >
+                                    Esqueci minha senha
+                                </button>
+                            )}
 
-                        {isSetPassword && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setMode('login');
-                                    setSelectedUser(null);
-                                    setNewPassword('');
-                                    setConfirmPassword('');
-                                }}
-                                className="text-sm font-medium text-slate-500 hover:underline"
-                            >
-                                Voltar para login
-                            </button>
-                        )}
-                    </div>
+                            {isSetPassword && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setMode('login');
+                                        setSelectedUser(null);
+                                        setNewPassword('');
+                                        setConfirmPassword('');
+                                    }}
+                                    className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                                >
+                                    Voltar para login
+                                </button>
+                            )}
+                        </motion.div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-[#4c1d95] hover:bg-[#3b1675] disabled:opacity-70 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-bold shadow-lg shadow-purple-200 transition-all flex items-center justify-center gap-2 group"
+                        <motion.button
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 1.0 }}
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#4c1d95] hover:bg-[#3b1675] disabled:opacity-70 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold shadow-xl shadow-purple-500/20 transition-all flex items-center justify-center gap-2 group relative overflow-hidden active:scale-[0.98]"
+                        >
+                            <span className="relative z-10">{loading ? 'Aguarde...' : isSetPassword ? 'Salvar senha e entrar' : 'Entrar na plataforma'}</span>
+                            {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform relative z-10" />}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                        </motion.button>
+                    </form>
+
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                        className="flex flex-col items-center pt-2"
                     >
-                        {loading ? 'Aguarde...' : isSetPassword ? 'Salvar senha e entrar' : 'Entrar'}
-                        {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
-                    </button>
-                </form>
-            </div>
+                        <p className="text-xs text-slate-400 text-center leading-relaxed">
+                            Ao acessar, você concorda com nossos termos de uso <br /> e política de privacidade.
+                        </p>
+                    </motion.div>
+                </div>
+            </motion.div>
 
-            <p className="mt-8 text-center text-slate-400 text-sm">
+            <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2 }}
+                className="mt-10 text-center text-slate-500 text-sm font-medium z-10"
+            >
                 © 2026 NIC-LABS. Todos os direitos reservados.
-            </p>
+            </motion.p>
         </div>
     );
 };
