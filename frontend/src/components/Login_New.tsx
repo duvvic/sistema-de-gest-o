@@ -239,7 +239,7 @@ const Login: React.FC = () => {
                 <div className="text-center space-y-2">
                     <div className="flex justify-center mb-4">
                         <img
-                            src="https://nic-labs.com/wp-content/uploads/2024/04/Logo-com-fundo-branco-1.png"
+                            src="/favicon.png"
                             alt="NIC Labs"
                             className="h-20 w-auto object-contain"
                         />
@@ -249,7 +249,7 @@ const Login: React.FC = () => {
                     </h2>
                     <p className="text-slate-500 text-sm">
                         {isSetPassword
-                            ? 'Crie sua senha para acessar o NIC Labs Manager.'
+                            ? 'Crie sua senha para acessar o NIC Labs.'
                             : 'Acesse sua conta para gerenciar projetos'}
                     </p>
                 </div>
@@ -372,7 +372,7 @@ const Login: React.FC = () => {
             </div>
 
             <p className="mt-8 text-center text-slate-400 text-sm">
-                © 2024 NIC Labs Manager. Todos os direitos reservados.
+                © 2026 NIC-LABS. Todos os direitos reservados.
             </p>
         </div>
     );

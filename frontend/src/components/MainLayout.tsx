@@ -58,7 +58,10 @@ const MainLayout: React.FC = () => {
                 <div className="p-6 flex items-center justify-between border-b border-purple-600">
                     {sidebarOpen ? (
                         <>
-                            <h1 className="text-xl font-bold">NIC Labs</h1>
+                            <div className="flex items-center gap-3">
+                                <img src="/favicon.png" alt="Logo" className="w-8 h-8 object-contain" />
+                                <h1 className="text-xl font-bold">NIC Labs</h1>
+                            </div>
                             <button
                                 onClick={() => setSidebarOpen(false)}
                                 className="p-2 hover:bg-purple-700 rounded-lg transition-colors"
