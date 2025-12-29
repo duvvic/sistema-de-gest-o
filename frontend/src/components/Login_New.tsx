@@ -6,6 +6,7 @@ import { User } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
+import logoImg from '@/assets/logo.png';
 
 type Mode = 'login' | 'set-password';
 
@@ -239,8 +240,8 @@ const Login: React.FC = () => {
                 <div className="text-center space-y-2">
                     <div className="flex justify-center mb-4">
                         <img
-                            src="/favicon.png"
-                            alt="NIC Labs"
+                            src={logoImg}
+                            alt="NIC-LABS"
                             className="h-20 w-auto object-contain"
                         />
                     </div>

@@ -14,6 +14,7 @@ import {
     Menu,
     X
 } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
 
 const MainLayout: React.FC = () => {
     const { currentUser, logout } = useAuth();
@@ -59,8 +60,8 @@ const MainLayout: React.FC = () => {
                     {sidebarOpen ? (
                         <>
                             <div className="flex items-center gap-3">
-                                <img src="/favicon.png" alt="Logo" className="w-8 h-8 object-contain" />
-                                <h1 className="text-xl font-bold">NIC Labs</h1>
+                                <img src={logoImg} alt="Logo" className="w-8 h-8 object-contain" />
+                                <h1 className="text-xl font-bold">NIC-LABS</h1>
                             </div>
                             <button
                                 onClick={() => setSidebarOpen(false)}
