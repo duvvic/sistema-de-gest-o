@@ -38,35 +38,60 @@ async function hashPassword(password: string): Promise<string> {
     return hash.toString(16);
 }
 
-const Snowflakes: React.FC = () => {
+const SnowBlocks: React.FC = () => {
     return (
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-            {[...Array(30)].map((_, i) => (
+            {[...Array(20)].map((_, i) => (
                 <motion.div
                     key={i}
                     initial={{
-                        opacity: 0,
                         y: -20,
-                        x: Math.random() * 100 + "%"
+                        x: Math.random() * 100 + "%",
+                        opacity: 0,
                     }}
                     animate={{
-                        opacity: [0, 0.8, 0],
                         y: "110vh",
-                        x: (Math.random() * 100 + (Math.random() - 0.5) * 20) + "%"
+                        opacity: [0, 0.6, 0],
+                        rotate: Math.random() * 360
                     }}
                     transition={{
-                        duration: Math.random() * 5 + 5,
+                        duration: Math.random() * 4 + 6,
                         repeat: Infinity,
                         delay: Math.random() * 5,
                         ease: "linear"
                     }}
-                    className="absolute text-white/40"
-                    style={{ fontSize: Math.random() * 10 + 10 + "px" }}
-                >
-                    ❄
-                </motion.div>
+                    className="absolute bg-white rounded-sm opacity-30"
+                    style={{
+                        width: Math.random() * 8 + 4 + "px",
+                        height: Math.random() * 8 + 4 + "px",
+                    }}
+                />
             ))}
         </div>
+    );
+};
+
+const SleighBackground: React.FC = () => {
+    return (
+        <motion.div
+            initial={{ x: "-20%", opacity: 0 }}
+            animate={{ x: "120%", opacity: 0.15 }}
+            transition={{
+                duration: 25,
+                repeat: Infinity,
+                ease: "linear",
+                delay: 2
+            }}
+            className="absolute bottom-[10%] left-0 w-[600px] pointer-events-none z-0"
+        >
+            {/* Silhueta simplificada de Trenó + Renas SVG */}
+            <svg viewBox="0 0 200 60" fill="currentColor" className="text-white w-full h-full">
+                <path d="M20 45 Q30 45, 35 40 L40 42 Q45 45, 50 40 L55 42 Q60 45, 65 40 L70 42 Q75 45, 80 40 L100 40 L105 35 L120 35 L125 40 L140 40 L135 30 L105 30 L100 25 L110 20 L130 20 L140 25 L150 25 L145 35 L160 35 L170 25 L180 30 L170 40 L180 45 L150 45 Z" opacity="0.8" />
+                <path d="M10 35 C 10 35, 20 20, 30 25 C 40 30, 30 40, 20 40 L 10 35" /> {/* Rena 1 */}
+                <circle cx="10" cy="35" r="1.5" />
+                <path d="M35 32 C 35 32, 45 17, 55 22 C 65 27, 55 37, 45 37 L 35 32" /> {/* Rena 2 */}
+            </svg>
+        </motion.div>
     );
 };
 
@@ -363,7 +388,8 @@ const Login: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0f0720] flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
-            <Snowflakes />
+            <SnowBlocks />
+            <SleighBackground />
             {/* Globos de Luz */}
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#4c1d95] opacity-20 blur-[120px] rounded-full"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#7c3aed] opacity-20 blur-[120px] rounded-full"></div>
@@ -372,8 +398,17 @@ const Login: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden z-10"
+                className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden z-10 relative"
             >
+                {/* Gorro de Natal na Borda do Menu */}
+                <div className="absolute -top-6 -left-6 w-24 h-24 pointer-events-none z-20">
+                    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg">
+                        <path d="M20 60 Q30 20, 70 30 Q60 10, 30 20 Z" fill="#D32F2F" /> {/* Parte vermelha */}
+                        <circle cx="20" cy="62" r="8" fill="white" /> {/* Pompom */}
+                        <path d="M30 65 Q50 75, 75 62 L 72 55 Q 50 65, 30 58 Z" fill="white" /> {/* Base branca */}
+                    </svg>
+                </div>
+
                 <div className="p-8 sm:p-10 space-y-8">
                     {/* Header */}
                     <div className="text-center space-y-3">
