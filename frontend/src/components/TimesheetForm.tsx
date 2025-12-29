@@ -365,14 +365,22 @@ const TimesheetForm: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-amber-50 p-4 rounded-xl border border-amber-200 cursor-pointer" onClick={() => setDeductLunch(!deductLunch)}>
+            <div className="flex items-center gap-3 bg-amber-50 p-4 rounded-xl border border-amber-200 cursor-pointer"
+              onClick={() => {
+                setDeductLunch(!deductLunch);
+                markDirty();
+              }}>
               <input
                 type="checkbox"
+                id="lunch-deduction-check"
                 checked={deductLunch}
                 onChange={() => { }} // Controlled by div click
-                className="w-5 h-5 text-[#4c1d95] border-slate-300 rounded focus:ring-[#4c1d95]"
+                className="w-5 h-5 text-[#4c1d95] border-slate-300 rounded focus:ring-[#4c1d95] pointer-events-none"
               />
-              <label className="font-semibold text-slate-700 cursor-pointer select-none">
+              <label
+                htmlFor="lunch-deduction-check"
+                className="font-semibold text-slate-700 cursor-pointer select-none"
+              >
                 🍽️ Descontar 1h de almoço
               </label>
             </div>

@@ -226,6 +226,7 @@ export const useDataController = () => {
     };
 
     const createTimesheet = async (entry: TimesheetEntry): Promise<void> => {
+        console.log("[Controller] Criando Apontamento:", entry);
         const { data, error } = await supabase
             .from('horas_trabalhadas')
             .insert({
@@ -253,6 +254,7 @@ export const useDataController = () => {
     };
 
     const updateTimesheet = async (entry: TimesheetEntry): Promise<void> => {
+        console.log("[Controller] Atualizando Apontamento:", entry);
         const { error } = await supabase
             .from('horas_trabalhadas')
             .update({
