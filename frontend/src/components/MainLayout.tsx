@@ -137,7 +137,7 @@ const MainLayout: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden">
+        <div className="flex h-screen bg-slate-100 overflow-hidden">
             {/* Sidebar */}
             <div
                 className={`${sidebarOpen ? 'w-64' : 'w-20'
@@ -230,7 +230,7 @@ const MainLayout: React.FC = () => {
             </div>
 
             {/* Main Content - iOS Navigation Wrapper */}
-            <div className="flex-1 overflow-hidden relative bg-slate-50 perspective-1000">
+            <div className="flex-1 overflow-hidden relative bg-slate-100 perspective-1000">
                 <AnimatePresence custom={direction} mode="popLayout">
                     <motion.div
                         key={location.pathname}
@@ -239,7 +239,7 @@ const MainLayout: React.FC = () => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="h-full w-full overflow-auto absolute top-0 left-0 bg-slate-50 shadow-2xl"
+                        className="h-full w-full overflow-auto absolute top-0 left-0 bg-slate-100 shadow-2xl"
                     // Adiciona sombra quando está "flutuando" na animação
                     >
                         <Outlet />
