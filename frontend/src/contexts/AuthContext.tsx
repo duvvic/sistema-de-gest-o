@@ -22,11 +22,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Carregar usuário do sessionStorage ao iniciar
     useEffect(() => {
         const loadUser = async () => {
+            console.log('[Auth] Iniciando loadUser...');
             try {
                 // Primeiro tenta carregar da sessão do Supabase
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (sessionError) {
+                    console.error('[Auth] Erro ao buscar sessão:', sessionError);
+                }
 
                 if (session?.user) {
+                    console.log('[Auth] Sessão encontrada para:', session.user.email);
                     // Buscar dados completos do usuário
                     const { data: userData, error } = await supabase
                         .from('dim_colaboradores')
@@ -34,7 +40,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         .eq('E-mail', session.user.email)
                         .maybeSingle();
 
+                    if (error) {
+                        console.error('[Auth] Erro ao buscar dados do usuário:', error);
+                    }
+
                     if (userData) {
+                        console.log('[Auth] Dados do usuário carregados:', userData.NomeColaborador);
                         const user: User = {
                             id: String(userData.ID_Colaborador),
                             name: userData.NomeColaborador,
@@ -47,25 +58,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         setCurrentUser(user);
                         sessionStorage.setItem('currentUser', JSON.stringify(user));
                     } else {
-                        // Usuário não encontrado no banco
+                        console.warn('[Auth] Usuário não encontrado no banco de dados');
                         setCurrentUser(null);
                         sessionStorage.removeItem('currentUser');
                         alert('Usuário não encontrado no banco. Faça login novamente.');
                     }
                 } else {
+                    console.log('[Auth] Nenhuma sessão Supabase encontrada, tentando fallback...');
                     // Fallback para sessionStorage
                     const storedUser = sessionStorage.getItem('currentUser');
                     if (storedUser) {
+                        console.log('[Auth] Usuário carregado do sessionStorage');
                         setCurrentUser(JSON.parse(storedUser));
                     } else {
+                        console.log('[Auth] Nenhum usuário encontrado no sessionStorage');
                         setCurrentUser(null);
                     }
                 }
             } catch (error) {
-                console.error('[Auth] Erro ao carregar usuário:', error);
+                console.error('[Auth] Erro FATAL ao carregar usuário:', error);
                 setCurrentUser(null);
                 alert('Erro ao carregar usuário. Faça login novamente.');
             } finally {
+                console.log('[Auth] Finalizando loadUser, isLoading = false');
                 setIsLoading(false);
             }
         };

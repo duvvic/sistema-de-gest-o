@@ -8,9 +8,9 @@ import { supabase } from '@/services/supabaseClient';
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser: updateAuthUser } = useAuth();
   // Use controller to get fresh data about current user if needed, or rely on AuthContext
-  const { users } = useDataController();
+  const { users, updateUser } = useDataController();
 
   const user = users.find(u => u.id === currentUser?.id) || currentUser;
 
@@ -28,14 +28,14 @@ const UserProfile: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('dim_colaboradores')
-        .update({ avatar_url: url })
-        .eq('ID_Colaborador', user.id);
+      await updateUser(user.id, { avatarUrl: url || undefined });
 
-      if (error) throw error;
+      // Atualizar o estado global imediatamente para refletir no MainLayout e outros lugares
+      const updatedUser = { ...user, avatarUrl: url || undefined };
+      updateAuthUser(updatedUser);
+
       setIsEditing(false);
-      // O realtime deve atualizar a UI do avatar
+      alert("Avatar atualizado com sucesso!");
     } catch (e: any) {
       alert("Erro ao atualizar avatar: " + e.message);
     } finally {
@@ -100,29 +100,81 @@ const UserProfile: React.FC = () => {
                 )}
               </div>
 
-              <div className="w-full">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">URL da Foto</label>
-                <div className="flex gap-2">
+              <div className="w-full space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">URL da Foto</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={avatarUrl}
+                      onChange={(e) => {
+                        setAvatarUrl(e.target.value);
+                        setIsEditing(true);
+                      }}
+                      placeholder="https://exemplo.com/minha-foto.jpg"
+                      className="flex-1 px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none"
+                    />
+                    {isEditing && (
+                      <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 font-medium shadow-md disabled:opacity-50"
+                      >
+                        <Save className="w-4 h-4" />
+                        {loading ? '...' : 'Salvar'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-px bg-slate-200"></div>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">ou</span>
+                  <div className="flex-1 h-px bg-slate-200"></div>
+                </div>
+
+                <div className="flex justify-center">
                   <input
-                    type="url"
-                    value={avatarUrl}
-                    onChange={(e) => {
-                      setAvatarUrl(e.target.value);
-                      setIsEditing(true);
+                    type="file"
+                    id="avatar-upload"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !user) return;
+
+                      setLoading(true);
+                      try {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                        const filePath = `avatars/${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                          .from('avatars')
+                          .upload(filePath, file);
+
+                        if (uploadError) throw uploadError;
+
+                        const { data: { publicUrl } } = supabase.storage
+                          .from('avatars')
+                          .getPublicUrl(filePath);
+
+                        setAvatarUrl(publicUrl);
+                        await saveAvatar(publicUrl);
+                      } catch (err: any) {
+                        alert("Erro no upload: " + (err.message || "Verifique se o bucket 'avatars' existe no Supabase."));
+                      } finally {
+                        setLoading(false);
+                      }
                     }}
-                    placeholder="https://exemplo.com/minha-foto.jpg"
-                    className="flex-1 px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none"
                   />
-                  {isEditing && (
-                    <button
-                      onClick={handleSave}
-                      disabled={loading}
-                      className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 font-medium shadow-md disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      {loading ? '...' : 'Salvar'}
-                    </button>
-                  )}
+                  <label
+                    htmlFor="avatar-upload"
+                    className={`flex items-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-600 font-semibold hover:border-[#4c1d95] hover:text-[#4c1d95] hover:bg-purple-50 transition-all cursor-pointer ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Camera className="w-5 h-5" />
+                    {loading ? 'Processando...' : 'Fazer Upload de Foto (PNG, JPG)'}
+                  </label>
                 </div>
               </div>
             </div>

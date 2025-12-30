@@ -301,11 +301,11 @@ export const useDataController = () => {
         const { data, error } = await supabase
             .from('dim_colaboradores')
             .insert([{
-                Nome_Colaborador: userData.name,
-                Email: userData.email,
+                NomeColaborador: userData.name,
+                "E-mail": userData.email,
                 Cargo: userData.cargo,
-                Nivel_Acesso: userData.role,
-                Ativo: userData.active
+                papel: userData.role === 'admin' ? 'Administrador' : 'Padrão',
+                ativo: userData.active ?? true
             }])
             .select('ID_Colaborador')
             .single();
@@ -315,16 +315,17 @@ export const useDataController = () => {
     };
 
     const updateUser = async (userId: string, updates: Partial<User>): Promise<void> => {
+        const payload: any = {};
+        if (updates.name !== undefined) payload.NomeColaborador = updates.name;
+        if (updates.email !== undefined) payload["E-mail"] = updates.email;
+        if (updates.cargo !== undefined) payload.Cargo = updates.cargo;
+        if (updates.role !== undefined) payload.papel = updates.role === 'admin' ? 'Administrador' : 'Padrão';
+        if (updates.active !== undefined) payload.ativo = updates.active;
+        if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
+
         const { error } = await supabase
             .from('dim_colaboradores')
-            .update({
-                Nome_Colaborador: updates.name,
-                Email: updates.email,
-                Cargo: updates.cargo,
-                Nivel_Acesso: updates.role,
-                Ativo: updates.active,
-                Avatar_URL: updates.avatarUrl
-            })
+            .update(payload)
             .eq('ID_Colaborador', Number(userId));
 
         if (error) throw error;
