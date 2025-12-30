@@ -99,7 +99,6 @@ const KanbanCard = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="space-y-2"
     >
       <div
         {...attributes}
@@ -183,17 +182,17 @@ const KanbanCard = ({
             </span>
           </div>
         </div>
-      </div>
 
-      {task.status !== 'Done' && (
-        <button
-          onClick={handleCreateTimesheet}
-          className="w-full flex items-center justify-center gap-2 py-2 bg-purple-50 hover:bg-[#4c1d95] text-[#4c1d95] hover:text-white rounded-lg transition-all text-[11px] font-bold border border-purple-100 shadow-sm"
-        >
-          <Clock size={12} />
-          Apontar Horas
-        </button>
-      )}
+        {task.status !== 'Done' && (
+          <button
+            onClick={handleCreateTimesheet}
+            className="mt-2 w-full flex items-center justify-center gap-2 py-2 bg-purple-50 hover:bg-[#4c1d95] text-[#4c1d95] hover:text-white rounded-lg transition-all text-[11px] font-bold border border-purple-100 shadow-sm"
+          >
+            <Clock size={12} />
+            Apontar Horas
+          </button>
+        )}
+      </div>
     </div>
   );
 };

@@ -222,11 +222,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
   };
 
   return (
-    <div className="space-y-2">
-      <button
-        onClick={onClick}
-        className="w-full bg-white border border-slate-200 rounded-lg p-3 hover:border-[#4c1d95] hover:shadow-md transition-all text-left group"
-      >
+    <div className="w-full bg-white border border-slate-200 rounded-lg p-3 hover:border-[#4c1d95] hover:shadow-md transition-all text-left group">
+      <div onClick={onClick} className="cursor-pointer">
         <div className="flex justify-between items-start gap-2">
           <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-[#4c1d95] flex-1">
             {task.title}
@@ -253,7 +250,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
         </div>
 
         {/* Rodapé com Responsável */}
-        <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2">
+        <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2 pb-2">
           <div className="flex items-center gap-2">
             {task.developerAvatar ? (
               <img src={task.developerAvatar} alt={task.developerName} className="w-5 h-5 rounded-full object-cover" />
@@ -274,12 +271,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
             </span>
           )}
         </div>
-      </button>
+      </div>
 
       {task.status !== 'Done' && (
         <button
           onClick={handleCreateTimesheet}
-          className="w-full flex items-center justify-center gap-2 py-2 bg-purple-50 hover:bg-[#4c1d95] text-[#4c1d95] hover:text-white rounded-lg transition-all text-xs font-bold border border-purple-100 shadow-sm"
+          className="w-full mt-2 flex items-center justify-center gap-2 py-2 bg-purple-50 hover:bg-[#4c1d95] text-[#4c1d95] hover:text-white rounded-lg transition-all text-xs font-bold border border-purple-100 shadow-sm"
         >
           <Clock className="w-4 h-4" />
           Apontar Horas

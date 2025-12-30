@@ -313,10 +313,13 @@ const ClientDetailsView: React.FC = () => {
                   };
 
                   return (
-                    <div key={task.id} className="space-y-2">
-                      <button
+                    <div
+                      key={task.id}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-4 hover:border-[#4c1d95] hover:shadow-md transition-all text-left group flex flex-col h-full"
+                    >
+                      <div
                         onClick={() => navigate(`/tasks/${task.id}`)}
-                        className="w-full bg-white border border-slate-200 rounded-xl p-4 hover:border-[#4c1d95] hover:shadow-md transition-all text-left group flex flex-col h-full"
+                        className="cursor-pointer flex-1 flex flex-col"
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${task.status === 'Done' ? 'bg-green-100 text-green-700' :
@@ -348,7 +351,7 @@ const ClientDetailsView: React.FC = () => {
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-50 mt-auto">
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-50 mt-auto pb-3">
                           <div className="flex items-center gap-2">
                             {developerUser?.avatarUrl ? (
                               <img src={developerUser.avatarUrl} className="w-6 h-6 rounded-full object-cover" />
@@ -369,7 +372,7 @@ const ClientDetailsView: React.FC = () => {
                             </div>
                           )}
                         </div>
-                      </button>
+                      </div>
 
                       {task.status !== 'Done' && (
                         <button

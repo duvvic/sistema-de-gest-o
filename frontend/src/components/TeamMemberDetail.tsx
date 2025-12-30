@@ -136,10 +136,13 @@ const TeamMemberDetail: React.FC = () => {
                            };
 
                            return (
-                              <div key={task.id} className="space-y-2">
+                              <div
+                                 key={task.id}
+                                 className={`border p-4 rounded-xl flex flex-col hover:shadow-md transition-all group ${isDelayed ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200 hover:border-[#4c1d95]'}`}
+                              >
                                  <div
                                     onClick={() => navigate(`/tasks/${task.id}`)}
-                                    className={`border p-4 rounded-xl flex justify-between items-center hover:shadow-md cursor-pointer transition-all group ${isDelayed ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-white border-slate-200 hover:border-[#4c1d95]'}`}
+                                    className="flex justify-between items-center cursor-pointer mb-3"
                                  >
                                     <div className="flex items-center gap-3">
                                        {task.status === 'Done' ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Clock className={`w-5 h-5 ${isDelayed ? 'text-red-400' : 'text-slate-400'}`} />}
