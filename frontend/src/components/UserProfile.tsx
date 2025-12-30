@@ -2,15 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDataController } from '@/controllers/useDataController';
+import { useUsers } from '@/hooks/v2/useUsers'; // Updated import
 import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, updateUser: updateAuthUser } = useAuth();
-  // Use controller to get fresh data about current user if needed, or rely on AuthContext
-  const { users, updateUser } = useDataController();
+  // Using v2 hook
+  const { users, updateUser } = useUsers();
 
   const user = users.find(u => u.id === currentUser?.id) || currentUser;
 
@@ -28,7 +28,7 @@ const UserProfile: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      await updateUser(user.id, { avatarUrl: url || undefined });
+      await updateUser({ userId: user.id, updates: { avatarUrl: url || undefined } });
 
       // Atualizar o estado global imediatamente para refletir no MainLayout e outros lugares
       const updatedUser = { ...user, avatarUrl: url || undefined };

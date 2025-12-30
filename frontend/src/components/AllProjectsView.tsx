@@ -1,12 +1,23 @@
 // components/AllProjectsView.tsx - Adaptado para Router
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDataController } from '@/controllers/useDataController';
+import { useProjects } from '@/hooks/v2/useProjects';
+import { useClients } from '@/hooks/v2/useClients';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useUsers } from '@/hooks/v2/useUsers';
+import { useProjectMembers } from '@/hooks/v2/useProjectMembers';
 import { Plus, Briefcase, CheckSquare } from 'lucide-react';
 
 const AllProjectsView: React.FC = () => {
   const navigate = useNavigate();
-  const { projects, clients, tasks, users, projectMembers, error, loading } = useDataController();
+
+  const { projects, isLoading: projectsLoading } = useProjects();
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { tasks, isLoading: tasksLoading } = useTasks();
+  const { users, isLoading: usersLoading } = useUsers();
+  const { projectMembers, isLoading: membersLoading } = useProjectMembers();
+
+  const loading = projectsLoading || clientsLoading || tasksLoading || usersLoading || membersLoading;
 
   return (
     <div className="h-full flex flex-col p-8">

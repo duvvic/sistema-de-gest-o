@@ -1,14 +1,18 @@
 // components/TeamList.tsx - Adaptado para Router
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDataController } from '@/controllers/useDataController';
+import { useUsers } from '@/hooks/v2/useUsers';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useTimesheets } from '@/hooks/v2/useTimesheets';
 import { User, Task } from '@/types';
 import { Briefcase, Mail, CheckSquare, ShieldCheck, User as UserIcon, Search, Trash2, AlertCircle, CheckCircle, Plus } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
 const TeamList: React.FC = () => {
   const navigate = useNavigate();
-  const { users, tasks, timesheetEntries, deleteUser } = useDataController();
+  const { users, deactivateUser } = useUsers();
+  const { tasks } = useTasks();
+  const { timesheets: timesheetEntries } = useTimesheets();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCargo, setSelectedCargo] = useState<'Todos' | string>('Todos');
@@ -108,8 +112,8 @@ const TeamList: React.FC = () => {
     if (userToDelete) {
       try {
         // Se o controller tiver metodo deleteUser (precisa adicionar se não tiver)
-        if (deleteUser) {
-          await deleteUser(userToDelete.id);
+        if (deactivateUser) {
+          await deactivateUser(userToDelete.id);
         } else {
           alert("Funcionalidade de exclusão não implementada no controller ainda.");
         }

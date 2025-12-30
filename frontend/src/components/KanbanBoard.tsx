@@ -2,7 +2,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDataController } from '@/controllers/useDataController';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useClients } from '@/hooks/v2/useClients';
+import { useProjects } from '@/hooks/v2/useProjects';
 import {
   DndContext,
   DragOverlay,
@@ -256,7 +258,11 @@ const KanbanBoard: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { tasks, clients, projects, updateTask, deleteTask } = useDataController();
+  const filteredClientId = searchParams.get('clientId');
+
+  const { tasks, updateTask, deleteTask } = useTasks(filteredClientId ? { clientId: filteredClientId } : undefined);
+  const { clients } = useClients();
+  const { projects } = useProjects();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -265,7 +271,7 @@ const KanbanBoard: React.FC = () => {
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
 
   const isAdmin = currentUser?.role === "admin";
-  const filteredClientId = searchParams.get('clientId');
+
 
   // Highlight
   useEffect(() => {
@@ -334,12 +340,15 @@ const KanbanBoard: React.FC = () => {
       else if (newStatus === 'Review') newProgress = 80;
       else if (newStatus === 'Done') newProgress = 100;
 
-      // Atualizar via Controller
-      await updateTask(activeId, {
-        status: newStatus,
-        progress: newProgress,
-        // Se concluiu, definir data de entrega real se não houver
-        ...(newStatus === 'Done' ? { actualDelivery: new Date().toISOString() } : {})
+      // Atualizar via Mutation V2
+      await updateTask({
+        taskId: activeId,
+        updates: {
+          status: newStatus,
+          progress: newProgress,
+          // Se concluiu, definir data de entrega real se não houver
+          ...(newStatus === 'Done' ? { actualDelivery: new Date().toISOString() } : {})
+        }
       });
     }
   };

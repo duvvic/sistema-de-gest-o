@@ -1,60 +1,24 @@
 // components/AdminDashboard.tsx - Versão adaptada para React Router
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
-import { useDataController } from '@/controllers/useDataController';
-import { Client, Project, Task } from "@/types";
+import { useClients } from '@/hooks/v2/useClients';
+import { useProjects } from '@/hooks/v2/useProjects';
+import { useTasks } from '@/hooks/v2/useTasks';
 import { Plus, Building2, ArrowDownAZ, Briefcase } from "lucide-react";
 
 type SortOption = 'recent' | 'alphabetical' | 'creation';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { clients: initialClients, projects: initialProjects, tasks: initialTasks, error, loading, users } = useDataController();
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { projects, isLoading: projectsLoading } = useProjects();
+  const { tasks, isLoading: tasksLoading } = useTasks();
 
-  const [clients, setClients] = useState(initialClients);
-  const [projects, setProjects] = useState(initialProjects);
-  const [tasks, setTasks] = useState(initialTasks);
   const [sortBy, setSortBy] = useState<SortOption>('recent');
 
-  // Atualizar quando os dados mudarem
-  React.useEffect(() => {
-    setClients(initialClients);
-  }, [initialClients]);
-
-  React.useEffect(() => {
-    setProjects(initialProjects);
-  }, [initialProjects]);
-
-  React.useEffect(() => {
-    setTasks(initialTasks);
-  }, [initialTasks]);
-
-  // Painel de debug
-
-  // Proteção contra undefined
   const safeClients = clients || [];
   const safeProjects = projects || [];
   const safeTasks = tasks || [];
-
-  // Realtime subscriptions
-  useSupabaseRealtime('dim_clientes', (payload) => {
-    if (payload.eventType === 'INSERT') setClients(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setClients(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
-    else if (payload.eventType === 'DELETE') setClients(prev => prev.filter(c => c.id !== payload.old.id));
-  });
-
-  useSupabaseRealtime('dim_projetos', (payload) => {
-    if (payload.eventType === 'INSERT') setProjects(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setProjects(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
-    else if (payload.eventType === 'DELETE') setProjects(prev => prev.filter(p => p.id !== payload.old.id));
-  });
-
-  useSupabaseRealtime('fato_tarefas', (payload) => {
-    if (payload.eventType === 'INSERT') setTasks(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
-    else if (payload.eventType === 'DELETE') setTasks(prev => prev.filter(t => t.id !== payload.old.id));
-  });
 
   // Separar clientes ativos
   const activeClients = useMemo(() =>

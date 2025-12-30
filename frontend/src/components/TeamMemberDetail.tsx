@@ -1,7 +1,11 @@
 // components/TeamMemberDetail.tsx - Adaptado para Router
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '@/controllers/useDataController';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useUsers } from '@/hooks/v2/useUsers';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useProjects } from '@/hooks/v2/useProjects';
+import { useTimesheets } from '@/hooks/v2/useTimesheets';
+import { useProjectMembers } from '@/hooks/v2/useProjectMembers';
 import { Task } from '@/types';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer } from 'lucide-react';
 
@@ -10,7 +14,12 @@ type ViewTab = 'projects' | 'tasks' | 'delayed' | 'ponto';
 const TeamMemberDetail: React.FC = () => {
    const { userId } = useParams<{ userId: string }>();
    const navigate = useNavigate();
-   const { users, tasks, projects, projectMembers, timesheetEntries } = useDataController();
+
+   const { users } = useUsers();
+   const { tasks } = useTasks();
+   const { projects } = useProjects();
+   const { timesheets: timesheetEntries } = useTimesheets();
+   const { projectMembers } = useProjectMembers();
 
    const [activeTab, setActiveTab] = useState<ViewTab>('projects');
 

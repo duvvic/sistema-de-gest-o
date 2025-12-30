@@ -1,18 +1,27 @@
 // components/ClientDetailsView.tsx - Adaptado para Router
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '@/controllers/useDataController';
+import { useClients } from '@/hooks/v2/useClients';
+import { useProjects } from '@/hooks/v2/useProjects';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useUsers } from '@/hooks/v2/useUsers';
+import { useProjectMembers } from '@/hooks/v2/useProjectMembers';
 import { ArrowLeft, Plus, Briefcase, CheckSquare, Clock, Edit, LayoutGrid, ListTodo, Filter } from 'lucide-react';
 
 const ClientDetailsView: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { clients, projects, tasks, users, getClientById, projectMembers } = useDataController();
+
+  const { clients } = useClients();
+  const { projects } = useProjects();
+  const { tasks } = useTasks();
+  const { users } = useUsers();
+  const { projectMembers } = useProjectMembers();
 
   const [activeTab, setActiveTab] = useState<'projects' | 'tasks'>('projects');
   const [selectedDeveloperId, setSelectedDeveloperId] = useState<string>('');
 
-  const client = clientId ? getClientById(clientId) : null;
+  const client = useMemo(() => clients.find(c => c.id === clientId), [clients, clientId]);
   const clientProjects = useMemo(() =>
     projects.filter(p => p.clientId === clientId),
     [projects, clientId]

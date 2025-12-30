@@ -204,11 +204,21 @@ export async function fetchProjects(): Promise<Project[]> {
 /**
  * Busca todas as tarefas (raw data)
  */
-export async function fetchTasks(): Promise<DbTaskRow[]> {
+export async function fetchTasks(filters?: { projectId?: string; userId?: string; clientId?: string }): Promise<DbTaskRow[]> {
   try {
-    const { data, error } = await supabase
-      .from("fato_tarefas")
-      .select("*");
+    let query = supabase.from("fato_tarefas").select("*");
+
+    if (filters?.projectId) {
+      query = query.eq('ID_Projeto', Number(filters.projectId));
+    }
+    if (filters?.userId) {
+      query = query.eq('ID_Colaborador', Number(filters.userId));
+    }
+    if (filters?.clientId) {
+      query = query.eq('ID_Cliente', Number(filters.clientId));
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;

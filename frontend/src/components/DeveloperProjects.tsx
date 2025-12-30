@@ -2,7 +2,10 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDataController } from '@/controllers/useDataController';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useProjects } from '@/hooks/v2/useProjects';
+import { useClients } from '@/hooks/v2/useClients';
+import { useProjectMembers } from '@/hooks/v2/useProjectMembers';
 import { Task, Project, Client } from "@/types";
 import { ArrowLeft, Building2, FolderKanban, CheckSquare, Clock } from "lucide-react";
 
@@ -65,7 +68,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
 const DeveloperProjects: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { tasks, projects, clients, projectMembers } = useDataController();
+
+  const { tasks } = useTasks();
+  const { projects } = useProjects();
+  const { clients } = useClients();
+  const { projectMembers } = useProjectMembers();
 
   const [currentView, setCurrentView] = useState<ViewType>('clients');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);

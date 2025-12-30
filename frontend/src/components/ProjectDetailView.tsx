@@ -1,13 +1,22 @@
 // components/ProjectDetailView.tsx - Adaptado para Router
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDataController } from '@/controllers/useDataController';
+import { useProjects } from '@/hooks/v2/useProjects';
+import { useClients } from '@/hooks/v2/useClients';
+import { useTasks } from '@/hooks/v2/useTasks';
+import { useUsers } from '@/hooks/v2/useUsers';
+import { useProjectMembers } from '@/hooks/v2/useProjectMembers';
 import { ArrowLeft, Plus, Edit, CheckSquare, Clock } from 'lucide-react';
 
 const ProjectDetailView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects, clients, tasks, users, projectMembers } = useDataController();
+
+  const { projects } = useProjects();
+  const { clients } = useClients();
+  const { tasks } = useTasks();
+  const { users } = useUsers();
+  const { projectMembers } = useProjectMembers();
 
   const project = projects.find(p => p.id === projectId);
   const client = project ? clients.find(c => c.id === project.clientId) : null;
