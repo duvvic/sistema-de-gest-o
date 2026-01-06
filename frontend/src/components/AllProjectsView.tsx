@@ -14,16 +14,19 @@ const AllProjectsView: React.FC = () => {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Briefcase className="w-6 h-6 text-[#4c1d95]" />
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--textTitle)' }}>
+            <Briefcase className="w-6 h-6" style={{ color: 'var(--brand)' }} />
             Todos os Projetos
           </h1>
-          <p className="text-slate-500 mt-1">{projects.length} projetos cadastrados</p>
+          <p className="mt-1" style={{ color: 'var(--textMuted)' }}>{projects.length} projetos cadastrados</p>
         </div>
 
         <button
           onClick={() => navigate('/admin/projects/new')}
-          className="px-4 py-2 bg-[#4c1d95] text-white rounded-lg hover:bg-[#3b1675] flex items-center gap-2"
+          className="px-4 py-2 text-white rounded-lg flex items-center gap-2 transition-colors shadow"
+          style={{ backgroundColor: 'var(--brand)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--brandHover)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--brand)'}
         >
           <Plus className="w-4 h-4" />
           Novo Projeto
@@ -35,18 +38,19 @@ const AllProjectsView: React.FC = () => {
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
-              <p className="text-slate-500 animate-pulse">Carregando projetos...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
+              <p className="animate-pulse" style={{ color: 'var(--textMuted)' }}>Carregando projetos...</p>
             </div>
           </div>
         ) : projects.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-slate-400">
+          <div className="flex items-center justify-center h-full" style={{ color: 'var(--textMuted)' }}>
             <div className="text-center">
               <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="text-lg mb-2">Nenhum projeto cadastrado</p>
               <button
                 onClick={() => navigate('/admin/projects/new')}
-                className="text-[#4c1d95] hover:underline"
+                className="hover:underline"
+                style={{ color: 'var(--brand)' }}
               >
                 Criar primeiro projeto
               </button>
@@ -63,37 +67,43 @@ const AllProjectsView: React.FC = () => {
                 <button
                   key={project.id}
                   onClick={() => navigate(`/admin/projects/${project.id}`)}
-                  className="bg-white border-2 border-slate-200 rounded-xl p-6 hover:border-[#4c1d95] hover:shadow-lg transition-all text-left group"
+                  className="border-2 rounded-xl p-6 hover:shadow-lg transition-all text-left group"
+                  style={{
+                    backgroundColor: 'var(--surface)',
+                    borderColor: 'var(--border)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                 >
                   {/* Cliente Logo */}
                   {client && (
-                    <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
-                      <div className="w-8 h-8 rounded bg-slate-50 p-1 flex items-center justify-center">
+                    <div className="flex items-center gap-2 mb-4 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                      <div className="w-8 h-8 rounded p-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bgApp)' }}>
                         <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />
                       </div>
-                      <span className="text-xs text-slate-500">{client.name}</span>
+                      <span className="text-xs" style={{ color: 'var(--textMuted)' }}>{client.name}</span>
                     </div>
                   )}
 
-                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-[#4c1d95] mb-2">
+                  <h3 className="text-lg font-bold mb-2 group-hover:text-[var(--brand)]" style={{ color: 'var(--textTitle)' }}>
                     {project.name}
                   </h3>
 
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text)' }}>
                       <CheckSquare className="w-4 h-4 text-green-500" />
                       <span>{doneTasks}/{projectTasks.length} tarefas concluídas</span>
                     </div>
 
                     {project.status && (
-                      <div className="text-xs text-slate-500">
-                        Status: <span className="font-medium text-slate-700">{project.status}</span>
+                      <div className="text-xs" style={{ color: 'var(--textMuted)' }}>
+                        Status: <span className="font-medium" style={{ color: 'var(--text)' }}>{project.status}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Equipe do Projeto */}
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-4 pt-4 border-t flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
                     <div className="flex -space-x-2">
                       {projectMembers
                         .filter(pm => pm.projectId === project.id)
@@ -103,13 +113,17 @@ const AllProjectsView: React.FC = () => {
                           return (
                             <div
                               key={member.id}
-                              className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden"
+                              className="w-7 h-7 rounded-full border-2 flex items-center justify-center overflow-hidden"
+                              style={{
+                                backgroundColor: 'var(--bgApp)',
+                                borderColor: 'var(--surface)'
+                              }}
                               title={member.name}
                             >
                               {member.avatarUrl ? (
                                 <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
                               ) : (
-                                <span className="text-[10px] font-bold text-slate-500">
+                                <span className="text-[10px] font-bold" style={{ color: 'var(--textMuted)' }}>
                                   {member.name.substring(0, 2).toUpperCase()}
                                 </span>
                               )}
@@ -118,7 +132,7 @@ const AllProjectsView: React.FC = () => {
                         })}
                     </div>
                     {projectMembers.filter(pm => pm.projectId === project.id).length === 0 && (
-                      <span className="text-[10px] text-slate-400 italic">Sem equipe</span>
+                      <span className="text-[10px] italic" style={{ color: 'var(--textMuted)' }}>Sem equipe</span>
                     )}
                   </div>
                 </button>

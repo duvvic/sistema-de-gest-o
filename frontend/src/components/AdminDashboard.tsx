@@ -103,17 +103,20 @@ const AdminDashboard: React.FC = () => {
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-[#4c1d95]" />
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--textTitle)' }}>
+            <Building2 className="w-6 h-6" style={{ color: 'var(--brand)' }} />
             Gerenciamento de Clientes
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-sm mt-1" style={{ color: 'var(--textMuted)' }}>
             {activeClients.length} {activeClients.length === 1 ? 'cliente ativo' : 'clientes ativos'}
           </p>
         </div>
 
         <button
-          className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow"
+          className="text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow transition-colors"
+          style={{ backgroundColor: 'var(--brand)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--brandHover)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--brand)'}
           onClick={() => navigate('/admin/clients/new')}
         >
           <Plus size={18} />
@@ -122,9 +125,14 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Aviso */}
-      <div className="mb-4 rounded-lg border border-purple-100 bg-purple-50 text-slate-800 px-3 py-2.5 flex items-start gap-2 shadow-sm">
+      <div className="mb-4 rounded-lg border px-3 py-2.5 flex items-start gap-2 shadow-sm"
+        style={{
+          backgroundColor: 'rgba(124, 58, 237, 0.1)', // brand/10
+          borderColor: 'rgba(124, 58, 237, 0.2)', // brand/20
+          color: 'var(--text)'
+        }}>
         <div className="mt-0.5">
-          <Briefcase className="w-4 h-4 text-[#4c1d95]" />
+          <Briefcase className="w-4 h-4" style={{ color: 'var(--brand)' }} />
         </div>
         <div className="text-sm leading-relaxed">
           Para criar um projeto, primeiro selecione o cliente e abra seus detalhes; lá o botão "+ Novo Projeto" já vem no contexto correto.
@@ -133,33 +141,39 @@ const AdminDashboard: React.FC = () => {
 
       {/* FILTRO DE ORDENAÇÃO */}
       <div className="flex items-center gap-3 mb-4">
-        <ArrowDownAZ className="w-5 h-5 text-slate-500" />
-        <span className="text-sm font-medium text-slate-600">Ordenar por:</span>
+        <ArrowDownAZ className="w-5 h-5" style={{ color: 'var(--textMuted)' }} />
+        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Ordenar por:</span>
         <div className="flex gap-2">
           <button
             onClick={() => setSortBy('recent')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortBy === 'recent'
-              ? 'bg-[#4c1d95] text-white'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border`}
+            style={{
+              backgroundColor: sortBy === 'recent' ? 'var(--brand)' : 'var(--surface)',
+              color: sortBy === 'recent' ? 'white' : 'var(--text)',
+              borderColor: sortBy === 'recent' ? 'transparent' : 'var(--border)'
+            }}
           >
             Recentes
           </button>
           <button
             onClick={() => setSortBy('alphabetical')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortBy === 'alphabetical'
-              ? 'bg-[#4c1d95] text-white'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border`}
+            style={{
+              backgroundColor: sortBy === 'alphabetical' ? 'var(--brand)' : 'var(--surface)',
+              color: sortBy === 'alphabetical' ? 'white' : 'var(--text)',
+              borderColor: sortBy === 'alphabetical' ? 'transparent' : 'var(--border)'
+            }}
           >
             Alfabética
           </button>
           <button
             onClick={() => setSortBy('creation')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${sortBy === 'creation'
-              ? 'bg-[#4c1d95] text-white'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border`}
+            style={{
+              backgroundColor: sortBy === 'creation' ? 'var(--brand)' : 'var(--surface)',
+              color: sortBy === 'creation' ? 'white' : 'var(--text)',
+              borderColor: sortBy === 'creation' ? 'transparent' : 'var(--border)'
+            }}
           >
             Data de Criação
           </button>
@@ -170,13 +184,13 @@ const AdminDashboard: React.FC = () => {
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
-            <p className="text-slate-500 animate-pulse">Carregando clientes...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
+            <p className="animate-pulse" style={{ color: 'var(--textMuted)' }}>Carregando clientes...</p>
           </div>
         </div>
       ) : sortedClients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-slate-400">
+          <div className="text-center" style={{ color: 'var(--textMuted)' }}>
             <Building2 className="w-16 h-16 mx-auto mb-4 opacity-30" />
             <p className="text-lg font-medium">
               Nenhum cliente ativo
@@ -191,11 +205,21 @@ const AdminDashboard: React.FC = () => {
           {sortedClients.map((client) => (
             <div
               key={client.id}
-              className="group bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-[#4c1d95] transition-all duration-300 cursor-pointer flex flex-col h-[280px]"
+              className="group border-2 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col h-[280px]"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand)'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
               onClick={() => navigate(`/admin/clients/${client.id}`)}
             >
               {/* LOGO */}
-              <div className="w-full h-[180px] bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center border-b-2 border-slate-100 group-hover:from-purple-50 group-hover:to-purple-100 transition-all duration-300">
+              <div className="w-full h-[180px] p-6 flex items-center justify-center border-b-2 transition-all duration-300"
+                style={{
+                  backgroundColor: 'var(--surfaceHover)',
+                  borderColor: 'var(--border)'
+                }}>
                 <img
                   src={client.logoUrl}
                   alt={client.name}
@@ -208,14 +232,14 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* INFO */}
-              <div className="p-4 flex-1 flex flex-col justify-between bg-white">
+              <div className="p-4 flex-1 flex flex-col justify-between" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex-1 flex flex-col justify-center">
-                  <h2 className="text-sm font-bold text-slate-800 mb-2 line-clamp-2 leading-tight group-hover:text-[#4c1d95] transition-colors text-center">
+                  <h2 className="text-sm font-bold mb-2 line-clamp-2 leading-tight transition-colors text-center group-hover:text-[var(--brand)]" style={{ color: 'var(--textTitle)' }}>
                     {client.name}
                   </h2>
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+                  <div className="flex items-center justify-center gap-1.5 text-xs" style={{ color: 'var(--textMuted)' }}>
                     <Briefcase className="w-3.5 h-3.5" />
-                    <span className="font-semibold text-[#4c1d95]">
+                    <span className="font-semibold" style={{ color: 'var(--brand)' }}>
                       {safeProjects.filter((p) => p.clientId === client.id).length}
                     </span>
                     <span>

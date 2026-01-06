@@ -1,0 +1,89 @@
+/* Theme CSS Variables - Light & Dark Mode */
+
+:root {
+  /* Brand Colors - Light Mode */
+  --brand: #7C3AED;
+  --brandHover: #6D28D9;
+  --accentLight: #DDD6FE;
+
+  /* Background - Light Mode */
+  --bgApp: #F8FAFC;
+  --bgSidebar: #FFFFFF;
+  --surface: #FFFFFF;
+  --surfaceHover: #F1F5F9;
+
+  /* Text - Light Mode */
+  --textTitle: #0F172A;
+  --text: #334155;
+  --textMuted: #64748B;
+
+  /* Border - Light Mode */
+  --border: #E2E8F0;
+
+  /* Status Colors (same for both modes) */
+  --success: #22C55E;
+  --warning: #FACC15;
+  --danger: #EF4444;
+  --info: #38BDF8;
+
+  /* Shadows - Light Mode */
+  --shadowCard: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadowCardHover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+html.dark {
+  /* Brand Colors - Dark Mode */
+  --brand: #6D28D9;
+  --brandHover: #7C3AED;
+  --accentLight: #C4B5FD;
+
+  /* Background - Dark Mode */
+  --bgApp: #151025;
+  --bgSidebar: #252236;
+  --surface: #2C283B;
+  --surfaceHover: #3A354E;
+
+  /* Text - Dark Mode */
+  --textTitle: #E8E7F0;
+  --text: #C5C2D9;
+  --textMuted: #9A9AA8;
+
+  /* Border - Dark Mode */
+  --border: #3E385C;
+
+  /* Status Colors (same for both modes) */
+  --success: #22C55E;
+  --warning: #FACC15;
+  --danger: #EF4444;
+  --info: #38BDF8;
+
+  /* Shadows - Dark Mode */
+  --shadowCard: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --shadowCardHover: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
+/* Base styles */
+body {
+  background-color: var(--bgApp);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--textMuted);
+}

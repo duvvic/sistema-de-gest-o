@@ -170,18 +170,19 @@ const TimesheetCalendar: React.FC = () => {
 
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 p-6 md:p-8 overflow-hidden gap-6">
+    <div className="h-full flex flex-col p-6 md:p-8 overflow-hidden gap-6" style={{ backgroundColor: 'var(--bgApp)' }}>
 
       {/* 1. SELEÇÃO DE EQUIPE (ADMIN) */}
       {isAdmin && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex-shrink-0 z-20">
+        <div className="rounded-2xl shadow-sm border p-6 flex-shrink-0 z-20"
+          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-              <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#4c1d95]" />
+              <h2 className="font-bold text-lg flex items-center gap-2" style={{ color: 'var(--textTitle)' }}>
+                <Users className="w-5 h-5" style={{ color: 'var(--brand)' }} />
                 Visão da Equipe
               </h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">
+              <p className="text-xs font-medium mt-1" style={{ color: 'var(--textMuted)' }}>
                 Selecione um colaborador para visualizar o ponto
               </p>
             </div>
@@ -190,16 +191,22 @@ const TimesheetCalendar: React.FC = () => {
             <div className="relative w-full md:w-96" ref={dropdownRef}>
               <div
                 className={`
-                            flex items-center gap-2 bg-slate-50 border rounded-xl p-3 cursor-pointer transition-all
-                            ${isDropdownOpen ? 'border-[#4c1d95] ring-2 ring-[#4c1d95]/10 bg-white' : 'border-slate-200 hover:border-purple-300'}
+                            flex items-center gap-2 border rounded-xl p-3 cursor-pointer transition-all
+                            ${isDropdownOpen ? 'ring-2' : ''}
                         `}
+                style={{
+                  backgroundColor: isDropdownOpen ? 'var(--surface)' : 'var(--bgApp)',
+                  borderColor: isDropdownOpen ? 'var(--brand)' : 'var(--border)',
+                  boxShadow: isDropdownOpen ? '0 0 0 2px rgba(76, 29, 149, 0.1)' : 'none'
+                }}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
                 <Search className="w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Buscar colaborador..."
-                  className="bg-transparent outline-none flex-1 text-sm font-medium text-slate-700 placeholder:text-slate-400 cursor-pointer"
+                  className="bg-transparent outline-none flex-1 text-sm font-medium placeholder:text-slate-400 cursor-pointer"
+                  style={{ color: 'var(--text)' }}
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setIsDropdownOpen(true); }}
                   onClick={(e) => e.stopPropagation()}
@@ -209,25 +216,31 @@ const TimesheetCalendar: React.FC = () => {
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-[320px] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 right-0 mt-2 border rounded-xl shadow-xl max-h-[320px] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                   <div className="p-2 space-y-1">
                     {searchedUsers.length === 0 ? (
-                      <div className="p-4 text-center text-slate-400 text-sm italic">Nenhum colaborador encontrado</div>
+                      <div className="p-4 text-center text-sm italic" style={{ color: 'var(--textMuted)' }}>Nenhum colaborador encontrado</div>
                     ) : (
                       searchedUsers.map(user => (
                         <button
                           key={user.id}
                           onClick={() => { setSelectedUserId(user.id); setIsDropdownOpen(false); setSearchTerm(''); }}
                           className={`
-                                                w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors group
-                                                ${user.id === selectedUserId ? 'bg-purple-50 hover:bg-purple-100' : ''}
+                                                w-full flex items-center gap-3 p-3 rounded-lg transition-colors group
                                             `}
+                          style={{
+                            backgroundColor: user.id === selectedUserId ? 'var(--bgApp)' : 'transparent'
+                          }}
+                          onMouseEnter={(e) => { if (user.id !== selectedUserId) e.currentTarget.style.backgroundColor = 'var(--surfaceHover)' }}
+                          onMouseLeave={(e) => { if (user.id !== selectedUserId) e.currentTarget.style.backgroundColor = 'transparent' }}
                         >
                           <div className="relative flex-shrink-0">
                             {user.avatarUrl ? (
-                              <img src={user.avatarUrl} className="w-9 h-9 rounded-full object-cover border border-slate-200" alt="" />
+                              <img src={user.avatarUrl} className="w-9 h-9 rounded-full object-cover border" style={{ borderColor: 'var(--border)' }} alt="" />
                             ) : (
-                              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs border border-slate-200">
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs border"
+                                style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
                                 {user.name.charAt(0)}
                               </div>
                             )}
@@ -236,14 +249,15 @@ const TimesheetCalendar: React.FC = () => {
                             )}
                           </div>
                           <div className="text-left flex-1 min-w-0">
-                            <p className={`text-sm font-bold truncate group-hover:text-[#4c1d95] ${user.id === selectedUserId ? 'text-[#4c1d95]' : 'text-slate-700'}`}>
+                            <p className={`text-sm font-bold truncate group-hover:text-[var(--brand)]`}
+                              style={{ color: user.id === selectedUserId ? 'var(--brand)' : 'var(--textTitle)' }}>
                               {user.name}
                             </p>
                             <p className={`text-[10px] font-medium truncate ${user.missing > 2 ? 'text-red-500' : 'text-emerald-600'}`}>
                               {user.missing > 2 ? `${user.missing} pendências` : 'Em dia'}
                             </p>
                           </div>
-                          {user.id === selectedUserId && <Check className="w-4 h-4 text-[#4c1d95]" />}
+                          {user.id === selectedUserId && <Check className="w-4 h-4" style={{ color: 'var(--brand)' }} />}
                         </button>
                       ))
                     )}
@@ -256,18 +270,20 @@ const TimesheetCalendar: React.FC = () => {
       )}
 
       {/* 2. CALENDÁRIO */}
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-0">
+      <div className="flex-1 rounded-2xl shadow-sm border overflow-hidden flex flex-col min-h-0"
+        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
-              <p className="text-slate-500 animate-pulse">Carregando calendário...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
+              <p className="animate-pulse" style={{ color: 'var(--textMuted)' }}>Carregando calendário...</p>
             </div>
           </div>
         ) : (
           <>
             {/* Header do Calendário */}
-            <div className="bg-gradient-to-r from-[#4c1d95] to-[#5b21b6] px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 text-white flex-shrink-0">
+            <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 text-white flex-shrink-0"
+              style={{ background: 'linear-gradient(to right, var(--brand), var(--brandHover))' }}>
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center backdrop-blur-sm border border-white/10">
                   <Calendar className="w-5 h-5 text-white" />
@@ -302,7 +318,8 @@ const TimesheetCalendar: React.FC = () => {
 
                 <button
                   onClick={() => navigate(`/timesheet/new?date=${new Date().toISOString().split('T')[0]}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
-                  className="bg-white text-[#4c1d95] hover:bg-purple-50 px-4 py-2 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center gap-2"
+                  className="bg-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center gap-2 hover:bg-purple-50"
+                  style={{ color: 'var(--brand)' }}
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Lançar</span>
@@ -311,20 +328,22 @@ const TimesheetCalendar: React.FC = () => {
             </div>
 
             {/* Grid Days Header (Sticky) */}
-            <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 flex-shrink-0 sticky top-0 z-10">
+            <div className="grid grid-cols-7 border-b flex-shrink-0 sticky top-0 z-10"
+              style={{ backgroundColor: 'var(--surfaceHover)', borderColor: 'var(--border)' }}>
               {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((day, idx) => (
-                <div key={day} className={`py-3 text-center text-[11px] font-bold tracking-widest ${idx === 0 || idx === 6 ? 'text-red-500/70' : 'text-slate-500'}`}>
+                <div key={day} className={`py-3 text-center text-[11px] font-bold tracking-widest ${idx === 0 || idx === 6 ? 'text-red-500/70' : 'text-slate-500'}`}
+                  style={{ color: (idx === 0 || idx === 6) ? undefined : 'var(--textMuted)' }}>
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Grid Body (Scrollable) */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-200 relative">
-              <div className="grid grid-cols-7 min-h-full auto-rows-fr bg-slate-200 gap-[1px] border-b border-slate-200">
+            <div className="flex-1 overflow-y-auto custom-scrollbar relative" style={{ backgroundColor: 'var(--border)' }}>
+              <div className="grid grid-cols-7 min-h-full auto-rows-fr gap-[1px] border-b" style={{ backgroundColor: 'var(--border)', borderColor: 'var(--border)' }}>
                 {/* Empty Slots */}
                 {Array.from({ length: firstDay }).map((_, i) => (
-                  <div key={`empty-${i}`} className="bg-slate-50/50 min-h-[100px]"></div>
+                  <div key={`empty-${i}`} className="min-h-[100px]" style={{ backgroundColor: 'var(--bgApp)' }}></div>
                 ))}
 
                 {/* Days */}
@@ -343,17 +362,22 @@ const TimesheetCalendar: React.FC = () => {
                       key={d}
                       onClick={() => navigate(`/timesheet/new?date=${dateStr}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
                       className={`
-                                        p-2 relative cursor-pointer min-h-[120px] transition-all group border-transparent hover:z-10 hover:shadow-xl
-                                        ${isWeekend ? 'bg-slate-50/60' : 'bg-white'}
-                                        ${isToday ? 'bg-purple-50/30' : ''}
+                                        p-2 relative cursor-pointer min-h-[120px] transition-all group hover:z-10 hover:shadow-xl
                                     `}
+                      style={{
+                        backgroundColor: isToday ? 'var(--brandHover)' : (isWeekend ? 'var(--surfaceHover)' : 'var(--surface)')
+                      }}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full transition-colors ${isToday ? 'bg-[#4c1d95] text-white shadow-md ring-2 ring-purple-200' : 'text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-100'}`}>
+                        <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full transition-colors ${isToday ? 'bg-[#4c1d95] text-white shadow-md ring-2 ring-purple-200' : 'text-slate-500 group-hover:text-slate-800'}`}
+                          style={{
+                            backgroundColor: isToday ? 'var(--brand)' : undefined,
+                            color: isToday ? 'white' : 'var(--textMuted)'
+                          }}>
                           {d}
                         </span>
                         {hasEntries && (
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800">
                             {totalDayHours.toFixed(1)}h
                           </span>
                         )}
@@ -368,7 +392,22 @@ const TimesheetCalendar: React.FC = () => {
                             <div
                               key={entry.id}
                               onClick={(e) => { e.stopPropagation(); navigate(`/timesheet/${entry.id}`); }}
-                              className="bg-white border border-slate-200 shadow-sm rounded-md px-2 py-1.5 text-[10px] text-slate-600 truncate hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-all flex justify-between items-center group/item"
+                              className="border shadow-sm rounded-md px-2 py-1.5 text-[10px] truncate transition-all flex justify-between items-center group/item"
+                              style={{
+                                backgroundColor: 'var(--surface)',
+                                borderColor: 'var(--border)',
+                                color: 'var(--textMuted)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--brand)';
+                                e.currentTarget.style.color = 'var(--brand)';
+                                e.currentTarget.style.backgroundColor = 'var(--surfaceHover)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.color = 'var(--textMuted)';
+                                e.currentTarget.style.backgroundColor = 'var(--surface)';
+                              }}
                             >
                               <div className="flex items-center gap-2 truncate">
                                 <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.totalHours >= 8 ? 'bg-emerald-400' : 'bg-purple-400'}`}></div>
@@ -387,7 +426,7 @@ const TimesheetCalendar: React.FC = () => {
 
                       {!hasEntries && !isWeekend && (
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                          <div className="bg-purple-50 p-2 rounded-full shadow-sm">
+                          <div className="bg-purple-50 p-2 rounded-full shadow-sm dark:bg-purple-900/40">
                             <Plus className="w-5 h-5 text-purple-400" />
                           </div>
                         </div>

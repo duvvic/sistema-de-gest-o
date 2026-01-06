@@ -122,18 +122,23 @@ const TeamList: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 bg-white z-10">
+    <div className="h-full flex flex-col rounded-2xl shadow-sm border overflow-hidden"
+      style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
+      <div className="px-6 py-5 border-b flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-10"
+        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
         <div>
-          <h1 className="text-xl font-bold text-slate-800">{showInactive ? 'Colaboradores Desligados' : 'Equipe'}</h1>
-          <p className="text-sm text-slate-500">{showInactive ? 'Colaboradores inativos' : 'Colaboradores, papéis e carga de tarefas'}</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--textTitle)' }}>{showInactive ? 'Colaboradores Desligados' : 'Equipe'}</h1>
+          <p className="text-sm" style={{ color: 'var(--textMuted)' }}>{showInactive ? 'Colaboradores inativos' : 'Colaboradores, papéis e carga de tarefas'}</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           {!showInactive && (
             <button
               onClick={() => navigate('/admin/team/new')}
-              className="px-4 py-2 bg-[#4c1d95] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#3b1675] flex items-center gap-2"
+              className="px-4 py-2 text-white rounded-xl font-semibold text-sm shadow flex items-center gap-2 transition-colors"
+              style={{ backgroundColor: 'var(--brand)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--brandHover)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--brand)'}
             >
               <Plus className="w-4 h-4" />
               Adicionar
@@ -144,22 +149,32 @@ const TeamList: React.FC = () => {
             <select
               value={selectedCargo}
               onChange={(e) => setSelectedCargo(e.target.value)}
-              className="w-full appearance-none pl-3 pr-9 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm bg-white"
+              className="w-full appearance-none pl-3 pr-9 py-2 rounded-xl border focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--text)'
+              }}
             >
               <option value="Todos">Todos os cargos</option>
               {cargoOptions.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <Briefcase className="absolute right-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Briefcase className="absolute right-3 top-2.5 w-4 h-4 pointer-events-none" style={{ color: 'var(--textMuted)' }} />
           </div>
 
           <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4" style={{ color: 'var(--textMuted)' }} />
             <input
               type="text"
               placeholder="Pesquisar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm"
+              className="w-full pl-9 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--text)'
+              }}
             />
           </div>
         </div>
@@ -167,10 +182,18 @@ const TeamList: React.FC = () => {
 
       {/* Status Filter Bar */}
       {!showInactive && (
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto">
-          <button onClick={() => setStatusFilter('Todos')} className={`px-3 py-1 rounded-lg text-xs font-bold ${statusFilter === 'Todos' ? 'bg-[#4c1d95] text-white' : 'bg-white border text-slate-600'}`}>Todos</button>
-          <button onClick={() => setStatusFilter('Livre')} className={`px-3 py-1 rounded-lg text-xs font-bold ${statusFilter === 'Livre' ? 'bg-green-500 text-white' : 'bg-white border text-green-600'}`}>Livres</button>
-          <button onClick={() => setStatusFilter('Ocupado')} className={`px-3 py-1 rounded-lg text-xs font-bold ${statusFilter === 'Ocupado' ? 'bg-amber-500 text-white' : 'bg-white border text-amber-600'}`}>Ocupados</button>
+        <div className="px-6 py-3 border-b flex gap-2 overflow-x-auto"
+          style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
+          <button onClick={() => setStatusFilter('Todos')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors border`}
+            style={{
+              backgroundColor: statusFilter === 'Todos' ? 'var(--brand)' : 'var(--surface)',
+              color: statusFilter === 'Todos' ? 'white' : 'var(--text)',
+              borderColor: statusFilter === 'Todos' ? 'transparent' : 'var(--border)'
+            }}>Todos</button>
+          <button onClick={() => setStatusFilter('Livre')} className={`px-3 py-1 rounded-lg text-xs font-bold border ${statusFilter === 'Livre' ? 'bg-green-500 text-white' : 'bg-white text-green-600'}`}
+            style={{ backgroundColor: statusFilter === 'Livre' ? undefined : 'var(--surface)', borderColor: 'var(--border)' }}>Livres</button>
+          <button onClick={() => setStatusFilter('Ocupado')} className={`px-3 py-1 rounded-lg text-xs font-bold border ${statusFilter === 'Ocupado' ? 'bg-amber-500 text-white' : 'bg-white text-amber-600'}`}
+            style={{ backgroundColor: statusFilter === 'Ocupado' ? undefined : 'var(--surface)', borderColor: 'var(--border)' }}>Ocupados</button>
         </div>
       )}
 
@@ -178,12 +201,12 @@ const TeamList: React.FC = () => {
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
-              <p className="text-slate-500 animate-pulse">Carregando equipe...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
+              <p className="animate-pulse" style={{ color: 'var(--textMuted)' }}>Carregando equipe...</p>
             </div>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-slate-400">
+          <div className="flex items-center justify-center h-full" style={{ color: 'var(--textMuted)' }}>
             <div className="text-center">
               <UserIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="text-lg">Nenhum colaborador encontrado</p>
@@ -201,11 +224,18 @@ const TeamList: React.FC = () => {
               return (
                 <div
                   key={user.id}
-                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all cursor-pointer group"
+                  className="p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                  style={{
+                    backgroundColor: 'var(--surface)',
+                    borderColor: 'var(--border)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                   onClick={() => navigate(`/admin/team/${user.id}`)}
                 >
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden text-slate-400 font-bold text-xl">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden font-bold text-xl"
+                      style={{ backgroundColor: 'var(--bgApp)', color: 'var(--textMuted)' }}>
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
@@ -213,52 +243,57 @@ const TeamList: React.FC = () => {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-base font-bold text-slate-800 truncate">{user.name}</h3>
+                      <h3 className="text-base font-bold truncate" style={{ color: 'var(--textTitle)' }}>{user.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase`}>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase`}
+                          style={{ backgroundColor: 'var(--bgApp)', color: 'var(--text)' }}>
                           {user.role === 'admin' ? 'Admin' : 'Time'}
                         </span>
                         {user.cargo && (
-                          <p className="text-xs font-semibold text-[#4c1d95] truncate">{user.cargo}</p>
+                          <p className="text-xs font-semibold truncate" style={{ color: 'var(--brand)' }}>{user.cargo}</p>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm text-slate-600 mb-4">
+                  <div className="space-y-2 text-sm mb-4" style={{ color: 'var(--text)' }}>
                     <div className="flex items-center gap-2 text-xs">
-                      <Mail className="w-3.5 h-3.5 text-slate-400" />
+                      <Mail className="w-3.5 h-3.5" style={{ color: 'var(--textMuted)' }} />
                       <span className="truncate">{user.email}</span>
                     </div>
 
                     <div className="flex flex-wrap gap-2 text-xs font-semibold mt-2">
                       {delayedTasks.length > 0 && (
-                        <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1">
+                        <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800">
                           <AlertCircle className="w-3 h-3" /> {delayedTasks.length} atrasos
                         </span>
                       )}
                       {userActiveTasks.length === 0 ? (
-                        <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100 flex items-center gap-1">
+                        <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100 flex items-center gap-1 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800">
                           <CheckSquare className="w-3 h-3" /> Livre
                         </span>
                       ) : (
-                        <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100 flex items-center gap-1">
+                        <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100 flex items-center gap-1 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800">
                           <AlertCircle className="w-3 h-3" /> {userActiveTasks.length} tarefas
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="pt-3 border-t flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ borderColor: 'var(--border)' }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/admin/team/${user.id}/edit`); }}
-                      className="text-xs font-bold text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg"
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg"
+                      style={{ color: 'var(--brand)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surfaceHover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       Editar
                     </button>
                     <button
                       onClick={(e) => handleDeleteClick(e, user)}
-                      className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg"
+                      className="text-xs font-bold text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       Excluir
                     </button>

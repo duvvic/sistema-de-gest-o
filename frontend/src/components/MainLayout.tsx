@@ -9,10 +9,13 @@ import {
     Briefcase,
     Clock,
     Menu,
-    X
+    X,
+    Moon,
+    Sun
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import logoImg from '@/assets/logo.png';
+import ThemeToggle from './ThemeToggle';
 
 const MainLayout: React.FC = () => {
     const { currentUser, logout } = useAuth();
@@ -137,11 +140,12 @@ const MainLayout: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-100 overflow-hidden">
+        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bgApp)' }}>
             {/* Sidebar */}
             <div
                 className={`${sidebarOpen ? 'w-64' : 'w-20'
-                    } bg-gradient-to-b from-[#4c1d95] to-[#5b21b6] text-white transition-all duration-300 flex flex-col z-20 shadow-xl relative`} // z-20 para ficar acima do conteúdo
+                    } transition-all duration-300 flex flex-col z-20 shadow-xl relative`}
+                style={{ backgroundColor: 'var(--bgSidebar)' }}
             >
                 {/* Header */}
                 <div className="p-6 flex items-center justify-between border-b border-purple-600">
@@ -194,6 +198,11 @@ const MainLayout: React.FC = () => {
                     )}
                 </button>
 
+                {/* Theme Toggle - Na área do usuário */}
+                <div className="px-6 pb-4 border-b border-purple-600">
+                    <ThemeToggle showLabel={sidebarOpen} />
+                </div>
+
                 {/* Menu Items */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     {menuItems.map((item) => {
@@ -204,10 +213,21 @@ const MainLayout: React.FC = () => {
                             <button
                                 key={item.path}
                                 onClick={() => navigate(item.path)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active
-                                    ? 'bg-white text-[#4c1d95] shadow-lg'
-                                    : 'text-purple-100 hover:bg-purple-700'
-                                    } ${!sidebarOpen && 'justify-center'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${!sidebarOpen && 'justify-center'}`}
+                                style={{
+                                    backgroundColor: active ? 'var(--brand)' : 'transparent',
+                                    color: active ? 'white' : 'var(--text)',
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!active) {
+                                        e.currentTarget.style.backgroundColor = 'var(--surfaceHover)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!active) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                    }
+                                }}
                             >
                                 <Icon className="w-5 h-5 flex-shrink-0" />
                                 {sidebarOpen && <span className="font-medium" translate="no">{item.label}</span>}
@@ -230,7 +250,7 @@ const MainLayout: React.FC = () => {
             </div>
 
             {/* Main Content - iOS Navigation Wrapper */}
-            <div className="flex-1 overflow-hidden relative bg-slate-100 perspective-1000">
+            <div className="flex-1 overflow-hidden relative perspective-1000" style={{ backgroundColor: 'var(--bgApp)' }}>
                 <AnimatePresence custom={direction} mode="popLayout">
                     <motion.div
                         key={location.pathname}
@@ -239,7 +259,8 @@ const MainLayout: React.FC = () => {
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        className="h-full w-full overflow-auto absolute top-0 left-0 bg-slate-100 shadow-2xl"
+                        className="h-full w-full overflow-auto absolute top-0 left-0 shadow-2xl"
+                        style={{ backgroundColor: 'var(--bgApp)' }}
                     // Adiciona sombra quando está "flutuando" na animação
                     >
                         <Outlet />

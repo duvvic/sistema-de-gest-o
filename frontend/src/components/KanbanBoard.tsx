@@ -26,11 +26,11 @@ import { Task, Client, Project, Status } from '@/types';
 import { Calendar, User as UserIcon, AlertCircle, Search, Trash2, ArrowLeft, GripVertical, Clock } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
-const STATUS_COLUMNS: { id: Status; title: string; color: string; bg: string; borderColor: string }[] = [
-  { id: 'Todo', title: 'A Fazer', color: 'text-slate-600', bg: 'bg-slate-50', borderColor: 'border-slate-200' },
-  { id: 'In Progress', title: 'Em Progresso', color: 'text-blue-600', bg: 'bg-blue-50', borderColor: 'border-blue-200' },
-  { id: 'Review', title: 'Revisão', color: 'text-purple-600', bg: 'bg-purple-50', borderColor: 'border-purple-200' },
-  { id: 'Done', title: 'Concluído', color: 'text-green-600', bg: 'bg-green-50', borderColor: 'border-green-200' },
+const STATUS_COLUMNS: { id: Status; title: string; color: string; badgeColor: string }[] = [
+  { id: 'Todo', title: 'A Fazer', color: 'var(--textMuted)', badgeColor: 'var(--textMuted)' },
+  { id: 'In Progress', title: 'Em Progresso', color: 'var(--info)', badgeColor: 'var(--info)' },
+  { id: 'Review', title: 'Revisão', color: 'var(--brand)', badgeColor: 'var(--brand)' },
+  { id: 'Done', title: 'Concluído', color: 'var(--success)', badgeColor: 'var(--success)' },
 ];
 
 /* ================== CARD ================== */
@@ -89,47 +89,57 @@ const KanbanCard = ({
     return (
       <div
         ref={setNodeRef}
-        style={style}
-        className="opacity-30 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl h-[180px] w-full"
+        style={{ ...style, borderColor: 'var(--textMuted)' }}
+        className="opacity-40 border-2 border-dashed rounded-xl h-[180px] w-full"
       />
     );
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-    >
+    <div ref={setNodeRef} style={style}>
       <div
         {...attributes}
         {...listeners}
         className={`
-          relative group flex flex-col gap-3 p-4 rounded-xl border bg-white shadow-sm cursor-grab active:cursor-grabbing
-          transition-all duration-500 ease-out
-          ${isHighlighted
-            ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50 shadow-purple-100 scale-[1.02]'
-            : isDelayed
-              ? 'border-red-200 bg-red-50/30'
-              : 'bg-white border-slate-100 hover:border-purple-200 hover:shadow-md'
-          }
-          touch-none
+          relative group flex flex-col gap-3 p-4 rounded-xl border shadow-sm cursor-grab active:cursor-grabbing
+          transition-all duration-300 ease-out
         `}
+        style={{
+          backgroundColor: isHighlighted ? 'var(--surfaceHover)' : 'var(--bgApp)', // Card background distinct from Column (Surface)
+          borderColor: isHighlighted ? 'var(--brand)' : (isDelayed ? 'var(--danger)' : 'var(--border)'),
+          boxShadow: isHighlighted ? '0 0 0 2px var(--brand)' : 'var(--shadowCard)',
+          transform: isHighlighted ? 'scale(1.02)' : 'none'
+        }}
         onClick={() => onTaskClick(task.id)}
+        onMouseEnter={(e) => {
+          if (!isHighlighted && !isDelayed) {
+            e.currentTarget.style.borderColor = 'var(--brand)';
+            e.currentTarget.style.boxShadow = 'var(--shadowCardHover)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isHighlighted && !isDelayed) {
+            e.currentTarget.style.borderColor = 'var(--border)';
+            e.currentTarget.style.boxShadow = 'var(--shadowCard)';
+            e.currentTarget.style.transform = 'none';
+          }
+        }}
       >
         <div className="flex justify-between items-start text-left">
           <div className="flex items-center gap-2 max-w-[85%]">
-            <div className="text-slate-300 hover:text-slate-500">
+            <div style={{ color: 'var(--textMuted)' }}>
               <GripVertical size={14} />
             </div>
             {client?.logoUrl && (
               <img src={client.logoUrl} className="w-4 h-4 rounded-sm object-contain" alt="" />
             )}
-            <span className="text-[10px] uppercase font-bold text-slate-500 truncate">
+            <span className="text-[10px] uppercase font-bold truncate" style={{ color: 'var(--textMuted)' }}>
               {client?.name || 'Sem Empresa'}
             </span>
           </div>
           {isDelayed && (
-            <div className="text-red-500" title="Atrasado">
+            <div style={{ color: 'var(--danger)' }} title="Atrasado">
               <AlertCircle size={14} />
             </div>
           )}
@@ -138,42 +148,55 @@ const KanbanCard = ({
         {isAdmin && onDelete && (
           <button
             onClick={(e) => onDelete(e, task)}
-            className="absolute top-2 right-2 p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ color: 'var(--textMuted)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--textMuted)'}
           >
             <Trash2 size={14} />
           </button>
         )}
 
         <div className="flex text-left">
-          <span className="text-[10px] font-bold tracking-wide uppercase text-[#4c1d95] bg-purple-50 px-2 py-1 rounded-md max-w-full truncate">
+          <span className="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md max-w-full truncate"
+            style={{ backgroundColor: 'var(--bgApp)', color: 'var(--brand)', border: '1px solid var(--border)' }}>
             {project?.name || 'Geral'}
           </span>
         </div>
 
-        <h4 className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2 text-left">
+        <h4 className="font-semibold text-sm leading-snug line-clamp-2 text-left" style={{ color: 'var(--textTitle)' }}>
           {task.title}
         </h4>
 
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border)' }}>
             <div
-              className={`h-full rounded-full ${isDelayed ? 'bg-red-500' : 'bg-[#4c1d95]'}`}
-              style={{ width: `${task.progress || 0}%` }}
+              className={`h-full rounded-full`}
+              style={{
+                width: `${task.progress || 0}%`,
+                backgroundColor: isDelayed ? 'var(--danger)' : 'var(--brand)'
+              }}
             />
           </div>
-          <span className="text-[10px] font-medium text-slate-500">{task.progress || 0}%</span>
+          <span className="text-[10px] font-medium" style={{ color: 'var(--textMuted)' }}>{task.progress || 0}%</span>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-50 mt-1">
+        <div className="flex items-center justify-between pt-2 border-t mt-1" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center border"
+              style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
               <UserIcon size={10} />
             </div>
-            <span className="text-[10px] text-slate-500 font-medium truncate max-w-[80px]">
+            <span className="text-[10px] font-medium truncate max-w-[80px]" style={{ color: 'var(--textMuted)' }}>
               {task.developer || 'N/A'}
             </span>
           </div>
-          <div className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md ${isDelayed ? 'bg-red-100 text-red-700' : 'bg-slate-50 text-slate-400'}`}>
+          <div className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md`}
+            style={{
+              backgroundColor: isDelayed ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface)',
+              color: isDelayed ? 'var(--danger)' : 'var(--textMuted)',
+              border: isDelayed ? '1px solid var(--danger)' : '1px solid var(--border)'
+            }}>
             <Calendar size={10} />
             <span>
               {task.estimatedDelivery
@@ -186,7 +209,20 @@ const KanbanCard = ({
         {task.status !== 'Done' && (
           <button
             onClick={handleCreateTimesheet}
-            className="mt-2 w-full flex items-center justify-center gap-2 py-2 bg-purple-50 hover:bg-[#4c1d95] text-[#4c1d95] hover:text-white rounded-lg transition-all text-[11px] font-bold border border-purple-100 shadow-sm"
+            className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-all text-[11px] font-bold border shadow-sm"
+            style={{
+              backgroundColor: 'var(--surface)',
+              borderColor: 'var(--brand)',
+              color: 'var(--brand)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--brand)';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--surface)';
+              e.currentTarget.style.color = 'var(--brand)';
+            }}
           >
             <Clock size={12} />
             Apontar Tarefa
@@ -223,10 +259,15 @@ const KanbanColumn = ({
   });
 
   return (
-    <div className={`flex flex-col flex-1 min-w-[250px] h-full rounded-2xl ${col.bg} border ${col.borderColor} p-3`}>
-      <div className={`flex items-center justify-between mb-3 px-1 ${col.color}`}>
-        <h3 className="font-bold text-sm uppercase tracking-wider">{col.title}</h3>
-        <span className="bg-white/60 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm border border-black/5">
+    <div className={`flex flex-col flex-1 min-w-[280px] h-full rounded-2xl border p-4`}
+      style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+      <div className={`flex items-center justify-between mb-4 px-1`}>
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.badgeColor }}></div>
+          <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--textTitle)' }}>{col.title}</h3>
+        </div>
+        <span className="px-2 py-0.5 rounded-md text-xs font-bold shadow-sm border"
+          style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
           {tasks.length}
         </span>
       </div>
@@ -361,35 +402,49 @@ const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50/50 p-4">
+    <div className="h-full flex flex-col p-4" style={{ backgroundColor: 'var(--bgApp)' }}>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
           {filteredClientId && (
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 bg-white border border-slate-200 hover:bg-[#4c1d95] text-slate-700 hover:text-white rounded-xl transition-all font-medium flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 border rounded-xl transition-all font-medium flex items-center gap-2 shadow-sm"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--brand)';
+                e.currentTarget.style.color = 'white';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--surface)';
+                e.currentTarget.style.color = 'var(--text)';
+              }}
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Voltar</span>
             </button>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--textTitle)' }}>
               {currentClient ? (
                 <>
                   {currentClient.logoUrl && (
                     <img
                       src={currentClient.logoUrl}
                       alt={currentClient.name}
-                      className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 p-1"
+                      className="w-8 h-8 rounded-lg object-contain p-1 border"
+                      style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                     />
                   )}
                   {currentClient.name}
                 </>
               ) : 'Quadro de Tarefas'}
             </h1>
-            <p className="text-slate-500 text-sm">
+            <p className="text-sm" style={{ color: 'var(--textMuted)' }}>
               {currentClient ? 'Gerenciamento de entregas' : 'Visão geral de todas as tarefas'}
             </p>
           </div>
@@ -397,19 +452,27 @@ const KanbanBoard: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4" style={{ color: 'var(--textMuted)' }} />
             <input
               type="text"
               placeholder="Buscar tarefas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm shadow-sm transition-all"
+              className="w-full pl-9 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none text-sm shadow-sm transition-all"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--text)'
+              }}
             />
           </div>
 
           {!location.pathname.includes('/developer/tasks') && isAdmin && (
             <button
-              className="bg-[#4c1d95] hover:bg-[#3b1675] text-white px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 font-bold text-sm whitespace-nowrap active:scale-95"
+              className="text-white px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 font-bold text-sm whitespace-nowrap active:scale-95"
+              style={{ backgroundColor: 'var(--brand)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--brandHover)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--brand)'}
               onClick={() => navigate('/tasks/new')}
             >
               + Nova Tarefa
@@ -422,8 +485,8 @@ const KanbanBoard: React.FC = () => {
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
-            <p className="text-slate-500 animate-pulse">Carregando quadro de tarefas...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
+            <p className="animate-pulse" style={{ color: 'var(--textMuted)' }}>Carregando quadro de tarefas...</p>
           </div>
         </div>
       ) : (
