@@ -1,84 +1,21 @@
 // controllers/useDataController.ts
-// Controller hook para gerenciar dados da aplicação (Clients, Projects, Tasks, etc)
+// Controller hook para gerenciar dados da aplicação usando o Contexto Centralizado
 
-import { useState, useEffect } from 'react';
-import { useAppData } from '@/hooks/useAppData';
+import { useData } from '@/contexts/DataContext';
 import { Task, Project, Client, User, TimesheetEntry } from '@/types';
 import { supabase } from '@/services/supabaseClient';
-import { useAuth } from '@/contexts/AuthContext';
 
 export const useDataController = () => {
-    // Verificar se o usuário está autenticado
-    const { currentUser, isLoading: authLoading } = useAuth();
-
-    // Hook do Supabase para dados em tempo real (só carrega se autenticado)
     const {
-        users: loadedUsers,
-        clients: loadedClients,
-        projects: loadedProjects,
-        tasks: loadedTasks,
-        timesheetEntries: loadedTimesheets,
-        projectMembers: loadedProjectMembers,
-        loading: dataLoading,
-        error: dataError,
-    } = useAppData();
-
-    // State local
-    const [clients, setClients] = useState<Client[]>([]);
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
-    const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>([]);
-    const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
-
-    // Sincronizar com dados do Supabase
-    useEffect(() => {
-        if (!currentUser || authLoading || dataLoading) {
-            return;
-        }
-
-        setClients(loadedClients);
-        setProjects(loadedProjects);
-        setTasks(loadedTasks);
-        setTimesheetEntries(loadedTimesheets);
-
-        // Sincronizar membros quando o carregamento terminar
-        if (!dataLoading) {
-            setProjectMembers(loadedProjectMembers);
-        }
-
-        if (loadedUsers.length > 0) {
-            setUsers(loadedUsers);
-        }
-
-    }, [currentUser, authLoading, dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers]);
-
-    // Canais Realtime para Membros
-    useEffect(() => {
-        const channel = supabase
-            .channel('project_members_changes')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'project_members'
-            }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setProjectMembers(prev => [...prev, {
-                        projectId: String(payload.new.id_projeto),
-                        userId: String(payload.new.id_colaborador)
-                    }]);
-                } else if (payload.eventType === 'DELETE') {
-                    setProjectMembers(prev => prev.filter(pm =>
-                        !(pm.projectId === String(payload.old.id_projeto) && pm.userId === String(payload.old.id_colaborador))
-                    ));
-                }
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, []);
+        clients, setClients,
+        projects, setProjects,
+        tasks, setTasks,
+        users, setUsers,
+        timesheetEntries, setTimesheetEntries,
+        projectMembers, setProjectMembers,
+        loading,
+        error
+    } = useData();
 
     // === CLIENT CONTROLLERS ===
 
@@ -94,7 +31,6 @@ export const useDataController = () => {
         const { createClient: createClientDb } = await import('@/services/clientService');
         const newId = await createClientDb(clientData as Client);
 
-        // Buscar o registro completo
         const { data: row } = await supabase
             .from('dim_clientes')
             .select('*')
@@ -124,7 +60,6 @@ export const useDataController = () => {
             .eq('ID_Cliente', Number(clientId));
 
         if (error) throw error;
-
         setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updates } : c));
     };
 
@@ -135,9 +70,8 @@ export const useDataController = () => {
             .eq('ID_Cliente', Number(clientId));
 
         if (error) throw error;
-
         setClients(prev => prev.map(c =>
-            c.id === clientId ? { ...(c as any), active: false, Desativado: reason } : c
+            c.id === clientId ? { ...c, active: false, Desativado: reason } as any : c
         ));
     };
 
@@ -154,17 +88,14 @@ export const useDataController = () => {
     const createProject = async (projectData: Partial<Project>): Promise<string> => {
         const { createProject: createProjectDb } = await import('@/services/projectService');
         const newId = await createProjectDb(projectData);
-
         const newProject = { ...projectData, id: String(newId) } as Project;
         setProjects(prev => [...prev, newProject]);
-
         return String(newId);
     };
 
     const updateProject = async (projectId: string, updates: Partial<Project>): Promise<void> => {
         const { updateProject: updateProjectDb } = await import('@/services/projectService');
         await updateProjectDb(projectId, updates);
-
         setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
     };
 
@@ -184,33 +115,23 @@ export const useDataController = () => {
 
     const createTask = async (taskData: Partial<Task>): Promise<string> => {
         const taskModule = await import('@/services/taskService');
-        const createTaskFn = (taskModule as any).createTask ??
-            (taskModule as any).default?.createTask ??
-            (taskModule as any).default;
-
+        const createTaskFn = (taskModule as any).createTask ?? (taskModule as any).default?.createTask ?? (taskModule as any).default;
         const newId = await createTaskFn(taskData);
         const newTask = { ...taskData, id: String(newId) } as Task;
-        setTasks(prev => [...prev, newTask]);
-
+        setTasks(prev => [newTask, ...prev]);
         return String(newId);
     };
 
     const updateTask = async (taskId: string, updates: Partial<Task>): Promise<void> => {
         const taskModule = await import('@/services/taskService');
-        const updateTaskFn = (taskModule as any).updateTask ??
-            (taskModule as any).default?.updateTask ??
-            (taskModule as any).default;
-
+        const updateTaskFn = (taskModule as any).updateTask ?? (taskModule as any).default?.updateTask ?? (taskModule as any).default;
         await updateTaskFn(taskId, updates);
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
     };
 
     const deleteTask = async (taskId: string): Promise<void> => {
         const taskModule = await import('@/services/taskService');
-        const deleteTaskFn = (taskModule as any).deleteTask ??
-            (taskModule as any).default?.deleteTask ??
-            (taskModule as any).default;
-
+        const deleteTaskFn = (taskModule as any).deleteTask ?? (taskModule as any).default?.deleteTask ?? (taskModule as any).default;
         await deleteTaskFn(taskId);
         setTasks(prev => prev.filter(t => t.id !== taskId));
     };
@@ -221,12 +142,7 @@ export const useDataController = () => {
         return timesheetEntries.filter(e => e.userId === userId);
     };
 
-    const getTimesheetsByClient = (clientId: string): TimesheetEntry[] => {
-        return timesheetEntries.filter(e => e.clientId === clientId);
-    };
-
     const createTimesheet = async (entry: TimesheetEntry): Promise<void> => {
-        console.log("[Controller] Criando Apontamento:", entry);
         const { data, error } = await supabase
             .from('horas_trabalhadas')
             .insert({
@@ -245,16 +161,11 @@ export const useDataController = () => {
             .single();
 
         if (error) throw error;
-
-        if (data) {
-            entry.id = String(data.ID_Horas_Trabalhadas);
-        }
-
-        setTimesheetEntries(prev => [...prev, entry]);
+        if (data) entry.id = String(data.ID_Horas_Trabalhadas);
+        setTimesheetEntries(prev => [entry, ...prev]);
     };
 
     const updateTimesheet = async (entry: TimesheetEntry): Promise<void> => {
-        console.log("[Controller] Atualizando Apontamento:", entry);
         const { error } = await supabase
             .from('horas_trabalhadas')
             .update({
@@ -272,7 +183,6 @@ export const useDataController = () => {
             .eq('ID_Horas_Trabalhadas', entry.id);
 
         if (error) throw error;
-
         setTimesheetEntries(prev => prev.map(e => e.id === entry.id ? entry : e));
     };
 
@@ -281,9 +191,7 @@ export const useDataController = () => {
             .from('horas_trabalhadas')
             .delete()
             .eq('ID_Horas_Trabalhadas', entryId);
-
         if (error) throw error;
-
         setTimesheetEntries(prev => prev.filter(e => e.id !== entryId));
     };
 
@@ -309,7 +217,6 @@ export const useDataController = () => {
             }])
             .select('ID_Colaborador')
             .single();
-
         if (error) throw error;
         return String(data.ID_Colaborador);
     };
@@ -327,48 +234,30 @@ export const useDataController = () => {
             .from('dim_colaboradores')
             .update(payload)
             .eq('ID_Colaborador', Number(userId));
-
         if (error) throw error;
     };
 
     const deleteUser = async (userId: string): Promise<void> => {
         const { error } = await supabase
             .from('dim_colaboradores')
-            .update({ Ativo: false })
+            .update({ ativo: false })
             .eq('ID_Colaborador', Number(userId));
-
         if (error) throw error;
     };
 
-    // === PROJECT MEMBERS CONTROLLERS ===
+    // === MEMBER CONTROLLERS ===
 
     const getProjectMembers = (projectId: string): string[] => {
-        return projectMembers
-            .filter(pm => pm.projectId === projectId)
-            .map(pm => pm.userId);
+        return projectMembers.filter(pm => pm.projectId === projectId).map(pm => pm.userId);
     };
 
     const addProjectMember = async (projectId: string, userId: string): Promise<void> => {
-        // Usar upsert para evitar erro de duplicidade se já existir (mesmo comportamento do trigger)
         const { error } = await supabase
             .from('project_members')
-            .upsert(
-                {
-                    id_projeto: Number(projectId),
-                    id_colaborador: Number(userId)
-                },
-                { onConflict: 'id_projeto, id_colaborador' }
-            );
-
-        if (error) {
-            console.error("[useDataController] Erro ao adicionar membro:", error);
-            throw error;
-        }
-
-        // Atualizar state local apenas se não estiver lá
+            .upsert({ id_projeto: Number(projectId), id_colaborador: Number(userId) }, { onConflict: 'id_projeto, id_colaborador' });
+        if (error) throw error;
         setProjectMembers(prev => {
-            const exists = prev.some(pm => pm.projectId === projectId && pm.userId === userId);
-            if (exists) return prev;
+            if (prev.some(pm => pm.projectId === projectId && pm.userId === userId)) return prev;
             return [...prev, { projectId, userId }];
         });
     };
@@ -377,66 +266,18 @@ export const useDataController = () => {
         const { error } = await supabase
             .from('project_members')
             .delete()
-            .match({
-                id_projeto: Number(projectId),
-                id_colaborador: Number(userId)
-            });
-
+            .match({ id_projeto: Number(projectId), id_colaborador: Number(userId) });
         if (error) throw error;
-
         setProjectMembers(prev => prev.filter(pm => !(pm.projectId === projectId && pm.userId === userId)));
     };
 
-
     return {
-        // State
-        clients,
-        projects,
-        tasks,
-        users,
-        timesheetEntries,
-        projectMembers,
-        loading: dataLoading,
-        error: dataError,
-
-        // Client methods
-        getClientById,
-        getActiveClients,
-        createClient,
-        updateClient,
-        deactivateClient,
-
-        // Project methods
-        getProjectById,
-        getProjectsByClient,
-        createProject,
-        updateProject,
-
-        // Task methods
-        getTaskById,
-        getTasksByProject,
-        getTasksByUser,
-        createTask,
-        updateTask,
-        deleteTask,
-
-        // Timesheet methods
-        getTimesheetsByUser,
-        getTimesheetsByClient,
-        createTimesheet,
-        updateTimesheet,
-        deleteTimesheet,
-
-        // User methods
-        getUserById,
-        getActiveUsers,
-        createUser,
-        updateUser,
-        deleteUser,
-
-        // Member methods
-        getProjectMembers,
-        addProjectMember,
-        removeProjectMember
+        clients, projects, tasks, users, timesheetEntries, projectMembers, loading, error,
+        getClientById, getActiveClients, createClient, updateClient, deactivateClient,
+        getProjectById, getProjectsByClient, createProject, updateProject,
+        getTaskById, getTasksByProject, getTasksByUser, createTask, updateTask, deleteTask,
+        getTimesheetsByUser, createTimesheet, updateTimesheet, deleteTimesheet,
+        getUserById, getActiveUsers, createUser, updateUser, deleteUser,
+        getProjectMembers, addProjectMember, removeProjectMember
     };
 };

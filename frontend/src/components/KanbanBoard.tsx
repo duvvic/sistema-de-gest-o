@@ -256,7 +256,7 @@ const KanbanBoard: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { tasks, clients, projects, updateTask, deleteTask } = useDataController();
+  const { tasks, clients, projects, updateTask, deleteTask, loading } = useDataController();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -419,52 +419,61 @@ const KanbanBoard: React.FC = () => {
       </div>
 
       {/* Kanban Area */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      >
-        <div className="flex-1 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 px-2 custom-scrollbar h-full">
-          {STATUS_COLUMNS.map((col) => (
-            <KanbanColumn
-              key={col.id} // Key usada aqui corretamente
-              col={col}
-              tasks={filteredTasks.filter(t => t.status === col.id)}
-              clients={clients}
-              projects={projects}
-              onTaskClick={(id) => {
-                if (id.startsWith('__NAVIGATE__:')) {
-                  navigate(id.replace('__NAVIGATE__:', ''));
-                } else {
-                  navigate(`/tasks/${id}`);
-                }
-              }}
-              onDelete={handleDeleteClick}
-              isAdmin={isAdmin}
-              highlightedTaskId={highlightedTaskId}
-            />
-          ))}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
+            <p className="text-slate-500 animate-pulse">Carregando quadro de tarefas...</p>
+          </div>
         </div>
-
-        <DragOverlay dropAnimation={{
-          sideEffects: defaultDropAnimationSideEffects({
-            styles: { active: { opacity: '0.5' } },
-          }),
-        }}>
-          {activeTask ? (
-            <div className="w-[300px]">
-              <KanbanCard
-                task={activeTask}
-                client={clients.find(c => c.id === activeTask.clientId)}
-                project={projects.find(p => p.id === activeTask.projectId)}
-                onTaskClick={() => { }}
-                isAdmin={false}
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        >
+          <div className="flex-1 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 px-2 custom-scrollbar h-full">
+            {STATUS_COLUMNS.map((col) => (
+              <KanbanColumn
+                key={col.id} // Key usada aqui corretamente
+                col={col}
+                tasks={filteredTasks.filter(t => t.status === col.id)}
+                clients={clients}
+                projects={projects}
+                onTaskClick={(id) => {
+                  if (id.startsWith('__NAVIGATE__:')) {
+                    navigate(id.replace('__NAVIGATE__:', ''));
+                  } else {
+                    navigate(`/tasks/${id}`);
+                  }
+                }}
+                onDelete={handleDeleteClick}
+                isAdmin={isAdmin}
+                highlightedTaskId={highlightedTaskId}
               />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+            ))}
+          </div>
+
+          <DragOverlay dropAnimation={{
+            sideEffects: defaultDropAnimationSideEffects({
+              styles: { active: { opacity: '0.5' } },
+            }),
+          }}>
+            {activeTask ? (
+              <div className="w-[300px]">
+                <KanbanCard
+                  task={activeTask}
+                  client={clients.find(c => c.id === activeTask.clientId)}
+                  project={projects.find(p => p.id === activeTask.projectId)}
+                  onTaskClick={() => { }}
+                  isAdmin={false}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       <ConfirmationModal
         isOpen={deleteModalOpen}

@@ -167,7 +167,14 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* LISTA DE CLIENTES */}
-      {sortedClients.length === 0 ? (
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
+            <p className="text-slate-500 animate-pulse">Carregando clientes...</p>
+          </div>
+        </div>
+      ) : sortedClients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-slate-400">
             <Building2 className="w-16 h-16 mx-auto mb-4 opacity-30" />

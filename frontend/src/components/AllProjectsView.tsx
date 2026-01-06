@@ -32,7 +32,14 @@ const AllProjectsView: React.FC = () => {
 
       {/* Lista de Projetos */}
       <div className="flex-1 overflow-y-auto">
-        {projects.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
+              <p className="text-slate-500 animate-pulse">Carregando projetos...</p>
+            </div>
+          </div>
+        ) : projects.length === 0 ? (
           <div className="flex items-center justify-center h-full text-slate-400">
             <div className="text-center">
               <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-30" />

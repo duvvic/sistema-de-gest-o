@@ -77,7 +77,9 @@ export interface DbTaskRow {
 export async function fetchUsers(): Promise<User[]> {
   try {
     console.log("[API] Buscando...");
-    const { data, error } = await supabase.from("dim_colaboradores").select("*");
+    const { data, error } = await supabase
+      .from("dim_colaboradores")
+      .select("ID_Colaborador, NomeColaborador, Cargo, E-mail, avatar_url, papel, ativo");
 
     if (error) {
       console.error("[API] Erro Supabase:", error);
@@ -208,7 +210,9 @@ export async function fetchTasks(): Promise<DbTaskRow[]> {
   try {
     const { data, error } = await supabase
       .from("fato_tarefas")
-      .select("*");
+      .select('id_tarefa_novo, ID_Cliente, ID_Projeto, Afazer, ID_Colaborador, StatusTarefa, entrega_estimada, entrega_real, inicio_previsto, inicio_real, Porcentagem, Prioridade, Impacto, Riscos, "Observações", attachment, description')
+      .order('id_tarefa_novo', { ascending: false })
+      .limit(500);
 
     if (error) {
       throw error;
@@ -262,7 +266,9 @@ export async function fetchTimesheets(): Promise<any[]> {
         Almoco_Deduzido,
         Descricao,
         dim_colaboradores!inner(NomeColaborador)
-      `);
+      `)
+      .order('Data', { ascending: false })
+      .limit(1000);
 
     if (error) {
       return [];

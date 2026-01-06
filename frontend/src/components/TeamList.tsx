@@ -8,7 +8,7 @@ import ConfirmationModal from './ConfirmationModal';
 
 const TeamList: React.FC = () => {
   const navigate = useNavigate();
-  const { users, tasks, timesheetEntries, deleteUser } = useDataController();
+  const { users, tasks, timesheetEntries, deleteUser, loading } = useDataController();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCargo, setSelectedCargo] = useState<'Todos' | string>('Todos');
@@ -175,83 +175,99 @@ const TeamList: React.FC = () => {
       )}
 
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredUsers.map(user => {
-            const userAllTasks = tasks.filter(t => t.developerId === user.id);
-            const userActiveTasks = userAllTasks.filter(t => t.status !== 'Done');
-            const delayedTasks = userActiveTasks.filter(isTaskDelayed);
-            const onTimeTasks = userActiveTasks.filter(t => !isTaskDelayed(t));
-            const missingDays = getUserMissingDays(user.id);
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4c1d95] mx-auto mb-4"></div>
+              <p className="text-slate-500 animate-pulse">Carregando equipe...</p>
+            </div>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-slate-400">
+            <div className="text-center">
+              <UserIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <p className="text-lg">Nenhum colaborador encontrado</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredUsers.map(user => {
+              const userAllTasks = tasks.filter(t => t.developerId === user.id);
+              const userActiveTasks = userAllTasks.filter(t => t.status !== 'Done');
+              const delayedTasks = userActiveTasks.filter(isTaskDelayed);
+              const onTimeTasks = userActiveTasks.filter(t => !isTaskDelayed(t));
+              const missingDays = getUserMissingDays(user.id);
 
-            return (
-              <div
-                key={user.id}
-                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all cursor-pointer group"
-                onClick={() => navigate(`/admin/team/${user.id}`)}
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden text-slate-400 font-bold text-xl">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                    ) : (
-                      user.name.substring(0, 2).toUpperCase()
-                    )}
+              return (
+                <div
+                  key={user.id}
+                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all cursor-pointer group"
+                  onClick={() => navigate(`/admin/team/${user.id}`)}
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden text-slate-400 font-bold text-xl">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        user.name.substring(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-slate-800 truncate">{user.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase`}>
+                          {user.role === 'admin' ? 'Admin' : 'Time'}
+                        </span>
+                        {user.cargo && (
+                          <p className="text-xs font-semibold text-[#4c1d95] truncate">{user.cargo}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-base font-bold text-slate-800 truncate">{user.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase`}>
-                        {user.role === 'admin' ? 'Admin' : 'Time'}
-                      </span>
-                      {user.cargo && (
-                        <p className="text-xs font-semibold text-[#4c1d95] truncate">{user.cargo}</p>
+
+                  <div className="space-y-2 text-sm text-slate-600 mb-4">
+                    <div className="flex items-center gap-2 text-xs">
+                      <Mail className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="truncate">{user.email}</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-xs font-semibold mt-2">
+                      {delayedTasks.length > 0 && (
+                        <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {delayedTasks.length} atrasos
+                        </span>
+                      )}
+                      {userActiveTasks.length === 0 ? (
+                        <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100 flex items-center gap-1">
+                          <CheckSquare className="w-3 h-3" /> Livre
+                        </span>
+                      ) : (
+                        <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {userActiveTasks.length} tarefas
+                        </span>
                       )}
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-2 text-sm text-slate-600 mb-4">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="truncate">{user.email}</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-xs font-semibold mt-2">
-                    {delayedTasks.length > 0 && (
-                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {delayedTasks.length} atrasos
-                      </span>
-                    )}
-                    {userActiveTasks.length === 0 ? (
-                      <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100 flex items-center gap-1">
-                        <CheckSquare className="w-3 h-3" /> Livre
-                      </span>
-                    ) : (
-                      <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {userActiveTasks.length} tarefas
-                      </span>
-                    )}
+                  <div className="pt-3 border-t border-slate-100 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/team/${user.id}/edit`); }}
+                      className="text-xs font-bold text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteClick(e, user)}
+                      className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg"
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </div>
-
-                <div className="pt-3 border-t border-slate-100 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/team/${user.id}/edit`); }}
-                    className="text-xs font-bold text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteClick(e, user)}
-                    className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg"
-                  >
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <ConfirmationModal
