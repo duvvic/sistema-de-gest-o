@@ -1,24 +1,33 @@
 /* Theme CSS Variables - Light & Dark Mode */
 
 :root {
-  /* Brand Colors - Light Mode */
-  --brand: #7C3AED;
-  --brandHover: #6D28D9;
+  /* Brand Colors - Light Mode (Original) */
+  --brand: #4c1d95;
+  /* violet-900 */
+  --brandHover: #3b1675;
+  /* Darker variant */
   --accentLight: #DDD6FE;
 
-  /* Background - Light Mode */
+  /* Background - Light Mode (Original) */
   --bgApp: #F8FAFC;
+  /* slate-50 */
   --bgSidebar: #FFFFFF;
   --surface: #FFFFFF;
-  --surfaceHover: #F1F5F9;
+  /* white */
+  --surfaceHover: #F8FAFC;
+  /* slate-50 (subtle hover) */
 
-  /* Text - Light Mode */
-  --textTitle: #0F172A;
-  --text: #334155;
+  /* Text - Light Mode (Original) */
+  --textTitle: #1E293B;
+  /* slate-800 */
+  --text: #475569;
+  /* slate-600 */
   --textMuted: #64748B;
+  /* slate-500 */
 
-  /* Border - Light Mode */
+  /* Border - Light Mode (Original) */
   --border: #E2E8F0;
+  /* slate-200 */
 
   /* Status Colors (same for both modes) */
   --success: #22C55E;
