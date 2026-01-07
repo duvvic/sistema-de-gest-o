@@ -395,19 +395,22 @@ const TimesheetCalendar: React.FC = () => {
                               onClick={(e) => { e.stopPropagation(); navigate(`/timesheet/${entry.id}`); }}
                               className="border shadow-sm rounded-md px-2 py-1.5 text-[10px] truncate transition-all flex justify-between items-center group/item"
                               style={{
-                                backgroundColor: 'var(--surface)',
+                                backgroundColor: 'var(--surface-2)', // Slightly darker than the day cell
                                 borderColor: 'var(--border)',
-                                color: 'var(--text)'
+                                color: 'var(--text)',
+                                boxShadow: 'var(--shadow-sm)'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.borderColor = 'var(--primary)';
                                 e.currentTarget.style.color = 'var(--primary)';
-                                e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+                                e.currentTarget.style.backgroundColor = 'var(--surface)'; // Highlight on hover
+                                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = 'var(--border)';
                                 e.currentTarget.style.color = 'var(--text)';
-                                e.currentTarget.style.backgroundColor = 'var(--surface)';
+                                e.currentTarget.style.backgroundColor = 'var(--surface-2)';
+                                e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
                               }}
                             >
                               <div className="flex items-center gap-2 truncate">

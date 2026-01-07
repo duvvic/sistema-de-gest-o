@@ -24,8 +24,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const loadUser = async () => {
             console.log('[Auth] Iniciando loadUser...');
             try {
-                // Primeiro tenta carregar da sessão do Supabase
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                // Primeiro tenta carregar da sessão do Supabase com timeout
+                const sessionPromise = supabase.auth.getSession();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ao carregar sessão')), 5000));
+
+                const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any;
 
                 if (sessionError) {
                     console.error('[Auth] Erro ao buscar sessão:', sessionError);
