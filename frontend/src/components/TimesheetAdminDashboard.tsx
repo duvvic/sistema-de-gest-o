@@ -163,9 +163,9 @@ const TimesheetAdminDashboard: React.FC = () => {
    }, [selectedClientId, selectedClientData, projects, tasks, users]);
 
    return (
-      <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="h-full flex flex-col rounded-2xl shadow-sm border overflow-hidden" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
          {/* Header */}
-         <div className="bg-gradient-to-r from-[#4c1d95] to-purple-600 px-8 py-6 border-b border-slate-200">
+         <div className="bg-gradient-to-r from-[#4c1d95] to-purple-600 px-8 py-6 border-b" style={{ borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between">
                <div>
                   <h1 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -182,11 +182,9 @@ const TimesheetAdminDashboard: React.FC = () => {
                      onClick={() => {
                         const newTab = activeTab === 'projects' ? 'status' : 'projects';
                         setActiveTab(newTab);
-                        // Reset clientId se for para status
                         if (newTab === 'status' && selectedClientId) {
                            const params: any = { tab: 'status' };
                            setSearchParams(params);
-                           // setSelectedClientId(null); // Actually handled by URL logic or redundant if URL drives state
                         }
                      }}
                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold flex items-center gap-2 border border-white/20 transition-all"
@@ -213,7 +211,7 @@ const TimesheetAdminDashboard: React.FC = () => {
          {/* Conteúdo */}
          {!selectedClientId && activeTab === 'projects' ? (
             // Lista de Clientes
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar" style={{ backgroundColor: 'var(--bgApp)' }}>
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {clients.map(client => {
                      const stats = getClientStats(client.id);
@@ -224,31 +222,37 @@ const TimesheetAdminDashboard: React.FC = () => {
                            onClick={() => {
                               setSearchParams({ tab: 'projects', clientId: client.id });
                            }}
-                           className="bg-white rounded-2xl border border-slate-200 p-6 cursor-pointer hover:shadow-lg hover:border-[#4c1d95] transition-all group flex flex-col h-full relative"
+                           className="rounded-2xl border p-6 cursor-pointer hover:shadow-lg transition-all group flex flex-col h-full relative"
+                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                           onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand)'}
+                           onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                         >
                            <div className="flex items-start justify-between mb-4">
-                              <div className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 p-2 flex items-center justify-center flex-shrink-0">
+                              <div className="w-14 h-14 rounded-xl border p-2 flex items-center justify-center flex-shrink-0"
+                                 style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
                                  {client.logoUrl ? (
                                     <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />
                                  ) : (
-                                    <div className="text-xl font-bold text-slate-400">{client.name.charAt(0)}</div>
+                                    <div className="text-xl font-bold" style={{ color: 'var(--textMuted)' }}>{client.name.charAt(0)}</div>
                                  )}
                               </div>
-                              <div className="w-8 h-8 rounded-full bg-slate-100 text-[#4c1d95] flex items-center justify-center group-hover:bg-[#4c1d95] group-hover:text-white transition-colors">
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center transition-colors group-hover:text-white"
+                                 style={{ backgroundColor: 'var(--surfaceHover)', color: 'var(--brand)' }}>
                                  <ArrowRight className="w-4 h-4" />
                               </div>
+                              <style>{`.group:hover .rounded-full { background-color: var(--brand) !important; color: white !important; }`}</style>
                            </div>
-                           <h3 className="text-lg font-bold text-slate-800 mb-4 line-clamp-2">{client.name}</h3>
-                           <div className="mt-auto space-y-3 pt-4 border-t border-slate-50">
+                           <h3 className="text-lg font-bold mb-4 line-clamp-2" style={{ color: 'var(--textTitle)' }}>{client.name}</h3>
+                           <div className="mt-auto space-y-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
                               <div className="flex justify-between items-center">
-                                 <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                                 <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--textMuted)' }}>
                                     <TrendingUp className="w-3 h-3 text-emerald-500" /> Horas Totais
                                  </span>
                                  <span className="text-lg font-black text-emerald-600">{stats.totalHours.toFixed(1)}h</span>
                               </div>
-                              <div className="text-xs text-slate-400 flex items-center justify-between">
+                              <div className="text-xs flex items-center justify-between" style={{ color: 'var(--textMuted)' }}>
                                  <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {clientProjects.length} Projetos</span>
-                                 {stats.projectCount > 0 && <span className="font-semibold text-[#4c1d95]">{stats.projectCount} ativos</span>}
+                                 {stats.projectCount > 0 && <span className="font-semibold" style={{ color: 'var(--brand)' }}>{stats.projectCount} ativos</span>}
                               </div>
                            </div>
                         </div>
@@ -258,16 +262,17 @@ const TimesheetAdminDashboard: React.FC = () => {
             </div>
          ) : !selectedClientId && activeTab === 'status' ? (
             // Aba Status dos Colaboradores
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar" style={{ backgroundColor: 'var(--bgApp)' }}>
                <div className="mb-6 flex justify-between items-end">
                   <div>
-                     <h2 className="text-xl font-bold text-slate-800">Status da Equipe</h2>
-                     <p className="text-slate-500 text-sm">Resumo mensal • {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                     <h2 className="text-xl font-bold" style={{ color: 'var(--textTitle)' }}>Status da Equipe</h2>
+                     <p className="text-sm" style={{ color: 'var(--textMuted)' }}>Resumo mensal • {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
                   </div>
                </div>
 
                {collaboratorsStatus.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                  <div className="text-center py-12 border-2 border-dashed rounded-2xl"
+                     style={{ borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
                      <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                      <p>Nenhum colaborador encontrado</p>
                   </div>
@@ -276,52 +281,53 @@ const TimesheetAdminDashboard: React.FC = () => {
                      {collaboratorsStatus.map(status => (
                         <div
                            key={status.user.id}
-                           className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition-all"
+                           className="border rounded-xl p-5 hover:shadow-md transition-all"
+                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                            onClick={() => navigate(`/admin/team/${status.user.id}`)}
                         >
                            <div className="flex flex-col md:flex-row items-center gap-6">
                               {/* User Info */}
                               <div className="flex items-center gap-4 flex-1 w-full">
-                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${status.isUpToDate ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${status.isUpToDate ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
                                     {status.isUpToDate ? <CheckSquare className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                                  </div>
                                  <div>
-                                    <h3 className="font-bold text-slate-800">{status.user.name}</h3>
-                                    <p className="text-xs text-slate-500">{status.user.cargo || 'Dev'}</p>
+                                    <h3 className="font-bold" style={{ color: 'var(--text)' }}>{status.user.name}</h3>
+                                    <p className="text-xs" style={{ color: 'var(--textMuted)' }}>{status.user.cargo || 'Dev'}</p>
                                  </div>
                               </div>
 
                               {/* Stats */}
                               <div className="flex items-center gap-8 w-full md:w-auto justify-around md:justify-end">
                                  <div className="text-center">
-                                    <p className="text-xl font-black text-[#4c1d95]">{status.daysWithEntries}</p>
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">dias ok</p>
+                                    <p className="text-xl font-black" style={{ color: 'var(--brand)' }}>{status.daysWithEntries}</p>
+                                    <p className="text-[10px] uppercase tracking-wide font-bold" style={{ color: 'var(--textMuted)' }}>dias ok</p>
                                  </div>
 
                                  {!status.isUpToDate && (
                                     <div className="text-center">
                                        <p className="text-xl font-black text-red-500">{status.missingDays}</p>
-                                       <p className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">falta</p>
+                                       <p className="text-[10px] uppercase tracking-wide font-bold" style={{ color: 'var(--textMuted)' }}>falta</p>
                                     </div>
                                  )}
 
                                  <div className="text-center">
-                                    <p className="text-xl font-black text-slate-700">{status.totalHours.toFixed(1)}h</p>
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">total</p>
+                                    <p className="text-xl font-black" style={{ color: 'var(--text)' }}>{status.totalHours.toFixed(1)}h</p>
+                                    <p className="text-[10px] uppercase tracking-wide font-bold" style={{ color: 'var(--textMuted)' }}>total</p>
                                  </div>
                               </div>
 
-                              <div className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${status.isUpToDate ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              <div className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${status.isUpToDate ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                                  {status.isUpToDate ? 'EM DIA' : 'ATENÇÃO'}
                               </div>
                            </div>
 
                            {!status.isUpToDate && status.missingDates.length > 0 && (
-                              <div className="mt-4 pt-4 border-t border-slate-100">
-                                 <p className="text-xs font-bold text-slate-500 mb-2">DIAS SEM APONTAMENTO:</p>
+                              <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                                 <p className="text-xs font-bold mb-2" style={{ color: 'var(--textMuted)' }}>DIAS SEM APONTAMENTO:</p>
                                  <div className="flex flex-wrap gap-2">
                                     {status.missingDates.slice(0, 12).map(date => (
-                                       <span key={date} className="px-2 py-0.5 bg-red-50 text-red-600 rounded border border-red-100 text-xs font-mono">
+                                       <span key={date} className="px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded border border-red-100 dark:border-red-800 text-xs font-mono">
                                           {new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                                        </span>
                                     ))}
@@ -335,15 +341,19 @@ const TimesheetAdminDashboard: React.FC = () => {
             </div>
          ) : (
             // Detalhe do Cliente com Abas
-            <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+            <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bgApp)' }}>
                {/* Tabs */}
-               <div className="px-8 py-2 bg-white border-b border-slate-200 flex gap-6">
+               <div className="px-8 py-2 border-b flex gap-6" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                   <button
                      onClick={() => setActiveTab('projects')}
                      className={`py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'projects'
-                        ? 'border-[#4c1d95] text-[#4c1d95]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'text-[#4c1d95] dark:text-purple-400'
+                        : 'border-transparent hover:text-slate-700'
                         }`}
+                     style={{
+                        borderColor: activeTab === 'projects' ? 'var(--brand)' : 'transparent',
+                        color: activeTab === 'projects' ? 'var(--brand)' : 'var(--textMuted)'
+                     }}
                   >
                      <Briefcase className="w-4 h-4" />
                      Projetos ({projectsWithHours.length})
@@ -351,10 +361,11 @@ const TimesheetAdminDashboard: React.FC = () => {
 
                   <button
                      onClick={() => setActiveTab('collaborators')}
-                     className={`py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'collaborators'
-                        ? 'border-[#4c1d95] text-[#4c1d95]'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
-                        }`}
+                     className={`py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2`}
+                     style={{
+                        borderColor: activeTab === 'collaborators' ? 'var(--brand)' : 'transparent',
+                        color: activeTab === 'collaborators' ? 'var(--brand)' : 'var(--textMuted)'
+                     }}
                   >
                      <Users className="w-4 h-4" />
                      Colaboradores ({collaboratorsWithHours.length})
@@ -366,29 +377,31 @@ const TimesheetAdminDashboard: React.FC = () => {
                   {/* Aba Projetos */}
                   {activeTab === 'projects' && (
                      <div className="space-y-6">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--textTitle)' }}>
                            {selectedClient?.logoUrl && <img src={selectedClient.logoUrl} className="w-8 h-8 object-contain" />}
                            Projetos de {selectedClient?.name}
                         </h2>
 
                         {projectsWithHours.length === 0 ? (
-                           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                           <div className="text-center py-12 border-2 border-dashed rounded-2xl"
+                              style={{ borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
                               <Briefcase className="w-12 h-12 mx-auto mb-2 opacity-50" />
                               <p>Nenhum projeto encontrado</p>
                            </div>
                         ) : (
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {projectsWithHours.map(proj => (
-                                 <div key={proj.id} className={`rounded-xl border p-5 hover:shadow-md transition-all bg-white cursor-pointer ${proj.entryCount > 0 ? 'border-slate-200' : 'border-slate-200 border-dashed opacity-75'}`}
+                                 <div key={proj.id} className={`rounded-xl border p-5 hover:shadow-md transition-all cursor-pointer ${proj.entryCount > 0 ? '' : 'border-dashed opacity-75'}`}
+                                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                                     onClick={() => navigate(`/admin/projects/${proj.id}`)}
                                  >
                                     <div className="flex justify-between items-start mb-2">
-                                       <h3 className="font-bold text-slate-800">{proj.name}</h3>
-                                       <span className={`text-lg font-black ${proj.totalHours > 0 ? 'text-[#4c1d95]' : 'text-slate-300'}`}>
+                                       <h3 className="font-bold" style={{ color: 'var(--text)' }}>{proj.name}</h3>
+                                       <span className={`text-lg font-black ${proj.totalHours > 0 ? 'text-[#4c1d95] dark:text-purple-400' : 'text-slate-300 dark:text-slate-600'}`}>
                                           {proj.totalHours.toFixed(1)}h
                                        </span>
                                     </div>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs" style={{ color: 'var(--textMuted)' }}>
                                        {proj.entryCount} apontamentos
                                     </p>
                                  </div>
@@ -401,10 +414,11 @@ const TimesheetAdminDashboard: React.FC = () => {
                   {/* Aba Colaboradores */}
                   {activeTab === 'collaborators' && (
                      <div className="space-y-4">
-                        <h2 className="text-xl font-bold text-slate-800 mb-4">Colaboradores no Cliente</h2>
+                        <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--textTitle)' }}>Colaboradores no Cliente</h2>
 
                         {collaboratorsWithHours.length === 0 ? (
-                           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                           <div className="text-center py-12 border-2 border-dashed rounded-2xl"
+                              style={{ borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
                               <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                               <p>Nenhum colaborador encontrado</p>
                            </div>
@@ -422,35 +436,40 @@ const TimesheetAdminDashboard: React.FC = () => {
                                  };
 
                                  return (
-                                    <div key={idx} className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-all">
+                                    <div key={idx} className="rounded-xl border overflow-hidden hover:shadow-md transition-all"
+                                       style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                                        <div
-                                          className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50"
+                                          className="p-5 flex items-center justify-between cursor-pointer"
                                           onClick={toggleExpand}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surfaceHover)'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                        >
                                           <div className="flex items-center gap-4">
-                                             <div className="w-10 h-10 rounded-full bg-[#4c1d95] text-white flex items-center justify-center font-bold">
+                                             <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
+                                                style={{ backgroundColor: 'var(--brand)', color: 'white' }}>
                                                 {collab.name.charAt(0)}
                                              </div>
                                              <div>
-                                                <h3 className="font-bold text-slate-800">{collab.name}</h3>
-                                                <p className="text-xs text-slate-500">{collab.entries} apontamentos</p>
+                                                <h3 className="font-bold" style={{ color: 'var(--text)' }}>{collab.name}</h3>
+                                                <p className="text-xs" style={{ color: 'var(--textMuted)' }}>{collab.entries} apontamentos</p>
                                              </div>
                                           </div>
                                           <div className="flex items-center gap-4">
-                                             <span className="text-xl font-black text-[#4c1d95]">{collab.hours.toFixed(1)}h</span>
-                                             {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                             <span className="text-xl font-black" style={{ color: 'var(--brand)' }}>{collab.hours.toFixed(1)}h</span>
+                                             {isExpanded ? <ChevronUp className="w-4 h-4" style={{ color: 'var(--textMuted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--textMuted)' }} />}
                                           </div>
                                        </div>
 
                                        {hasApontamentos && isExpanded && (
-                                          <div className="bg-slate-50 border-t border-slate-100 p-4 space-y-2">
+                                          <div className="border-t p-4 space-y-2" style={{ backgroundColor: 'var(--surfaceHover)', borderColor: 'var(--border)' }}>
                                              {collab.taskEntries.map((task: any, tIdx: number) => (
-                                                <div key={tIdx} className="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center text-sm">
+                                                <div key={tIdx} className="p-3 rounded-lg border flex justify-between items-center text-sm"
+                                                   style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                                                    <div>
-                                                      <p className="font-semibold text-slate-700">{task.taskName}</p>
-                                                      <p className="text-xs text-slate-400">{new Date(task.date).toLocaleDateString()} • {task.startTime} - {task.endTime}</p>
+                                                      <p className="font-semibold" style={{ color: 'var(--text)' }}>{task.taskName}</p>
+                                                      <p className="text-xs" style={{ color: 'var(--textMuted)' }}>{new Date(task.date).toLocaleDateString()} • {task.startTime} - {task.endTime}</p>
                                                    </div>
-                                                   <span className="font-bold text-[#4c1d95]">{task.totalHours.toFixed(2)}h</span>
+                                                   <span className="font-bold" style={{ color: 'var(--brand)' }}>{task.totalHours.toFixed(2)}h</span>
                                                 </div>
                                              ))}
                                           </div>

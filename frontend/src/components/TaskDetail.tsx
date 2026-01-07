@@ -173,7 +173,7 @@ const TaskDetail: React.FC = () => {
   const daysDelayed = getDelayDays();
 
   if (!isNew && !task) {
-    return <div className="p-8 text-center text-slate-500">Tarefa não encontrada.</div>;
+    return <div className="p-8 text-center" style={{ color: 'var(--textMuted)' }}>Tarefa não encontrada.</div>;
   }
 
   return (
@@ -344,7 +344,8 @@ const TaskDetail: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowImageEditor(true)}
-                          className="bg-white text-slate-900 px-4 py-2 rounded-lg font-medium shadow-lg hover:bg-slate-50 transition-colors"
+                          className="px-4 py-2 rounded-lg font-medium shadow-lg hover:opacity-90 transition-opacity"
+                          style={{ backgroundColor: 'var(--surface)', color: 'var(--textTitle)', border: '1px solid var(--border)' }}
                         >
                           Editar
                         </button>

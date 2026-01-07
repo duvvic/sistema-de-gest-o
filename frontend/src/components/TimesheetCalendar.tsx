@@ -201,7 +201,7 @@ const TimesheetCalendar: React.FC = () => {
                 }}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
-                <Search className="w-5 h-5 text-slate-400" />
+                <Search className="w-5 h-5" style={{ color: 'var(--textMuted)' }} />
                 <input
                   type="text"
                   placeholder="Buscar colaborador..."
@@ -211,7 +211,7 @@ const TimesheetCalendar: React.FC = () => {
                   onChange={(e) => { setSearchTerm(e.target.value); setIsDropdownOpen(true); }}
                   onClick={(e) => e.stopPropagation()}
                 />
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--textMuted)' }} />
               </div>
 
               {/* Dropdown Menu */}
@@ -415,7 +415,8 @@ const TimesheetCalendar: React.FC = () => {
                               </div>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setEntryToDelete(entry); setDeleteModalOpen(true); }}
-                                className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                                className="opacity-0 group-hover/item:opacity-100 transition-opacity hover:text-red-500"
+                                style={{ color: 'var(--textMuted)' }}
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>

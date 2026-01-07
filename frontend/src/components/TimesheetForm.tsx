@@ -215,8 +215,9 @@ const TimesheetForm: React.FC = () => {
   if (!user) return <div className="p-8">Usuário não identificado</div>;
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="px-8 py-6 bg-gradient-to-r from-[#4c1d95] to-[#5d2aa8] border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 shadow-lg">
+    <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--bgApp)' }}>
+      <div className="px-8 py-6 bg-gradient-to-r from-[#4c1d95] to-[#5d2aa8] border-b flex items-center justify-between sticky top-0 z-10 shadow-lg"
+        style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-4">
           <button onClick={handleBack} className="p-2 hover:bg-white/20 rounded-full transition-colors text-white">
             <ArrowLeft className="w-5 h-5" />
@@ -253,14 +254,14 @@ const TimesheetForm: React.FC = () => {
         <div className="max-w-3xl mx-auto space-y-8">
 
           {/* Context Card */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-200 pb-4 text-slate-800">
-              <UserIcon className="w-6 h-6 text-[#4c1d95]" />
+          <div className="p-8 rounded-2xl border shadow-sm space-y-6" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: 'var(--border)', color: 'var(--textTitle)' }}>
+              <UserIcon className="w-6 h-6" style={{ color: 'var(--brand)' }} />
               <h2 className="font-bold text-lg">Informações do Projeto</h2>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3">Colaborador</label>
+              <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>Colaborador</label>
               {isAdmin ? (
                 <select
                   value={formData.userId || ''}
@@ -269,7 +270,8 @@ const TimesheetForm: React.FC = () => {
                     markDirty();
                     setFormData({ ...formData, userId: u?.id || '', userName: u?.name || '' });
                   }}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium"
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium"
+                  style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
                 >
                   <option value="">Selecione um colaborador...</option>
                   {users.filter(u => u.active !== false).map(u => (
@@ -281,33 +283,36 @@ const TimesheetForm: React.FC = () => {
                   type="text"
                   value={formData.userName || ''}
                   disabled
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed font-medium"
+                  className="w-full p-3 border rounded-xl cursor-not-allowed font-medium opacity-70"
+                  style={{ backgroundColor: 'var(--surfaceHover)', borderColor: 'var(--border)', color: 'var(--textMuted)' }}
                 />
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-[#4c1d95]" /> Cliente *
+                <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                  <Briefcase className="w-4 h-4" style={{ color: 'var(--brand)' }} /> Cliente *
                 </label>
                 <select
                   value={formData.clientId}
                   onChange={(e) => { markDirty(); setFormData({ ...formData, clientId: e.target.value, projectId: '', taskId: '' }); }}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium"
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium"
+                  style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
                 >
                   <option value="">Selecione um cliente...</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-[#4c1d95]" /> Projeto *
+                <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                  <Briefcase className="w-4 h-4" style={{ color: 'var(--brand)' }} /> Projeto *
                 </label>
                 <select
                   value={formData.projectId}
                   onChange={(e) => { markDirty(); setFormData({ ...formData, projectId: e.target.value, taskId: '' }); }}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium disabled:bg-slate-100"
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   disabled={!formData.clientId}
                 >
                   <option value="">Selecione um projeto...</option>
@@ -317,13 +322,14 @@ const TimesheetForm: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-[#4c1d95]" /> Tarefa *
+              <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                <CheckSquare className="w-4 h-4" style={{ color: 'var(--brand)' }} /> Tarefa *
               </label>
               <select
                 value={formData.taskId}
                 onChange={(e) => { markDirty(); setFormData({ ...formData, taskId: e.target.value }); }}
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium disabled:bg-slate-100"
+                className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none font-medium disabled:opacity-50"
+                style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
                 disabled={!formData.projectId}
               >
                 <option value="">Selecione a tarefa...</option>
@@ -333,50 +339,53 @@ const TimesheetForm: React.FC = () => {
           </div>
 
           {/* Time Card */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-200 pb-4 text-slate-800">
+          <div className="p-8 rounded-2xl border shadow-sm space-y-6" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: 'var(--border)', color: 'var(--textTitle)' }}>
               <Clock className="w-6 h-6 text-blue-600" />
               <h3 className="font-bold text-lg">Horário e Data</h3>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text)' }}>
                 <Calendar className="w-4 h-4 text-blue-600" /> Data *
               </label>
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) => { markDirty(); setFormData({ ...formData, date: e.target.value }); }}
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--textTitle)' }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text)' }}>
                   <Clock className="w-4 h-4 text-green-600" /> Início *
                 </label>
                 <input
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => { markDirty(); setFormData({ ...formData, startTime: e.target.value }); }}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium"
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium"
+                  style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--textTitle)' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text)' }}>
                   <Clock className="w-4 h-4 text-red-600" /> Fim *
                 </label>
                 <input
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => { markDirty(); setFormData({ ...formData, endTime: e.target.value }); }}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-medium"
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-500 outline-none font-medium"
+                  style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--textTitle)' }}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-amber-50 p-4 rounded-xl border border-amber-200 cursor-pointer"
+            <div className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"
               onClick={() => {
                 setDeductLunch(!deductLunch);
                 markDirty();
@@ -386,32 +395,35 @@ const TimesheetForm: React.FC = () => {
                 id="lunch-deduction-check"
                 checked={deductLunch}
                 onChange={() => { }} // Controlled by div click
-                className="w-5 h-5 text-[#4c1d95] border-slate-300 rounded focus:ring-[#4c1d95] pointer-events-none"
+                className="w-5 h-5 border-slate-300 rounded focus:ring-[#4c1d95] pointer-events-none"
+                style={{ color: 'var(--brand)' }}
               />
               <label
                 htmlFor="lunch-deduction-check"
-                className="font-semibold text-slate-700 cursor-pointer select-none"
+                className="font-semibold cursor-pointer select-none"
+                style={{ color: 'var(--textTitle)' }}
               >
                 🍽️ Descontar 1h de almoço
               </label>
             </div>
 
-            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-center p-4 rounded-xl border"
+              style={{ backgroundColor: 'var(--surfaceHover)', borderColor: 'var(--border)' }}>
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-[#4c1d95]" />
-                <span className="font-bold text-slate-700">Total:</span>
+                <Clock className="w-5 h-5" style={{ color: 'var(--brand)' }} />
+                <span className="font-bold" style={{ color: 'var(--text)' }}>Total:</span>
               </div>
-              <span className="text-3xl font-black text-[#4c1d95]">{timeDisplay}</span>
+              <span className="text-3xl font-black" style={{ color: 'var(--brand)' }}>{timeDisplay}</span>
             </div>
 
             {formData.taskId && (
-              <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center justify-between">
+              <div className="p-6 rounded-xl border" style={{ backgroundColor: 'var(--surfaceHover)', borderColor: 'var(--border)' }}>
+                <label className="block text-sm font-semibold mb-3 flex items-center justify-between" style={{ color: 'var(--text)' }}>
                   <span className="flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4 text-[#4c1d95]" />
+                    <CheckSquare className="w-4 h-4" style={{ color: 'var(--brand)' }} />
                     Progresso da Tarefa
                   </span>
-                  <span className="text-xl font-black text-[#4c1d95]">{taskProgress}%</span>
+                  <span className="text-xl font-black" style={{ color: 'var(--brand)' }}>{taskProgress}%</span>
                 </label>
                 <input
                   type="range"
@@ -419,14 +431,15 @@ const TimesheetForm: React.FC = () => {
                   max="100"
                   value={taskProgress}
                   onChange={(e) => { markDirty(); setTaskProgress(Number(e.target.value)); }}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#4c1d95]"
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#4c1d95]"
+                  style={{ backgroundColor: 'var(--border)' }}
                 />
               </div>
             )}
           </div>
 
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-3 border-b border-slate-200 pb-4 text-slate-800">
+          <div className="p-8 rounded-2xl border shadow-sm space-y-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: 'var(--border)', color: 'var(--textTitle)' }}>
               <AlertCircle className="w-6 h-6 text-amber-500" />
               <h3 className="font-bold text-lg">Notas</h3>
             </div>
@@ -434,7 +447,8 @@ const TimesheetForm: React.FC = () => {
               rows={4}
               value={formData.description || ''}
               onChange={(e) => { markDirty(); setFormData({ ...formData, description: e.target.value }); }}
-              className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+              style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
               placeholder="Descreva o que foi feito..."
             />
           </div>

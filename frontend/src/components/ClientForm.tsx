@@ -69,11 +69,11 @@ const ClientForm: React.FC = () => {
       <div className="mb-6 flex items-center gap-4">
         <button
           onClick={() => navigate('/admin/clients')}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          className="p-2 hover:bg-[var(--surfaceHover)] rounded-full transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+          <ArrowLeft className="w-5 h-5 text-[var(--textMuted)]" />
         </button>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-[var(--textTitle)]">
           {isEdit ? 'Editar Cliente' : 'Novo Cliente'}
         </h1>
       </div>
@@ -83,14 +83,14 @@ const ClientForm: React.FC = () => {
         <div className="max-w-2xl space-y-6">
           {/* Nome */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Nome do Cliente *
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
               placeholder="Ex: Empresa XYZ"
               required
             />
@@ -98,7 +98,7 @@ const ClientForm: React.FC = () => {
 
           {/* Logo URL */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               URL do Logo
             </label>
             <div className="flex gap-2">
@@ -106,33 +106,20 @@ const ClientForm: React.FC = () => {
                 type="url"
                 value={logoUrl}
                 onChange={(e) => setLogoUrl(e.target.value)}
-                className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent"
+                className="flex-1 px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
                 placeholder="https://exemplo.com/logo.png"
               />
               <button
                 type="button"
-                className="px-4 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-2"
+                className="px-4 py-3 border border-[var(--border)] rounded-lg hover:bg-[var(--surfaceHover)] flex items-center gap-2 text-[var(--text)]"
               >
                 <Upload className="w-4 h-4" />
                 Upload
               </button>
             </div>
             {logoUrl && (
-              <div className="mt-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
-                <p className="text-sm text-slate-600 mb-2">Preview:</p>
-                <img
-                  src={logoUrl}
-                  alt="Preview"
-                  className="h-20 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://placehold.co/200x200?text=Logo';
-                  }}
-                />
-              </div>
-            )}
-            {logoUrl && (
-              <div className="mt-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
-                <p className="text-sm text-slate-600 mb-2">Preview:</p>
+              <div className="mt-4 p-4 border border-[var(--border)] rounded-lg bg-[var(--bgApp)]">
+                <p className="text-sm text-[var(--textMuted)] mb-2">Preview:</p>
                 <img
                   src={logoUrl}
                   alt="Preview"
@@ -146,14 +133,14 @@ const ClientForm: React.FC = () => {
           </div>
 
           {!isEdit && (
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-              <h3 className="font-semibold text-slate-800">Contrato de Serviço</h3>
+            <div className="bg-[var(--bgApp)] p-4 rounded-xl border border-[var(--border)] space-y-4">
+              <h3 className="font-semibold text-[var(--textTitle)]">Contrato de Serviço</h3>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Possui tempo de contrato determinado?</label>
+                <label className="block text-sm font-medium text-[var(--text)] mb-2">Possui tempo de contrato determinado?</label>
                 <select
                   name="contractChoice"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95]"
+                  className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] text-[var(--text)]"
                   defaultValue="nao"
                   id="contractChoiceSelect"
                   onChange={(e) => {
@@ -173,13 +160,13 @@ const ClientForm: React.FC = () => {
               </div>
 
               <div id="monthsInput" className="hidden">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Duração (Meses)</label>
+                <label className="block text-sm font-medium text-[var(--text)] mb-2">Duração (Meses)</label>
                 <input
                   type="number"
                   name="contractMonths"
                   min="1"
                   defaultValue="12"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95]"
+                  className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] text-[var(--text)]"
                 />
               </div>
             </div>
@@ -190,14 +177,14 @@ const ClientForm: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/admin/clients')}
-              className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              className="px-6 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surfaceHover)]"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-6 py-3 bg-[#4c1d95] text-white rounded-lg hover:bg-[#3b1675] flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-3 bg-[var(--brand)] text-white rounded-lg hover:bg-[var(--brandHover)] flex items-center gap-2 disabled:opacity-50"
               disabled={loading}
             >
               <Save className="w-4 h-4" />

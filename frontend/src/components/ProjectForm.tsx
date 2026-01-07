@@ -115,11 +115,11 @@ const ProjectForm: React.FC = () => {
       <div className="mb-6 flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          className="p-2 hover:bg-[var(--surfaceHover)] rounded-full transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+          <ArrowLeft className="w-5 h-5 text-[var(--textMuted)]" />
         </button>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-[var(--textTitle)]">
           {isEdit ? 'Editar Projeto' : 'Novo Projeto'}
         </h1>
       </div>
@@ -129,13 +129,13 @@ const ProjectForm: React.FC = () => {
         <div className="max-w-2xl space-y-6">
           {/* Cliente */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Cliente *
             </label>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
               required
               disabled={isEdit} // Não pode mudar cliente em edição
             >
@@ -150,14 +150,14 @@ const ProjectForm: React.FC = () => {
 
           {/* Nome do Projeto */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Nome do Projeto *
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
               placeholder="Ex: Desenvolvimento do Website"
               required
             />
@@ -165,13 +165,13 @@ const ProjectForm: React.FC = () => {
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent"
+              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
             >
               <option value="">Selecione um status</option>
               <option value="Planejamento">Planejamento</option>
@@ -184,12 +184,12 @@ const ProjectForm: React.FC = () => {
 
           {/* Membros do Projeto */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Membros do Projeto
             </label>
-            <div className="border border-slate-300 rounded-lg p-4 max-h-60 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="border border-[var(--border)] rounded-lg p-4 max-h-60 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3 custom-scrollbar">
               {users.filter(u => u.active !== false).map(user => (
-                <label key={user.id} className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors">
+                <label key={user.id} className="flex items-center gap-3 cursor-pointer hover:bg-[var(--surfaceHover)] p-2 rounded transition-colors group">
                   <input
                     type="checkbox"
                     checked={selectedUsers.includes(user.id)}
@@ -200,10 +200,10 @@ const ProjectForm: React.FC = () => {
                         setSelectedUsers(prev => prev.filter(id => id !== user.id));
                       }
                     }}
-                    className="w-5 h-5 text-[#4c1d95] rounded border-slate-300 focus:ring-[#4c1d95]"
+                    className="w-5 h-5 text-[var(--brand)] rounded border-[var(--border)] focus:ring-[var(--brand)] bg-[var(--bgApp)]"
                   />
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#4c1d95] text-white flex items-center justify-center text-xs font-bold overflow-hidden">
+                    <div className="w-8 h-8 rounded-full bg-[var(--brand)] text-white flex items-center justify-center text-xs font-bold overflow-hidden">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
@@ -211,14 +211,14 @@ const ProjectForm: React.FC = () => {
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-700">{user.name}</p>
-                      <p className="text-xs text-slate-500 capitalize">{user.role}</p>
+                      <p className="text-sm font-medium text-[var(--textTitle)] group-hover:text-[var(--brand)] transition-colors">{user.name}</p>
+                      <p className="text-xs text-[var(--textMuted)] capitalize">{user.role}</p>
                     </div>
                   </div>
                 </label>
               ))}
             </div>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-[var(--textMuted)] mt-2">
               Selecione os colaboradores que trabalharão neste projeto.
             </p>
           </div>
@@ -228,14 +228,14 @@ const ProjectForm: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              className="px-6 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surfaceHover)]"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-6 py-3 bg-[#4c1d95] text-white rounded-lg hover:bg-[#3b1675] flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-3 bg-[var(--brand)] text-white rounded-lg hover:bg-[var(--brandHover)] flex items-center gap-2 disabled:opacity-50"
               disabled={loading}
             >
               <Save className="w-4 h-4" />

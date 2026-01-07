@@ -85,7 +85,7 @@ const UserTasks: React.FC<UserTasksProps> = ({
   // 4) Render
   // ================================
   return (
-    <div className="h-full flex flex-col p-2 bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="h-full flex flex-col p-2" style={{ backgroundColor: 'var(--bgApp)' }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-[#4c1d95] to-purple-600 rounded-2xl px-8 py-6 mb-6 shadow-lg border-2 border-slate-200">
         <div className="flex items-center justify-between">
@@ -115,31 +115,31 @@ const UserTasks: React.FC<UserTasksProps> = ({
 
       {/* Top status cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-md">
+        <div className="p-5 rounded-2xl border-2 shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Em Progresso</div>
-              <div className="text-3xl font-black text-blue-600 mt-2">⚙️ {tasksByStatus.InProgress.length}</div>
+              <div className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--textMuted)' }}>Em Progresso</div>
+              <div className="text-3xl font-black mt-2 text-blue-600">⚙️ {tasksByStatus.InProgress.length}</div>
             </div>
             <TrendingUp className="w-8 h-8 text-blue-300" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-md">
+        <div className="p-5 rounded-2xl border-2 shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Atrasadas</div>
-              <div className="text-3xl font-black text-red-600 mt-2">⏰ {tasksByStatus.Delayed.length}</div>
+              <div className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--textMuted)' }}>Atrasadas</div>
+              <div className="text-3xl font-black mt-2 text-red-600">⏰ {tasksByStatus.Delayed.length}</div>
             </div>
             <Clock className="w-8 h-8 text-red-300" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border-2 border-slate-200 shadow-md">
+        <div className="p-5 rounded-2xl border-2 shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Concluídas</div>
-              <div className="text-3xl font-black text-emerald-600 mt-2">✅ {tasksByStatus.Concluded.length}</div>
+              <div className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--textMuted)' }}>Concluídas</div>
+              <div className="text-3xl font-black mt-2 text-emerald-600">✅ {tasksByStatus.Concluded.length}</div>
             </div>
             <TrendingUp className="w-8 h-8 text-emerald-300" />
           </div>
@@ -148,8 +148,9 @@ const UserTasks: React.FC<UserTasksProps> = ({
 
       {/* Empty State */}
       {filteredTasks.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-2xl p-8 bg-white">
-          <FolderKanban className="w-16 h-16 mb-4 text-slate-300" />
+        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8"
+          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--textMuted)' }}>
+          <FolderKanban className="w-16 h-16 mb-4 opacity-50" />
           <p className="text-lg font-semibold">Nenhuma tarefa encontrada.</p>
           <p className="text-sm mt-2">Crie uma nova tarefa para começar</p>
         </div>
@@ -197,13 +198,14 @@ const UserTasks: React.FC<UserTasksProps> = ({
 
           {viewFilter === 'concluded' && (
             <div className="grid grid-cols-1 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                <h3 className="font-bold text-slate-700 mb-3">Tarefas Concluídas</h3>
+              <div className="rounded-2xl border p-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                <h3 className="font-bold mb-3" style={{ color: 'var(--textTitle)' }}>Tarefas Concluídas</h3>
                 <div className="space-y-3">
                   {tasksByStatus.Concluded.map(t => (
-                    <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left bg-slate-50 hover:bg-slate-100 transition border border-slate-200 rounded-xl p-4 shadow-sm">
-                      <div className="font-bold text-slate-800">{t.title}</div>
-                      <div className="text-xs text-slate-500 mt-1">Entrega: {t.actualDelivery}</div>
+                    <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left transition border rounded-xl p-4 shadow-sm"
+                      style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
+                      <div className="font-bold" style={{ color: 'var(--text)' }}>{t.title}</div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--textMuted)' }}>Entrega: {t.actualDelivery}</div>
                     </button>
                   ))}
                 </div>
@@ -213,13 +215,14 @@ const UserTasks: React.FC<UserTasksProps> = ({
 
           {viewFilter === 'delayed' && (
             <div className="grid grid-cols-1 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <div className="rounded-2xl border p-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <h3 className="font-bold text-red-600 mb-3">Tarefas Atrasadas</h3>
                 <div className="space-y-3">
                   {tasksByStatus.Delayed.map(t => (
-                    <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left bg-slate-50 hover:bg-slate-100 transition border border-slate-200 rounded-xl p-4 shadow-sm">
-                      <div className="font-bold text-slate-800">{t.title}</div>
-                      <div className="text-xs text-slate-500 mt-1">Prevista: {t.estimatedDelivery}</div>
+                    <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left transition border rounded-xl p-4 shadow-sm"
+                      style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
+                      <div className="font-bold" style={{ color: 'var(--text)' }}>{t.title}</div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--textMuted)' }}>Prevista: {t.estimatedDelivery}</div>
                     </button>
                   ))}
                 </div>
@@ -229,13 +232,14 @@ const UserTasks: React.FC<UserTasksProps> = ({
 
           {viewFilter === 'inprogress' && (
             <div className="grid grid-cols-1 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                <h3 className="font-bold text-slate-700 mb-3">Em Progresso</h3>
+              <div className="rounded-2xl border p-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                <h3 className="font-bold mb-3" style={{ color: 'var(--textTitle)' }}>Em Progresso</h3>
                 <div className="space-y-3">
                   {tasksByStatus.InProgress.map(t => (
-                    <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left bg-slate-50 hover:bg-slate-100 transition border border-slate-200 rounded-xl p-4 shadow-sm">
-                      <div className="font-bold text-slate-800">{t.title}</div>
-                      <div className="text-xs text-slate-500 mt-1">Prevista: {t.estimatedDelivery}</div>
+                    <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left transition border rounded-xl p-4 shadow-sm"
+                      style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
+                      <div className="font-bold" style={{ color: 'var(--text)' }}>{t.title}</div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--textMuted)' }}>Prevista: {t.estimatedDelivery}</div>
                     </button>
                   ))}
                 </div>
@@ -266,8 +270,8 @@ const TaskColumn: React.FC<{
 }> = ({ title, tasks, clients, projects, onTaskClick, onCreateTimesheetForTask, timesheetEntries, currentUserId }) => {
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col">
-      <h2 className="text-lg font-bold text-slate-700 mb-4">{title}</h2>
+    <div className="rounded-2xl border p-4 flex flex-col" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+      <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--textTitle)' }}>{title}</h2>
 
       <div className="space-y-3 overflow-y-auto custom-scrollbar">
         {tasks.map(task => {
@@ -275,24 +279,25 @@ const TaskColumn: React.FC<{
           const client = clients.find(c => c.id === task.clientId);
 
           return (
-            <div key={task.id} className="w-full bg-slate-50 hover:bg-slate-100 transition border border-slate-200 rounded-xl p-4 shadow-sm">
+            <div key={task.id} className="w-full transition border rounded-xl p-4 shadow-sm group"
+              style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
               <button
                 onClick={() => onTaskClick(task.id)}
                 className="w-full text-left"
               >
-                <p className="font-bold text-slate-800">{task.title}</p>
+                <p className="font-bold" style={{ color: 'var(--text)' }}>{task.title}</p>
 
-                <div className="text-xs text-slate-500 mt-2 flex items-center gap-2">
+                <div className="text-xs mt-2 flex items-center gap-2" style={{ color: 'var(--textMuted)' }}>
                   <Calendar size={14} />
                   {task.estimatedDelivery}
                 </div>
 
-                <div className="text-xs text-slate-600 mt-1 flex items-center gap-2">
-                  <Building2 size={14} className="text-[#4c1d95]" />
+                <div className="text-xs mt-1 flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                  <Building2 size={14} style={{ color: 'var(--brand)' }} />
                   {client?.name ?? "Cliente"}
                 </div>
 
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs mt-1" style={{ color: 'var(--textMuted)' }}>
                   Projeto: {project?.name ?? "Sem projeto"}
                 </div>
               </button>
@@ -304,7 +309,7 @@ const TaskColumn: React.FC<{
                 const show = !hasEntry && task.status !== 'Done';
                 return show ? (
                   <div className="mt-3">
-                    <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Sem Apont.</span>
+                    <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">Sem Apont.</span>
                   </div>
                 ) : null;
               })()}
@@ -314,7 +319,10 @@ const TaskColumn: React.FC<{
                   {onCreateTimesheetForTask && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onCreateTimesheetForTask(task); }}
-                      className="px-3 py-1 rounded-lg bg-[#4c1d95] text-white text-sm hover:bg-[#3b1675] transition"
+                      className="px-3 py-1 rounded-lg text-white text-sm transition"
+                      style={{ backgroundColor: 'var(--brand)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--brandHover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--brand)'}
                     >
                       Apontar Hoje
                     </button>

@@ -78,54 +78,54 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Todo': return 'bg-slate-100';
-      case 'In Progress': return 'bg-blue-50';
-      case 'Review': return 'bg-purple-50';
-      case 'Done': return 'bg-green-50';
-      default: return 'bg-slate-100';
+      case 'Todo': return 'bg-slate-100 dark:bg-slate-800/50';
+      case 'In Progress': return 'bg-blue-50 dark:bg-blue-900/20';
+      case 'Review': return 'bg-purple-50 dark:bg-purple-900/20';
+      case 'Done': return 'bg-green-50 dark:bg-green-900/20';
+      default: return 'bg-slate-100 dark:bg-slate-800/50';
     }
   };
 
   const getStatusHeaderColor = (status: string) => {
     switch (status) {
-      case 'Todo': return 'text-slate-600';
-      case 'In Progress': return 'text-blue-600';
-      case 'Review': return 'text-purple-600';
-      case 'Done': return 'text-green-600';
-      default: return 'text-slate-600';
+      case 'Todo': return 'text-[var(--textMuted)]';
+      case 'In Progress': return 'text-blue-600 dark:text-blue-400';
+      case 'Review': return 'text-purple-600 dark:text-purple-400';
+      case 'Done': return 'text-green-600 dark:text-green-400';
+      default: return 'text-[var(--textMuted)]';
     }
   };
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div className="h-full flex flex-col bg-[var(--surface)] rounded-2xl shadow-sm border border-[var(--border)] overflow-hidden">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+      <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface)] sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+            className="p-2 hover:bg-[var(--surfaceHover)] rounded-full transition-colors text-[var(--textMuted)]"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+            <h1 className="text-xl font-bold text-[var(--textTitle)] flex items-center gap-3">
               {client.logoUrl && (
                 <img
                   src={client.logoUrl}
                   alt={client.name}
-                  className="w-8 h-8 rounded-lg object-contain bg-slate-50 border border-slate-200 p-1"
+                  className="w-8 h-8 rounded-lg object-contain bg-[var(--bgApp)] border border-[var(--border)] p-1"
                   onError={(e) => (e.currentTarget.style.display = 'none')}
                 />
               )}
               {client.name}
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Projetos e Tarefas</p>
+            <p className="text-sm text-[var(--textMuted)] mt-1">Projetos e Tarefas</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => onOpenClientDetails?.(client.id)}
-            className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:border-[#4c1d95] hover:text-[#4c1d95] transition-colors flex items-center gap-2"
+            className="px-3 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] hover:border-[var(--brand)] hover:text-[var(--brand)] transition-colors flex items-center gap-2"
             title="Informações e Edição do Cliente"
           >
             <Info className="w-4 h-4" />
@@ -135,12 +135,12 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 px-8 py-4 border-b border-slate-100 bg-slate-50">
+      <div className="flex gap-4 px-8 py-4 border-b border-[var(--border)] bg-[var(--bgApp)]">
         <button
           onClick={() => setActiveTab('projects')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'projects'
-            ? 'bg-[#4c1d95] text-white'
-            : 'text-slate-600 hover:bg-white'
+            ? 'bg-[var(--brand)] text-white'
+            : 'text-[var(--textMuted)] hover:bg-[var(--surfaceHover)]'
             }`}
         >
           <FolderKanban className="w-4 h-4" />
@@ -149,8 +149,8 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
         <button
           onClick={() => setActiveTab('tasks')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'tasks'
-            ? 'bg-[#4c1d95] text-white'
-            : 'text-slate-600 hover:bg-white'
+            ? 'bg-[var(--brand)] text-white'
+            : 'text-[var(--textMuted)] hover:bg-[var(--surfaceHover)]'
             }`}
         >
           <CheckSquare className="w-4 h-4" />
@@ -165,11 +165,11 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
           {/* PROJECTS TAB */}
           {activeTab === 'projects' && (
             <div>
-              <h2 className="text-lg font-bold text-slate-800 mb-6">Projetos do Cliente</h2>
+              <h2 className="text-lg font-bold text-[var(--textTitle)] mb-6">Projetos do Cliente</h2>
               {clientProjects.length === 0 ? (
-                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-8 text-center">
-                  <FolderKanban className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-600">Nenhum projeto para este cliente</p>
+                <div className="bg-[var(--bgApp)] border border-dashed border-[var(--border)] rounded-2xl p-8 text-center">
+                  <FolderKanban className="w-12 h-12 text-[var(--textMuted)] mx-auto mb-3" />
+                  <p className="text-[var(--textMuted)]">Nenhum projeto para este cliente</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -177,16 +177,16 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                     <div
                       key={project.id}
                       onClick={() => onProjectClick?.(project.id)}
-                      className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer"
+                      className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 hover:shadow-md hover:border-[#d8b4fe] dark:hover:border-purple-800 transition-all cursor-pointer"
                     >
-                      <h3 className="text-lg font-semibold text-slate-800">{project.name}</h3>
+                      <h3 className="text-lg font-semibold text-[var(--textTitle)]">{project.name}</h3>
                       {project.description && (
-                        <p className="text-sm text-slate-600 mt-2 line-clamp-2">{project.description}</p>
+                        <p className="text-sm text-[var(--textMuted)] mt-2 line-clamp-2">{project.description}</p>
                       )}
                       <div className="mt-4 flex items-center gap-2">
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${project.status === 'Em andamento'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-green-100 text-green-700'
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                          : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                           }`}>
                           {project.status}
                         </span>
@@ -202,15 +202,15 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
           {activeTab === 'tasks' && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-slate-800">Tarefas do Cliente</h2>
+                <h2 className="text-lg font-bold text-[var(--textTitle)]">Tarefas do Cliente</h2>
                 <div className="flex gap-2">
                   {(['all', 'todo', 'inprogress', 'review', 'done'] as const).map(filter => (
                     <button
                       key={filter}
                       onClick={() => setStatusFilter(filter)}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${statusFilter === filter
-                        ? 'bg-[#4c1d95] text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-[var(--brand)] text-white'
+                        : 'bg-[var(--surfaceHover)] text-[var(--textMuted)] hover:bg-[var(--bgApp)]'
                         }`}
                     >
                       {filter === 'all' ? 'Todas' : filter === 'todo' ? 'Todo' : filter === 'inprogress' ? 'Em Progresso' : filter === 'review' ? 'Review' : 'Concluídas'}
@@ -220,9 +220,9 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
               </div>
 
               {clientTasks.length === 0 ? (
-                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-8 text-center">
-                  <CheckSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-600">Nenhuma tarefa para este cliente</p>
+                <div className="bg-[var(--bgApp)] border border-dashed border-[var(--border)] rounded-2xl p-8 text-center">
+                  <CheckSquare className="w-12 h-12 text-[var(--textMuted)] mx-auto mb-3" />
+                  <p className="text-[var(--textMuted)]">Nenhuma tarefa para este cliente</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-auto">
@@ -237,32 +237,32 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
                     return (
                       <div
                         key={status}
-                        className={`${getStatusColor(status)} border border-slate-200 rounded-2xl p-4 flex flex-col`}
+                        className={`${getStatusColor(status)} border border-[var(--border)] rounded-2xl p-4 flex flex-col`}
                       >
                         <h3 className={`font-bold text-sm uppercase tracking-wider mb-4 ${getStatusHeaderColor(status)}`}>
                           {status} ({list.length})
                         </h3>
-                        <div className="flex-1 space-y-3 overflow-y-auto pr-2">
+                        <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                           {list.map(task => (
                             <div
                               key={task.id}
                               onClick={() => onTaskClick(task.id)}
-                              className="bg-white border border-slate-100 rounded-lg p-3 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer group"
+                              className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 hover:shadow-md hover:border-[#d8b4fe] dark:hover:border-purple-800 transition-all cursor-pointer group"
                             >
-                              <h4 className="font-semibold text-sm text-slate-800 line-clamp-2 group-hover:text-purple-700">
+                              <h4 className="font-semibold text-sm text-[var(--textTitle)] line-clamp-2 group-hover:text-[var(--brand)]">
                                 {task.title}
                               </h4>
-                              <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                              <div className="mt-2 flex items-center justify-between text-xs text-[var(--textMuted)]">
                                 <span>{task.progress || 0}%</span>
-                                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="w-16 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
                                   <div
-                                    className="h-full bg-[#4c1d95]"
+                                    className="h-full bg-[var(--brand)]"
                                     style={{ width: `${task.progress || 0}%` }}
                                   />
                                 </div>
                               </div>
                               {task.estimatedDelivery && (
-                                <div className="mt-2 text-xs text-slate-500">
+                                <div className="mt-2 text-xs text-[var(--textMuted)]">
                                   Entrega: {new Date(task.estimatedDelivery).toLocaleDateString('pt-BR')}
                                 </div>
                               )}

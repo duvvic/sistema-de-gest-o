@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { ThemeContext } from '@/App';
 import { Outlet, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -15,10 +16,11 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import logoImg from '@/assets/logo.png';
-import ThemeToggle from './ThemeToggle';
+
 
 const MainLayout: React.FC = () => {
     const { currentUser, logout } = useAuth();
+    const { themeMode, toggleTheme } = useContext(ThemeContext);
     const navigate = useNavigate();
     const location = useLocation();
     const navType = useNavigationType(); // Detecta PUSH, POP, REPLACE
@@ -198,11 +200,6 @@ const MainLayout: React.FC = () => {
                     )}
                 </button>
 
-                {/* Theme Toggle - Na área do usuário */}
-                <div className="px-6 pb-4 border-b border-purple-600">
-                    <ThemeToggle showLabel={sidebarOpen} />
-                </div>
-
                 {/* Menu Items */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     {menuItems.map((item) => {
@@ -236,12 +233,25 @@ const MainLayout: React.FC = () => {
                     })}
                 </nav>
 
-                {/* Logout */}
-                <div className="p-4 border-t border-purple-600">
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-purple-600 space-y-1">
+                    {/* Theme Toggle Button */}
+                    <button
+                        onClick={toggleTheme}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-purple-100 hover:bg-purple-700/50 transition-colors ${!sidebarOpen && 'justify-center'}`}
+                    >
+                        {themeMode === 'light' ? (
+                            <Moon className="w-5 h-5 flex-shrink-0" />
+                        ) : (
+                            <Sun className="w-5 h-5 flex-shrink-0" />
+                        )}
+                        {sidebarOpen && <span className="font-medium">{themeMode === 'light' ? 'Escuro' : 'Claro'}</span>}
+                    </button>
+
+                    {/* Logout */}
                     <button
                         onClick={handleLogout}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-purple-100 hover:bg-red-600 transition-colors ${!sidebarOpen && 'justify-center'
-                            }`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-purple-100 hover:bg-red-600 transition-colors ${!sidebarOpen && 'justify-center'}`}
                     >
                         <LogOut className="w-5 h-5 flex-shrink-0" />
                         {sidebarOpen && <span className="font-medium">Sair</span>}
