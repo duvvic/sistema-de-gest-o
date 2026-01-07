@@ -383,41 +383,47 @@ const Login: React.FC = () => {
     const effectiveEmail = (mode === 'set-password' || mode === 'otp-verification') && selectedUser ? selectedUser.email : email;
 
     return (
-        <div className="min-h-screen flex flex-col justify-center items-center p-4" style={{ backgroundColor: 'var(--bgApp)', color: 'var(--text)' }}>
-            <div className="w-full max-w-md rounded-2xl shadow-xl border p-8 space-y-8" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="min-h-screen flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans" style={{ backgroundColor: '#130e24' }}>
+            {/* Background Effects (Optional subtle glow) */}
+            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-900/20 rounded-full blur-[120px] pointer-events-none"></div>
+            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-900/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+            <div className="w-full max-w-[420px] bg-white rounded-[2rem] shadow-2xl p-8 md:p-10 space-y-8 relative z-10">
                 {/* Header */}
-                <div className="text-center space-y-2">
-                    <div className="flex justify-center mb-4">
+                <div className="text-center flex flex-col items-center">
+                    <div className="mb-6 p-2">
                         <img
                             src="https://nic-labs.com/wp-content/uploads/2024/04/Logo-com-fundo-branco-1.png"
                             alt="NIC Labs"
-                            className="h-20 w-auto object-contain bg-white rounded-lg p-2"
+                            className="h-16 w-auto object-contain"
                         />
                     </div>
-                    <h2 className="text-2xl font-bold" style={{ color: 'var(--textTitle)' }}>
+                    <h2 className="text-[26px] leading-tight font-extrabold text-[#1e1b4b]">
                         {mode === 'otp-verification' ? 'Verificação de Código' :
-                            mode === 'set-password' ? 'Defina sua senha' : 'Bem-vindo de volta'}
+                            mode === 'set-password' ? 'Defina sua senha' : 'Bem-vindo colaborador'}
                     </h2>
-                    <p className="text-sm" style={{ color: 'var(--textMuted)' }}>
-                        {mode === 'otp-verification' ? 'Insira o token enviado para seu e-mail' :
-                            mode === 'set-password' ? 'Crie sua senha para acessar o NIC Labs Manager.' :
-                                'Acesse sua conta para gerenciar projetos'}
+                    <p className="text-[#64748b] text-sm mt-2">
+                        {mode === 'otp-verification' ? 'Insira o token enviado para o seu email' :
+                            mode === 'set-password' ? 'Crie sua nova senha de acesso' :
+                                'Acesse com seu email@nic-labs.com.br'}
                     </p>
+
                     {successMessage && mode === 'login' && (
-                        <div className="mt-4 px-4 py-2 rounded-lg bg-green-100 border border-green-200 text-green-700 text-sm font-semibold dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
+                        <div className="mt-4 w-full px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-semibold flex items-center justify-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                             {successMessage}
                         </div>
                     )}
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-5">
                         {/* E-mail */}
                         <div>
-                            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--textTitle)' }}>E-mail</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <label className="block text-sm font-bold text-[#334155] mb-2 pl-1">E-mail</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
                                     <Mail className="h-5 w-5" />
                                 </div>
                                 <input
@@ -425,9 +431,8 @@ const Login: React.FC = () => {
                                     value={effectiveEmail}
                                     onChange={(e) => mode === 'login' && setEmail(e.target.value)}
                                     disabled={mode !== 'login'}
-                                    className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all placeholder-slate-400 disabled:opacity-60"
-                                    style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                                    placeholder="seu@email.com"
+                                    className="w-full pl-11 pr-4 py-3.5 bg-emerald-50/30 border-2 border-emerald-400 rounded-xl focus:ring-0 focus:border-emerald-500 outline-none transition-all placeholder-slate-400 text-slate-700 font-medium"
+                                    placeholder="seu.nome@nic-labs.com.br"
                                     required
                                 />
                             </div>
@@ -436,17 +441,16 @@ const Login: React.FC = () => {
                         {/* Token OTP */}
                         {mode === 'otp-verification' && (
                             <div>
-                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--textTitle)' }}>Token de Verificação</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <label className="block text-sm font-bold text-[#334155] mb-2 pl-1">Token de Verificação</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#4c1d95]">
                                         <Key className="h-5 w-5" />
                                     </div>
                                     <input
                                         type="text"
                                         value={otpToken}
                                         onChange={(e) => setOtpToken(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all placeholder-slate-400 font-mono tracking-widest text-center text-lg"
-                                        style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-0 focus:border-[#4c1d95] outline-none transition-all placeholder-slate-400 font-mono tracking-widest text-center text-lg text-slate-800"
                                         placeholder="••••••"
                                         required
                                     />
@@ -457,23 +461,22 @@ const Login: React.FC = () => {
                         {/* Senha normal */}
                         {mode === 'login' && (
                             <div>
-                                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--textTitle)' }}>Senha</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                        <Lock className="h-5 h-5" />
+                                <label className="block text-sm font-bold text-[#334155] mb-2 pl-1">Senha</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#4c1d95]">
+                                        <Lock className="h-5 w-5" />
                                     </div>
                                     <input
                                         type={showPass ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all placeholder-slate-400"
-                                        style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                                        placeholder="••••••••"
+                                        className="w-full pl-11 pr-12 py-3.5 bg-[#eff6ff] border-2 border-transparent focus:bg-white focus:border-[#4c1d95] rounded-xl outline-none transition-all placeholder-slate-400 text-slate-800 font-medium tracking-wide"
+                                        placeholder="••••••••••••"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => peekPassword(setShowPass)}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#4c1d95] transition-colors cursor-pointer"
                                     >
                                         {showPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
@@ -483,33 +486,32 @@ const Login: React.FC = () => {
 
                         {/* Definição de senha */}
                         {mode === 'set-password' && (
-                            <>
-                                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-lg p-3 space-y-1">
-                                    <p className="text-xs font-semibold text-purple-800 dark:text-purple-300 uppercase tracking-wider">Requisitos da senha:</p>
-                                    <ul className="text-xs text-purple-700 dark:text-purple-400 list-disc list-inside space-y-0.5">
-                                        <li>No mínimo 7 caracteres</li>
-                                        <li>Deve conter letras e números</li>
+                            <div className="space-y-5">
+                                <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                                    <p className="text-xs font-bold text-purple-900 uppercase tracking-wider mb-2">Requisitos:</p>
+                                    <ul className="text-xs text-purple-700 space-y-1 pl-4 list-disc marker:text-purple-400">
+                                        <li>Mínimo 7 caracteres</li>
+                                        <li>Letras e números obrigatórios</li>
                                     </ul>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--textTitle)' }}>Nova senha</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                            <Lock className="h-5 h-5" />
+                                    <label className="block text-sm font-bold text-[#334155] mb-2 pl-1">Nova senha</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                            <Lock className="h-5 w-5" />
                                         </div>
                                         <input
                                             type={showNewPass ? "text" : "password"}
                                             value={newPassword}
                                             onChange={(e) => setNewPassword(e.target.value)}
-                                            className="w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all placeholder-slate-400"
-                                            style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                                            placeholder="Defina uma senha"
+                                            className="w-full pl-11 pr-12 py-3.5 bg-[#eff6ff] border-2 border-transparent focus:bg-white focus:border-[#4c1d95] rounded-xl outline-none transition-all placeholder-slate-400 text-slate-800 font-medium"
+                                            placeholder="Nova senha"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => peekPassword(setShowNewPass)}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#4c1d95] transition-colors"
                                         >
                                             {showNewPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                         </button>
@@ -517,38 +519,37 @@ const Login: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--textTitle)' }}>Confirmar senha</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                            <Lock className="h-5 h-5" />
+                                    <label className="block text-sm font-bold text-[#334155] mb-2 pl-1">Confirmar senha</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                            <Lock className="h-5 w-5" />
                                         </div>
                                         <input
                                             type={showConfirmPass ? "text" : "password"}
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#4c1d95] focus:border-transparent outline-none transition-all placeholder-slate-400"
-                                            style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                            className="w-full pl-11 pr-12 py-3.5 bg-[#eff6ff] border-2 border-transparent focus:bg-white focus:border-[#4c1d95] rounded-xl outline-none transition-all placeholder-slate-400 text-slate-800 font-medium"
                                             placeholder="Repita a senha"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => peekPassword(setShowConfirmPass)}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-[#4c1d95] transition-colors"
                                         >
                                             {showConfirmPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                         </button>
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
 
-                    <div className="flex flex-col space-y-3">
+                    <div className="flex flex-col space-y-6 pt-2">
                         {mode === 'login' && (
                             <button
                                 type="button"
                                 onClick={handleForgotPassword}
-                                className="text-sm font-medium text-[#4c1d95] hover:underline self-end"
+                                className="text-sm font-bold text-[#4c1d95] hover:text-[#3b1675] hover:underline self-end transition-colors"
                             >
                                 Esqueci minha senha
                             </button>
@@ -564,45 +565,43 @@ const Login: React.FC = () => {
                                     setNewPassword('');
                                     setConfirmPassword('');
                                 }}
-                                className="text-sm font-medium text-slate-500 hover:underline flex items-center gap-1"
-                                style={{ color: 'var(--textMuted)' }}
+                                className="text-sm font-bold text-slate-500 hover:text-slate-700 hover:underline flex items-center gap-1 transition-colors"
                             >
                                 <ArrowRight className="w-4 h-4 rotate-180" />
                                 Voltar para login
                             </button>
                         )}
+
+                        <div className="space-y-4">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-gradient-to-r from-[#4c1d95] to-[#6d28d9] hover:to-[#5b21b6] disabled:opacity-70 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold shadow-lg shadow-purple-900/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.99]"
+                            >
+                                {loading ? 'Processando...' :
+                                    mode === 'login' ? 'Entrar na plataforma' :
+                                        mode === 'otp-verification' ? 'Validar Código' :
+                                            'Definir Senha'}
+                                {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                            </button>
+
+                            {mode === 'login' && (
+                                <button
+                                    type="button"
+                                    onClick={handleFirstAccess}
+                                    disabled={loading}
+                                    className="w-full bg-white border border-slate-200 py-4 rounded-xl font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Primeiro acesso
+                                </button>
+                            )}
+                        </div>
                     </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-[#4c1d95] hover:bg-[#3b1675] disabled:opacity-70 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-bold shadow-lg shadow-purple-200 transition-all flex items-center justify-center gap-2 group"
-                    >
-                        {loading ? 'Aguarde...' :
-                            mode === 'login' ? 'Entrar' :
-                                mode === 'otp-verification' ? 'Validar Token' :
-                                    'Salvar senha e entrar'}
-                        {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
-                    </button>
-
-                    {mode === 'login' && (
-                        <button
-                            type="button"
-                            onClick={handleFirstAccess}
-                            disabled={loading}
-                            className="w-full border py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
-                            style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--textMuted)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--surfaceHover)'; e.currentTarget.style.color = 'var(--text)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--surface)'; e.currentTarget.style.color = 'var(--textMuted)'; }}
-                        >
-                            Primeiro acesso
-                        </button>
-                    )}
                 </form>
             </div>
 
-            <p className="mt-8 text-center text-sm" style={{ color: 'var(--textMuted)' }}>
-                © 2024 NIC Labs Manager. Todos os direitos reservados.
+            <p className="mt-12 text-center text-sm font-medium text-slate-400/60 tracking-wide">
+                © 2026 NIC-LABS. Todos os direitos reservados.
             </p>
         </div>
     );
