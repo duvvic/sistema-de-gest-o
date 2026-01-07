@@ -3,75 +3,69 @@
    ================================================ */
 
 :root {
-  /* LIGHT MODE - Original Design Restored */
+  /* LIGHT MODE - Refined based on user feedback */
 
   /* Backgrounds */
-  --bg: #F7F7FB;
-  /* off-white levemente arroxeado */
+  --bg: #F0F2F5;
+  /* Cinza claro para destacar os cards brancos */
   --surface: #FFFFFF;
-  /* cards */
-  --surface-2: #F3F4F8;
-  /* inputs/areas secundárias */
-  --surface-hover: #F5F6FF;
-  /* hover state */
+  /* Cards brancos puros */
+  --surface-2: #F8FAFC;
+  /* Áreas internas discretas */
+  --surface-hover: #F1F5F9;
 
-  /* Sidebar */
+  /* Sidebar & Header */
   --sidebar-bg: #4C1D95;
-  /* violet-900 */
   --sidebar-bg-2: #5B21B6;
-  /* violet-800 (gradiente) */
 
   /* Primary Colors */
-  --primary: #4C1D95;
-  /* roxo corporativo */
-  --primary-hover: #3B1675;
-  /* hover */
-  --primary-soft: #EDE9FE;
-  /* violet-100 (backgrounds suaves) */
+  --primary: #581C87;
+  /* Roxo um pouco mais profundo para labels */
+  --primary-hover: #4C1D95;
+  --primary-soft: #F5F3FF;
 
-  /* Text */
-  --text: #0F172A;
-  /* slate-900 (títulos/principal) */
-  --text-2: #334155;
-  /* slate-700 (secundário) */
-  --muted: #64748B;
-  /* slate-500 (muted) */
+  /* Text Colors */
+  --text: #1E1B4B;
+  /* Azul marinho escuro para melhor legibilidade */
+  --text-2: #475569;
+  --muted: #94A3B8;
 
   /* Borders & Effects */
   --border: #E2E8F0;
-  /* slate-200 */
-  --ring: rgba(76, 29, 149, 0.35);
-  /* focus ring */
+  --ring: rgba(88, 28, 135, 0.2);
 
-  /* Status Colors (same for both modes) */
-  --success: #22C55E;
-  --warning: #FACC15;
+  /* Status Colors - Refined for labels (Light BG + Dark Text) */
+  --success: #10B981;
+  --success-bg: #D1FAE5;
+  --success-text: #065F46;
+
+  --warning-bg: #FEF3C7;
+  --warning-text: #92400E;
+
   --danger: #EF4444;
-  --info: #38BDF8;
+  --danger-bg: #FEE2E2;
+  --danger-text: #991B1B;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --info: #3B82F6;
+  --info-bg: #DBEAFE;
+  --info-text: #1E40AF;
+
+  /* Kanban Specific Statuses */
+  --status-todo: #F1F5F9;
+  --status-progress: #EFF6FF;
+  --status-review: #FAF5FF;
+  --status-done: #F0FDF4;
+
+  /* Shadows - Mais definidas para destacar cards do fundo */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
   /* Aliases for backward compatibility */
   --bg-app: var(--bg);
   --bg-surface: var(--surface);
-  --bg-surface-hover: var(--surface-hover);
-  --bgApp: var(--bg);
-  --bgSidebar: var(--sidebar-bg);
   --text-primary: var(--text);
-  --text-default: var(--text-2);
-  --text-muted: var(--muted);
-  --textTitle: var(--text);
   --brand: var(--primary);
-  --brandHover: var(--primary-hover);
-  --accentLight: var(--primary-soft);
-  --shadowCard: var(--shadow);
-  --shadowCardHover: var(--shadow-lg);
-  --surfaceHover: var(--surface-hover);
 }
 
 html.dark {

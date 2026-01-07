@@ -26,11 +26,11 @@ import { Task, Client, Project, Status } from '@/types';
 import { Calendar, User as UserIcon, AlertCircle, Search, Trash2, ArrowLeft, GripVertical, Clock } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
-const STATUS_COLUMNS: { id: Status; title: string; color: string; badgeColor: string }[] = [
-  { id: 'Todo', title: 'A Fazer', color: 'var(--muted)', badgeColor: 'var(--muted)' },
-  { id: 'In Progress', title: 'Em Progresso', color: 'var(--info)', badgeColor: 'var(--info)' },
-  { id: 'Review', title: 'Revisão', color: 'var(--primary)', badgeColor: 'var(--primary)' },
-  { id: 'Done', title: 'Concluído', color: 'var(--success)', badgeColor: 'var(--success)' },
+const STATUS_COLUMNS: { id: Status; title: string; color: string; bg: string; badgeColor: string }[] = [
+  { id: 'Todo', title: 'A Fazer', color: 'var(--text)', bg: 'var(--status-todo)', badgeColor: 'var(--muted)' },
+  { id: 'In Progress', title: 'Em Progresso', color: 'var(--info-text)', bg: 'var(--status-progress)', badgeColor: 'var(--info)' },
+  { id: 'Review', title: 'Revisão', color: 'var(--primary)', bg: 'var(--status-review)', badgeColor: 'var(--primary)' },
+  { id: 'Done', title: 'Concluído', color: 'var(--success-text)', bg: 'var(--status-done)', badgeColor: 'var(--success)' },
 ];
 
 /* ================== CARD ================== */
@@ -259,14 +259,14 @@ const KanbanColumn = ({
   });
 
   return (
-    <div className={`flex flex-col flex-1 min-w-[280px] h-full rounded-2xl border p-4`}
-      style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+    <div className={`flex flex-col flex-1 min-w-[300px] h-full rounded-2xl border p-4 shadow-sm transition-all`}
+      style={{ backgroundColor: col.bg, borderColor: 'var(--border)' }}>
       <div className={`flex items-center justify-between mb-4 px-1`}>
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.badgeColor }}></div>
-          <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: 'var(--text)' }}>{col.title}</h3>
+          <h3 className="font-black text-xs uppercase tracking-widest" style={{ color: col.color || 'var(--text)' }}>{col.title}</h3>
         </div>
-        <span className="px-2 py-0.5 rounded-md text-xs font-bold shadow-sm border"
+        <span className="px-2 py-0.5 rounded-md text-[10px] font-black shadow-sm border"
           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--muted)' }}>
           {tasks.length}
         </span>

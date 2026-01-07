@@ -270,18 +270,21 @@ const TeamList: React.FC = () => {
                       <span className="truncate">{user.email}</span>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold mt-2">
+                    <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wider mt-2">
                       {delayedTasks.length > 0 && (
-                        <span className="bg-red-50 text-red-600 px-2.5 py-1 rounded-full border border-red-100 flex items-center gap-1 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800">
+                        <span className="px-2.5 py-1 rounded-full border flex items-center gap-1 shadow-sm"
+                          style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger-text)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
                           <AlertCircle className="w-3 h-3" /> {delayedTasks.length} atrasos
                         </span>
                       )}
                       {userActiveTasks.length === 0 ? (
-                        <span className="bg-green-50 text-green-600 px-2.5 py-1 rounded-full border border-green-100 flex items-center gap-1 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800">
+                        <span className="px-2.5 py-1 rounded-full border flex items-center gap-1 shadow-sm"
+                          style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success-text)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
                           <CheckSquare className="w-3 h-3" /> Livre
                         </span>
                       ) : (
-                        <span className="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-full border border-amber-100 flex items-center gap-1 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800">
+                        <span className="px-2.5 py-1 rounded-full border flex items-center gap-1 shadow-sm"
+                          style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning-text)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>
                           <AlertCircle className="w-3 h-3" /> {userActiveTasks.length} tarefas
                         </span>
                       )}

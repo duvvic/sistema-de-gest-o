@@ -260,83 +260,158 @@ const TimesheetAdminDashboard: React.FC = () => {
                </div>
             </div>
          ) : !selectedClientId && activeTab === 'status' ? (
-            // Aba Status dos Colaboradores
+            // Aba Status dos Colaboradores - VISÃO 3 COLUNAS (Original Design)
             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-               <div className="mb-6 flex justify-between items-end">
-                  <div>
-                     <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Status da Equipe</h2>
-                     <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Resumo mensal • {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+               <style>{`
+                  .status-column {
+                    flex: 1;
+                    min-width: 320px;
+                    border-radius: 1.5rem;
+                    border: 1px solid var(--border);
+                    display: flex;
+                    flex-col: column;
+                    gap: 1.5rem;
+                    padding: 1.5rem;
+                    height: 100%;
+                  }
+                  .status-card {
+                     background: var(--surface);
+                     border: 1px solid var(--border);
+                     border-radius: 1rem;
+                     padding: 1rem;
+                     display: flex;
+                     align-items: center;
+                     gap: 1rem;
+                     box-shadow: var(--shadow-sm);
+                     transition: all 0.2s ease;
+                  }
+                  .status-card:hover {
+                     transform: translateY(-2px);
+                     box-shadow: var(--shadow-md);
+                     border-color: var(--primary);
+                  }
+                `}</style>
+               <div className="flex flex-col md:flex-row gap-6 h-full min-h-[600px]">
+                  {/* COLUNA: LIVRES */}
+                  <div className="status-column" style={{ backgroundColor: '#F0FDF4' }}>
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg">
+                           <CheckSquare className="w-6 h-6" />
+                        </div>
+                        <div>
+                           <h3 className="font-bold text-emerald-900">Livres</h3>
+                           <p className="text-[10px] uppercase font-black tracking-widest text-emerald-600">Disponíveis</p>
+                        </div>
+                     </div>
+
+                     {(() => {
+                        const freeCollabs = collaboratorsStatus.filter(s => s.isUpToDate && tasks.filter(t => t.developerId === s.user.id && t.status !== 'Done').length === 0);
+                        return freeCollabs.length === 0 ? (
+                           <div className="flex-1 flex items-center justify-center text-emerald-600/50 italic text-sm text-center px-4">
+                              Nenhum colaborador livre
+                           </div>
+                        ) : (
+                           <div className="flex flex-col gap-3 overflow-y-auto">
+                              {freeCollabs.map(s => (
+                                 <div key={s.user.id} className="status-card" onClick={() => navigate(`/admin/team/${s.user.id}`)}>
+                                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100 shadow-inner">
+                                       {s.user.name.charAt(0)}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                       <p className="font-bold text-slate-800 truncate">{s.user.name}</p>
+                                       <p className="text-[10px] text-slate-500 truncate">{s.user.cargo || 'Desenvolvedor'}</p>
+                                    </div>
+                                    <span className="text-xs font-black text-emerald-600">Disponível</span>
+                                 </div>
+                              ))}
+                           </div>
+                        );
+                     })()}
+                  </div>
+
+                  {/* COLUNA: OCUPADOS */}
+                  <div className="status-column" style={{ backgroundColor: '#FFFBEB' }}>
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg">
+                           <Clock className="w-6 h-6" />
+                        </div>
+                        <div>
+                           <h3 className="font-bold text-amber-900">Ocupados</h3>
+                           <p className="text-[10px] uppercase font-black tracking-widest text-amber-600">Em atividade</p>
+                        </div>
+                     </div>
+
+                     {(() => {
+                        const busyCollabs = collaboratorsStatus.filter(s => s.isUpToDate && tasks.filter(t => t.developerId === s.user.id && t.status !== 'Done').length > 0);
+                        return busyCollabs.length === 0 ? (
+                           <div className="flex-1 flex items-center justify-center text-amber-600/50 italic text-sm text-center px-4">
+                              Nenhum colaborador ocupado
+                           </div>
+                        ) : (
+                           <div className="flex flex-col gap-3 overflow-y-auto">
+                              {busyCollabs.map(s => {
+                                 const activeTasks = tasks.filter(t => t.developerId === s.user.id && t.status !== 'Done');
+                                 return (
+                                    <div key={s.user.id} className="status-card" onClick={() => navigate(`/admin/team/${s.user.id}`)}>
+                                       <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold border border-amber-100 shadow-inner">
+                                          {s.user.name.charAt(0)}
+                                       </div>
+                                       <div className="min-w-0 flex-1">
+                                          <p className="font-bold text-slate-800 truncate">{s.user.name}</p>
+                                          <p className="text-[10px] text-slate-500 truncate">{s.user.cargo || 'Desenvolvedor'}</p>
+                                       </div>
+                                       <div className="text-right">
+                                          <p className="text-sm font-black text-amber-600">{activeTasks.length}</p>
+                                          <p className="text-[8px] font-black uppercase text-slate-400">tarefas</p>
+                                       </div>
+                                    </div>
+                                 );
+                              })}
+                           </div>
+                        );
+                     })()}
+                  </div>
+
+                  {/* COLUNA: AUSENTES */}
+                  <div className="status-column" style={{ backgroundColor: '#FEF2F2' }}>
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center text-white shadow-lg">
+                           <AlertCircle className="w-6 h-6" />
+                        </div>
+                        <div>
+                           <h3 className="font-bold text-red-900">Ausentes</h3>
+                           <p className="text-[10px] uppercase font-black tracking-widest text-red-600">Sem apontamentos</p>
+                        </div>
+                     </div>
+
+                     {(() => {
+                        const absentCollabs = collaboratorsStatus.filter(s => !s.isUpToDate);
+                        return absentCollabs.length === 0 ? (
+                           <div className="flex-1 flex items-center justify-center text-red-600/50 italic text-sm text-center px-4">
+                              Todos estão em dia!
+                           </div>
+                        ) : (
+                           <div className="flex flex-col gap-3 overflow-y-auto">
+                              {absentCollabs.map(s => (
+                                 <div key={s.user.id} className="status-card" onClick={() => navigate(`/admin/team/${s.user.id}`)}>
+                                    <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold border border-red-100 shadow-inner">
+                                       {s.user.name.charAt(0)}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                       <p className="font-bold text-slate-800 truncate">{s.user.name}</p>
+                                       <p className="text-[10px] text-slate-500 truncate">{s.user.cargo || 'Desenvolvedor'}</p>
+                                    </div>
+                                    <div className="text-right">
+                                       <p className="text-sm font-black text-red-600">{s.missingDays}</p>
+                                       <p className="text-[8px] font-black uppercase text-slate-400">dias faltando</p>
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        );
+                     })()}
                   </div>
                </div>
-
-               {collaboratorsStatus.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed rounded-2xl"
-                     style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--muted)' }}>
-                     <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                     <p>Nenhum colaborador encontrado</p>
-                  </div>
-               ) : (
-                  <div className="space-y-4">
-                     {collaboratorsStatus.map(status => (
-                        <div
-                           key={status.user.id}
-                           className="border rounded-2xl p-5 hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.01]"
-                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                           onClick={() => navigate(`/admin/team/${status.user.id}`)}
-                        >
-                           <div className="flex flex-col md:flex-row items-center gap-6">
-                              {/* User Info */}
-                              <div className="flex items-center gap-4 flex-1 w-full">
-                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${status.isUpToDate ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
-                                    {status.isUpToDate ? <CheckSquare className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-                                 </div>
-                                 <div>
-                                    <h3 className="font-bold" style={{ color: 'var(--text)' }}>{status.user.name}</h3>
-                                    <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{status.user.cargo || 'Dev'}</p>
-                                 </div>
-                              </div>
-
-                              {/* Stats */}
-                              <div className="flex items-center gap-8 w-full md:w-auto justify-around md:justify-end">
-                                 <div className="text-center">
-                                    <p className="text-xl font-black" style={{ color: 'var(--primary)' }}>{status.daysWithEntries}</p>
-                                    <p className="text-[10px] uppercase tracking-wider font-black" style={{ color: 'var(--muted)' }}>dias ok</p>
-                                 </div>
-
-                                 {!status.isUpToDate && (
-                                    <div className="text-center">
-                                       <p className="text-xl font-black text-red-600">{status.missingDays}</p>
-                                       <p className="text-[10px] uppercase tracking-wider font-black" style={{ color: 'var(--muted)' }}>falta</p>
-                                    </div>
-                                 )}
-
-                                 <div className="text-center">
-                                    <p className="text-xl font-black" style={{ color: 'var(--text)' }}>{status.totalHours.toFixed(1)}h</p>
-                                    <p className="text-[10px] uppercase tracking-wider font-black" style={{ color: 'var(--muted)' }}>total</p>
-                                 </div>
-                              </div>
-
-                              <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-sm border ${status.isUpToDate ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800'}`}>
-                                 {status.isUpToDate ? 'EM DIA' : 'ATENÇÃO'}
-                              </div>
-                           </div>
-
-                           {!status.isUpToDate && status.missingDates.length > 0 && (
-                              <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
-                                 <p className="text-[10px] font-black mb-2 uppercase tracking-widest" style={{ color: 'var(--muted)' }}>DIAS PENDENTES:</p>
-                                 <div className="flex flex-wrap gap-2">
-                                    {status.missingDates.slice(0, 12).map(date => (
-                                       <span key={date} className="px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-800 text-[10px] font-bold font-mono shadow-sm">
-                                          {new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                                       </span>
-                                    ))}
-                                 </div>
-                              </div>
-                           )}
-                        </div>
-                     ))}
-                  </div>
-               )}
             </div>
          ) : (
             // Detalhe do Cliente com Abas
