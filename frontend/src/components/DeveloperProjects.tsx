@@ -25,18 +25,21 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-left hover:bg-white hover:border-[#4c1d95]/30 hover:shadow-md transition-all group w-full flex flex-col cursor-pointer pointer-events-auto"
+      className="border rounded-lg p-3 text-left hover:shadow-md transition-all group w-full flex flex-col cursor-pointer pointer-events-auto"
+      style={{ backgroundColor: 'var(--bg-app)', borderColor: 'var(--border)' }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--brand)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-app)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
       <div className="mb-2">
-        <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-[#4c1d95]">{task.title}</p>
+        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{task.title}</p>
         <div className="flex items-center gap-2 mt-2">
-          <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+          <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border)' }}>
             <div
               className="h-full bg-[#4c1d95]"
               style={{ width: `${task.progress}%` }}
             />
           </div>
-          <span className="text-xs font-bold text-slate-600">{task.progress}%</span>
+          <span className="text-xs font-bold" style={{ color: 'var(--text-default)' }}>{task.progress}%</span>
         </div>
         {task.priority && (
           <span className={`text-xs mt-2 px-2 py-1 rounded-full font-medium inline-block ${task.priority === 'Critical' ? 'bg-red-100 text-red-700' :
@@ -150,20 +153,20 @@ const DeveloperProjects: React.FC = () => {
   }, [projectTasks]);
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div className="h-full flex flex-col rounded-2xl shadow-sm border overflow-hidden" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
 
       {/* VISTA 1: EMPRESAS/CLIENTES */}
       {currentView === 'clients' && (
         <div className="flex-1 flex flex-col p-8">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-800">Projetos</h1>
-            <p className="text-slate-500 mt-1">Escolha um cliente para ver os projetos</p>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Projetos</h1>
+            <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Escolha um cliente para ver os projetos</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {clients.filter(c => clientStats.has(c.id)).length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                <Building2 className="w-12 h-12 mb-4 text-slate-300" />
+              <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--text-muted)' }}>
+                <Building2 className="w-12 h-12 mb-4" style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
                 <p>Nenhum cliente vinculado encontrado.</p>
               </div>
             ) : (
@@ -179,24 +182,27 @@ const DeveloperProjects: React.FC = () => {
                           setSelectedClientId(client.id);
                           setCurrentView('projects');
                         }}
-                        className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-lg hover:border-[#4c1d95]/30 transition-all text-left group cursor-pointer pointer-events-auto"
+                        className="border rounded-2xl p-6 hover:shadow-lg transition-all text-left group cursor-pointer pointer-events-auto"
+                        style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand)'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                       >
                         <div className="flex items-start gap-4 mb-4">
-                          <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 p-2 flex items-center justify-center overflow-hidden">
+                          <div className="w-16 h-16 rounded-xl border p-2 flex items-center justify-center overflow-hidden" style={{ backgroundColor: 'var(--bg-app)', borderColor: 'var(--border)' }}>
                             {client.logoUrl ? (
                               <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />
                             ) : (
-                              <Building2 className="w-8 h-8 text-slate-300" />
+                              <Building2 className="w-8 h-8" style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
                             )}
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-lg font-bold text-slate-800 group-hover:text-[#4c1d95]">{client.name}</h3>
-                            <p className="text-sm text-slate-500 mt-1">{stats?.projectCount} projetos vinculados</p>
+                            <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{client.name}</h3>
+                            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{stats?.projectCount} projetos vinculados</p>
                           </div>
                         </div>
 
-                        <div className="pt-4 border-t border-slate-100 space-y-2">
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <div className="pt-4 border-t space-y-2" style={{ borderColor: 'var(--border)' }}>
+                          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-default)' }}>
                             <CheckSquare className="w-4 h-4 text-[#4c1d95]" />
                             {stats?.taskCount} tarefas vinculadas
                           </div>
@@ -214,38 +220,41 @@ const DeveloperProjects: React.FC = () => {
       {currentView === 'projects' && selectedClientId && (
         <div className="flex-1 flex flex-col">
           {/* BARRA SUPERIOR PERSONALIZADA */}
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50">
+          <div className="px-8 py-6 border-b flex items-center gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-app)' }}>
             <button
               onClick={() => {
                 setCurrentView('clients');
                 setSelectedClientId(null);
               }}
-              className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
+              className="p-2 rounded-full transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 p-1.5 flex items-center justify-center overflow-hidden shadow-sm">
+              <div className="w-12 h-12 rounded-lg border p-1.5 flex items-center justify-center overflow-hidden shadow-sm" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
                 {clients.find(c => c.id === selectedClientId)?.logoUrl ? (
                   <img src={clients.find(c => c.id === selectedClientId)?.logoUrl} alt="" className="w-full h-full object-contain" />
                 ) : (
-                  <Building2 className="w-6 h-6 text-slate-300" />
+                  <Building2 className="w-6 h-6" style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
                 )}
               </div>
               <div>
-                <h1 className="text-lg font-bold text-slate-800">
+                <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                   {clients.find(c => c.id === selectedClientId)?.name}
                 </h1>
-                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Selecione um projeto</p>
+                <p className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--text-muted)' }}>Selecione um projeto</p>
               </div>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 px-1">Projetos</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest mb-6 px-1" style={{ color: 'var(--text-muted)' }}>Projetos</h2>
             {clientProjects.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                <FolderKanban className="w-12 h-12 mb-4 text-slate-300" />
+              <div className="flex flex-col items-center justify-center h-64" style={{ color: 'var(--text-muted)' }}>
+                <FolderKanban className="w-12 h-12 mb-4" style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
                 <p>Nenhum projeto vinculado encontrado para este cliente.</p>
               </div>
             ) : (
@@ -261,22 +270,25 @@ const DeveloperProjects: React.FC = () => {
                         setSelectedProjectId(project.id);
                         setCurrentView('tasks');
                       }}
-                      className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-lg hover:border-[#4c1d95]/30 transition-all text-left group cursor-pointer pointer-events-auto"
+                      className="border rounded-2xl p-6 hover:shadow-lg transition-all text-left group cursor-pointer pointer-events-auto"
+                      style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--brand)'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
                       <div className="mb-4">
-                        <h3 className="text-lg font-bold text-slate-800 group-hover:text-[#4c1d95]">{project.name}</h3>
-                        <p className="text-sm text-slate-500 mt-1 line-clamp-1">{project.description || 'Sem descrição'}</p>
+                        <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{project.name}</h3>
+                        <p className="text-sm mt-1 line-clamp-1" style={{ color: 'var(--text-muted)' }}>{project.description || 'Sem descrição'}</p>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-100 space-y-2">
+                      <div className="pt-4 border-t space-y-2" style={{ borderColor: 'var(--border)' }}>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600 flex items-center gap-2">
+                          <span className="flex items-center gap-2" style={{ color: 'var(--text-default)' }}>
                             <CheckSquare className="w-4 h-4 text-green-500" />
                             Progresso
                           </span>
-                          <span className="font-bold text-slate-800">{completedTasks}/{projTasks.length} tarefas</span>
+                          <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{completedTasks}/{projTasks.length} tarefas</span>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
+                        <div className="w-full h-1.5 rounded-full overflow-hidden mt-1" style={{ backgroundColor: 'var(--border)' }}>
                           <div
                             className="h-full bg-green-500 rounded-full"
                             style={{ width: `${projTasks.length > 0 ? (completedTasks / projTasks.length) * 100 : 0}%` }}
@@ -296,21 +308,24 @@ const DeveloperProjects: React.FC = () => {
       {currentView === 'tasks' && selectedProjectId && (
         <div className="flex-1 flex flex-col">
           {/* BARRA SUPERIOR CUSTOMIZADA PARA TAREFAS */}
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50">
+          <div className="px-8 py-6 border-b flex items-center gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-app)' }}>
             <button
               onClick={() => {
                 setCurrentView('projects');
                 setSelectedProjectId(null);
               }}
-              className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
+              className="p-2 rounded-full transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-slate-800">
+              <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                 {projects.find(p => p.id === selectedProjectId)?.name}
               </h1>
-              <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">
+              <p className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--text-muted)' }}>
                 Minhas Tarefas
               </p>
             </div>
@@ -325,8 +340,8 @@ const DeveloperProjects: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto p-8">
             {projectTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                <CheckSquare className="w-12 h-12 mb-4 text-slate-300" />
+              <div className="flex flex-col items-center justify-center h-64" style={{ color: 'var(--text-muted)' }}>
+                <CheckSquare className="w-12 h-12 mb-4" style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
                 <p>Nenhuma tarefa criada por você neste projeto.</p>
                 <button
                   className="mt-4 text-[#4c1d95] font-bold hover:underline"
