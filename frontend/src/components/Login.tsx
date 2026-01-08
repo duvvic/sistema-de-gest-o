@@ -111,17 +111,11 @@ const Login: React.FC = () => {
             }
 
             // Busca colaborador diretamente pelo e-mail
-            // Adicionado timeout de 5 segundos para evitar travamento em "Processando..."
-            const dbRef = supabase
+            const { data: dbUser, error: userError } = await supabase
                 .from('dim_colaboradores')
                 .select('*')
                 .eq('E-mail', normalizedInput)
                 .maybeSingle();
-
-            const { data: dbUser, error: userError } = await Promise.race([
-                dbRef,
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo limite de conexão excedido.')), 5000))
-            ]) as any;
 
             if (userError) {
                 console.error('[Login] Erro ao buscar usuário:', userError);
