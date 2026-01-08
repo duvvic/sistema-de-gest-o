@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     session = data?.session;
                     sessionError = error;
                 } catch (e) {
-                    console.warn('[Auth] Timeout na verificação de sessão, tentando fallback local...');
+                    console.warn('[Auth] Timeout de sessão detectado. Tentando recuperar via armazenamento local...');
                 }
 
                 if (sessionError) {
