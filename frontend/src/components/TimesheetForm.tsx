@@ -206,9 +206,32 @@ const TimesheetForm: React.FC = () => {
   }, [requestBack, navigate]);
 
   // Filter Logic
-  // Allow seeing all projects if admin, or filter by user assignment if restricted? 
-  // For now assuming all projects are selectable if clientId matches
-  const filteredProjects = projects.filter(p => !formData.clientId || p.clientId === formData.clientId);
+  const { projectMembers } = useDataController(); // Re-calling to get projectMembers if not in destructuring above
+
+  const availableProjectsIds = React.useMemo(() => {
+    if (isAdmin) return projects.map(p => p.id);
+    return projectMembers
+      .filter(pm => pm.userId === user?.id)
+      .map(pm => pm.projectId);
+  }, [projectMembers, user, isAdmin, projects]);
+
+  const availableProjects = projects.filter(p =>
+    availableProjectsIds.includes(p.id) &&
+    (!formData.clientId || p.clientId === formData.clientId)
+  );
+
+  const availableClientIds = React.useMemo(() => {
+    if (isAdmin) return clients.map(c => c.id);
+    // Clients that have at least one project the user is assigned to
+    const userProjects = projects.filter(p => availableProjectsIds.includes(p.id));
+    return [...new Set(userProjects.map(p => p.clientId))];
+  }, [clients, projects, availableProjectsIds, isAdmin]);
+
+  const filteredClients = clients.filter(c => availableClientIds.includes(c.id));
+
+  // Projects already filtered by assignment above, now just standard filter
+  const filteredProjects = availableProjects;
+
   // Tasks filtered by project
   const filteredTasks = tasks.filter(t => !formData.projectId || t.projectId === formData.projectId);
 
@@ -304,7 +327,7 @@ const TimesheetForm: React.FC = () => {
                   style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
                 >
                   <option value="">Selecione um cliente...</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>

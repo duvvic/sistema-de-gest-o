@@ -152,6 +152,29 @@ const TaskDetail: React.FC = () => {
   const selectedClient = clients.find(c => c.id === formData.clientId);
   const selectedProject = projects.find(p => p.id === formData.projectId);
 
+  const { projectMembers } = useDataController();
+
+  const availableProjectsIds = React.useMemo(() => {
+    if (isAdmin) return projects.map(p => p.id);
+    return projectMembers
+      .filter(pm => pm.userId === currentUser?.id)
+      .map(pm => pm.projectId);
+  }, [projectMembers, currentUser, isAdmin, projects]);
+
+  const availableClientIds = React.useMemo(() => {
+    if (isAdmin) return clients.map(c => c.id);
+    const userProjects = projects.filter(p => availableProjectsIds.includes(p.id));
+    return [...new Set(userProjects.map(p => p.clientId))];
+  }, [clients, projects, availableProjectsIds, isAdmin]);
+
+  const filteredClients = clients.filter(c => c.active !== false && availableClientIds.includes(c.id));
+
+  const filteredProjects = projects.filter(p =>
+    availableProjectsIds.includes(p.id) &&
+    p.active !== false &&
+    (!formData.clientId || p.clientId === formData.clientId)
+  );
+
   const getDelayDays = () => {
     if (formData.status === 'Done') return 0;
     if (!formData.estimatedDelivery) return 0;
@@ -254,7 +277,7 @@ const TaskDetail: React.FC = () => {
                     disabled={!isNew && !isAdmin}
                   >
                     <option value="">Selecione um cliente...</option>
-                    {clients.filter(c => c.active !== false).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
 
@@ -268,9 +291,7 @@ const TaskDetail: React.FC = () => {
                     disabled={!formData.clientId || (!isNew && !isAdmin)}
                   >
                     <option value="">{formData.clientId ? 'Selecione um projeto...' : 'Selecione um cliente primeiro'}</option>
-                    {formData.clientId && projects
-                      .filter(p => p.clientId === formData.clientId)
-                      .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {formData.clientId && filteredProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
               </div>
