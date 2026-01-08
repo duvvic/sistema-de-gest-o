@@ -26,9 +26,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
     <div
       onClick={onClick}
       className="border rounded-lg p-3 text-left hover:shadow-md transition-all group w-full flex flex-col cursor-pointer pointer-events-auto"
-      style={{ backgroundColor: 'var(--bg-app)', borderColor: 'var(--border)' }}
+      style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}
       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--brand)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-app)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
       <div className="mb-2">
         <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{task.title}</p>
@@ -153,7 +153,7 @@ const DeveloperProjects: React.FC = () => {
   }, [projectTasks]);
 
   return (
-    <div className="h-full flex flex-col rounded-2xl shadow-sm border overflow-hidden" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: 'transparent' }}>
 
       {/* VISTA 1: EMPRESAS/CLIENTES */}
       {currentView === 'clients' && (
