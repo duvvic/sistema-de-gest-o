@@ -22,7 +22,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Task, Client, Project, Status } from '@/types';
+import { Task, Client, Project, Status, User } from '@/types';
 import { Calendar, User as UserIcon, AlertCircle, Search, Trash2, ArrowLeft, GripVertical, Clock } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -297,12 +297,13 @@ const KanbanBoard: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { tasks, clients, projects, updateTask, deleteTask, loading } = useDataController();
+  const { tasks, clients, projects, users, updateTask, deleteTask, loading } = useDataController();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [selectedDeveloperId, setSelectedDeveloperId] = useState<string>('');
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
 
   const isAdmin = currentUser?.role === "admin";
@@ -320,13 +321,17 @@ const KanbanBoard: React.FC = () => {
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => {
       // Se não for admin, mostrar apenas as tarefas do usuário logado
-      const userFilter = isAdmin || t.developerId === currentUser?.id;
+      const userPermission = isAdmin || t.developerId === currentUser?.id;
 
-      return userFilter &&
+      // Filtro de colaborador selecionado (apenas para visualização)
+      const developerFilter = !selectedDeveloperId || t.developerId === selectedDeveloperId;
+
+      return userPermission &&
+        developerFilter &&
         (!filteredClientId || t.clientId === filteredClientId) &&
         (t.title.toLowerCase().includes(searchTerm.toLowerCase()));
     });
-  }, [tasks, filteredClientId, searchTerm, isAdmin, currentUser]);
+  }, [tasks, filteredClientId, searchTerm, isAdmin, currentUser, selectedDeveloperId]);
 
   const currentClient = useMemo(() =>
     filteredClientId ? clients.find(c => c.id === filteredClientId) : null
@@ -466,6 +471,29 @@ const KanbanBoard: React.FC = () => {
               }}
             />
           </div>
+
+          {isAdmin && (
+            <div className="relative md:w-48">
+              <select
+                value={selectedDeveloperId}
+                onChange={(e) => setSelectedDeveloperId(e.target.value)}
+                className="w-full pl-3 pr-8 py-2.5 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none text-sm shadow-sm transition-all appearance-none cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--surface-2)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--text)'
+                }}
+              >
+                <option value="">Todos os Colaboradores</option>
+                {users.filter(u => u.active !== false).map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+              <UserIcon className="absolute right-3 top-2.5 w-4 h-4 pointer-events-none" style={{ color: 'var(--muted)' }} />
+            </div>
+          )}
 
           {!location.pathname.includes('/developer/tasks') && isAdmin && (
             <button
