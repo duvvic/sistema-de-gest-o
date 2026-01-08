@@ -27,40 +27,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Tenta recuperar sessão do Supabase (localStorage do browser)
                 const sessionPromise = supabase.auth.getSession();
 
-                // Opção: Aumentar timeout para conexão lenta ou remover se desnecessário. 
-                // Mantendo race para evitar hang eterno, mas tratando falha como logout.
                 let session = null;
 
                 try {
+                    // Timeout de segurança
                     const { data, error } = await Promise.race([
                         sessionPromise,
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000)) // Aumentado para 10s
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
                     ]) as any;
 
                     if (error) throw error;
                     session = data?.session;
                 } catch (e) {
-                    console.warn('[Auth] Falha ou Timeout ao buscar sessão:', e);
-                    // Se falhar a verificação de sessão, não podemos confiar no sessionStorage
-                    // pois o token de acesso (JWT) estaria inválido/ausente.
+                    console.warn('[Auth] Falha ou Timeout ao buscar sessão Supabase (pode ser login customizado):', e);
                 }
 
                 if (session?.user) {
-                    console.log('[Auth] Sessão encontrada para:', session.user.email);
+                    // === CAMINHO 1: Login via Supabase Auth (OTP/Magic Link) ===
+                    console.log('[Auth] Sessão Supabase encontrada:', session.user.email);
 
-                    // Buscar dados completos do usuário no banco
-                    const { data: userData, error } = await supabase
+                    const { data: userData } = await supabase
                         .from('dim_colaboradores')
                         .select('*')
                         .eq('E-mail', session.user.email)
                         .maybeSingle();
 
-                    if (error) {
-                        console.error('[Auth] Erro ao buscar dados do usuário:', error);
-                    }
-
                     if (userData) {
-                        console.log('[Auth] Dados do usuário carregados:', userData.NomeColaborador);
                         const user: User = {
                             id: String(userData.ID_Colaborador),
                             name: userData.NomeColaborador,
@@ -72,23 +64,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         };
                         setCurrentUser(user);
                         sessionStorage.setItem('currentUser', JSON.stringify(user));
-                    } else {
-                        console.warn('[Auth] Usuário não encontrado no banco de dados');
-                        setCurrentUser(null);
-                        sessionStorage.removeItem('currentUser');
-                        await supabase.auth.signOut(); // Forçar logout limpo
                     }
                 } else {
-                    console.log('[Auth] Nenhuma sessão ativa encontrada.');
-                    // IMPORTANTE: Remover fallback para sessionStorage aqui. 
-                    // Se o Supabase não tem sessão, o sessionStorage tem apenas dados "visuais" sem token válido.
-                    setCurrentUser(null);
-                    sessionStorage.removeItem('currentUser');
+                    // === CAMINHO 2: Login Customizado (Senha/Tabela) ===
+                    // Como o Login por senha NÃO cria sessão no Supabase (apenas verifica hash no banco),
+                    // dependemos exclusivamente do sessionStorage para persistir o login.
+
+                    console.log('[Auth] Nenhuma sessão Supabase ativa. Verificando fallback local...');
+                    const storedUser = sessionStorage.getItem('currentUser');
+
+                    if (storedUser) {
+                        console.log('[Auth] Usuário recuperado do armazenamento local (Login Customizado).');
+                        try {
+                            const parsedUser = JSON.parse(storedUser);
+                            setCurrentUser(parsedUser);
+                        } catch (err) {
+                            console.error('[Auth] Erro ao parsear usuário armazenado:', err);
+                            sessionStorage.removeItem('currentUser');
+                        }
+                    } else {
+                        console.log('[Auth] Nenhum usuário logado.');
+                        setCurrentUser(null);
+                    }
                 }
             } catch (error) {
-                console.error('[Auth] Erro FATAL ao carregar usuário:', error);
-                setCurrentUser(null);
-                sessionStorage.removeItem('currentUser');
+                console.error('[Auth] Erro geral ao carregar usuário:', error);
+                // Não deslogar forçadamente aqui para não atrapalhar UX em erros transientes
             } finally {
                 setIsLoading(false);
             }
