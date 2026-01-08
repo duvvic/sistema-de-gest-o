@@ -93,90 +93,48 @@ const Login: React.FC = () => {
     }, [currentUser, navigate, mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
         if (mode === 'login') {
-            await handleLogin();
-        } else if (mode === 'otp-verification') {
-            await handleVerifyOtp();
+            await handleLogin(e);
         } else {
-            await handleCreatePassword();
+            e.preventDefault();
+            if (mode === 'otp-verification') {
+                await handleVerifyOtp();
+            } else {
+                await handleCreatePassword();
+            }
         }
     };
 
-    const handleLogin = async () => {
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        console.log('[Login] Tentando login para:', email);
+
+        setLoading(true);
+
         try {
-            setLoading(true);
-            const normalizedInput = email.trim().toLowerCase();
-            console.log('[Login] Tentando login para:', normalizedInput);
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email.trim(),
+                password,
+            });
 
-            if (!normalizedInput || !password) {
-                alert('Informe e-mail e senha.');
+            console.log('[Login] Resultado signIn:', { data, error });
+
+            if (error) {
+                console.error('[Login] Erro:', error);
+                alert(error.message);
                 return;
             }
 
-            // Busca colaborador diretamente pelo e-mail
-            const { data: dbUser, error: userError } = await supabase
-                .from('dim_colaboradores')
-                .select('*')
-                .eq('E-mail', normalizedInput)
-                .maybeSingle();
+            // opcional: confirmar sessão atual
+            const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+            console.log('[Login] Session após login:', { sessionData, sessionErr });
 
-            if (userError) {
-                console.error('[Login] Erro ao buscar usuário:', userError);
-                throw new Error('Erro ao conectar com o banco de dados.');
-            }
-
-            if (!dbUser) {
-                console.warn('[Login] Usuário não encontrado no banco:', normalizedInput);
-                alert(`E-mail "${normalizedInput}" não encontrado.`);
-                return;
-            }
-
-            // Mapeia para o tipo User
-            const foundUser: User = {
-                id: String(dbUser.ID_Colaborador),
-                name: dbUser.NomeColaborador || "Sem nome",
-                email: String(dbUser["E-mail"] || "").trim().toLowerCase(),
-                avatarUrl: dbUser.avatar_url || undefined,
-                cargo: dbUser.Cargo || undefined,
-                role: dbUser.papel === 'Administrador' ? 'admin' : 'developer',
-                active: dbUser.ativo !== false,
-            };
-
-            // Busca credencial
-            const { data: credential, error: credError } = await supabase
-                .from('user_credentials')
-                .select('password_hash')
-                .eq('colaborador_id', Number(foundUser.id))
-                .maybeSingle();
-
-            if (credError) {
-                console.error('[Login] Erro ao buscar credencial:', credError);
-                throw new Error('Erro ao validar credenciais.');
-            }
-
-            if (!credential) {
-                alert('Este é seu primeiro acesso. Use o botão "Primeiro acesso" abaixo.');
-                return;
-            }
-
-            const passwordHash = await hashPassword(password);
-            if (passwordHash !== credential.password_hash) {
-                alert('Senha incorreta.');
-                return;
-            }
-
-            console.log('[Login] Sucesso!');
-            console.log('[Login] foundUser.role:', foundUser.role);
-            console.log('[Login] dbUser.papel:', dbUser.papel);
-            login(foundUser);
-            const redirectPath = foundUser.role === 'admin' ? '/admin/clients' : '/developer/projects';
-            console.log('[Login] Redirecionando para:', redirectPath);
-            navigate(redirectPath);
-
+            // redirecionar
+            navigate('/'); // Ajustado para rota raiz, o AuthContext deve redirecionar com base na role depois
         } catch (err: any) {
-            console.error('[Login] Falha no login:', err);
-            alert(err.message || 'Erro inesperado ao realizar login.');
+            console.error('[Login] Exception:', err);
+            alert('Erro inesperado no login. Veja o console.');
         } finally {
             setLoading(false);
         }
