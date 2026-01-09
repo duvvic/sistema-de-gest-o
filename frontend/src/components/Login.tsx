@@ -212,6 +212,16 @@ const Login: React.FC = () => {
 
             if (error) throw error;
 
+            // CRÍTICO: Atualizar também no Supabase Auth para o Login funcionar
+            const { error: authError } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (authError) {
+                console.error('Erro ao atualizar senha no Auth:', authError);
+                throw new Error('Falha ao registrar senha no sistema de autenticação.');
+            }
+
             // Volta para login preenchendo os campos, sem logar automaticamente
             setMode('login');
             setEmail(selectedUser.email);
