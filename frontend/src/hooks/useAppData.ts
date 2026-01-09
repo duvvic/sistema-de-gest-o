@@ -166,11 +166,8 @@ export function useAppData(): AppData {
         const { supabase } = await import('@/services/supabaseClient');
         const { data: { session } } = await supabase.auth.getSession();
 
-        // Se não tiver sessão E não tiver usuário no sessionStorage, não carregar dados
-        const storedUser = sessionStorage.getItem('currentUser');
-
-        if (!session && !storedUser && !currentUser) {
-          console.log('[useAppData] Sem sessão ou usuário, aguardando login...');
+        if (!session && !currentUser) {
+          console.log('[useAppData] Sem sessão ativa no Supabase, aguardando login...');
           setLoading(false);
           return;
         }

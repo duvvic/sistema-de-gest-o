@@ -114,7 +114,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
       const { data: colaboradores, error: dbError } = await supabase
         .from('dim_colaboradores')
         .select('ID_Colaborador')
-        .eq('E-mail', userEmail)
+        .eq('email', userEmail)
         .maybeSingle();
 
       if (dbError || !colaboradores) {

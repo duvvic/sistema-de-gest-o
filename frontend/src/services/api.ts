@@ -13,7 +13,7 @@ export interface DbUserRow {
   ID_Colaborador: number;
   NomeColaborador: string;
   Cargo: string | null;
-  "E-mail": string;
+  "email": string;
   avatar_url: string | null;
   papel: string | null;
   ativo?: boolean | null;
@@ -79,7 +79,7 @@ export async function fetchUsers(): Promise<User[]> {
     console.log("[API] Buscando...");
     const { data, error } = await supabase
       .from("dim_colaboradores")
-      .select("ID_Colaborador, NomeColaborador, Cargo, E-mail, avatar_url, papel, ativo");
+      .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, papel, ativo");
 
     if (error) {
       console.error("[API] Erro Supabase:", error);
@@ -94,7 +94,7 @@ export async function fetchUsers(): Promise<User[]> {
     const mapped: User[] = data.map((row: any) => ({
       id: String(row.ID_Colaborador),
       name: row.NomeColaborador || "Sem nome",
-      email: String(row["E-mail"] || row["email"] || "").trim().toLowerCase(),
+      email: String(row.email || "").trim().toLowerCase(),
       avatarUrl: row.avatar_url || undefined,
       cargo: row.Cargo || row.cargo || undefined,
       // 'Administrador' -> admin, 'Padrão' ou qualquer outro -> developer

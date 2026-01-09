@@ -1,13 +1,12 @@
 // contexts/AuthContext.tsx
-// Context para gerenciar autenticação e usuário logado
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 
 interface AuthContextType {
     currentUser: User | null;
     isLoading: boolean;
+    authReady: boolean;
     login: (user: User) => void;
     logout: () => void;
     updateUser: (user: User) => void;
@@ -15,141 +14,119 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper para normalização consistente de e-mail
+export const normalizeEmail = (email: string | undefined | null): string => {
+    return (email || '').trim().toLowerCase();
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [authReady, setAuthReady] = useState(false);
 
-    // Carregar usuário do sessionStorage ao iniciar
-    useEffect(() => {
-        const loadUser = async () => {
-            console.log('[Auth] Iniciando loadUser...');
-            try {
-                // Tenta carregar sessão do Supabase com timeout curto (2s)
-                // Se a rede estiver lenta ou o cliente travar, pulamos para o fallback local
-                const sessionPromise = supabase.auth.getSession();
-                let session = null;
+    const mapUserDataToUser = useCallback((userData: any): User => {
+        const papel = String(userData.papel || '').trim().toLowerCase();
+        // admin se papel (case-insensitive) contém “admin” => 'admin' senão 'developer'
+        const role = papel.includes('admin') ? 'admin' : 'developer';
 
-                try {
-                    const { data, error } = await Promise.race([
-                        sessionPromise,
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
-                    ]) as any;
-
-                    if (error) throw error;
-                    session = data?.session;
-                } catch (e) {
-                    // Timeout ou Erro: Prossegue para tentar recuperar do sessionStorage
-                    // console.warn('[Auth] Sessão Supabase não detectada (Timeout/Erro). Verificando local.');
-                }
-
-                if (session?.user) {
-                    // === CAMINHO 1: Login via Supabase Auth (OTP/Magic Link) ===
-                    console.log('[Auth] Sessão Supabase encontrada:', session.user.email);
-
-                    const { data: userData } = await supabase
-                        .from('dim_colaboradores')
-                        .select('*')
-                        .eq('E-mail', session.user.email)
-                        .maybeSingle();
-
-                    if (userData) {
-                        const user: User = {
-                            id: String(userData.ID_Colaborador),
-                            name: userData.NomeColaborador,
-                            email: userData['E-mail'] || userData.email,
-                            role: userData.papel === 'Administrador' ? 'admin' : 'developer',
-                            avatarUrl: userData.avatar_url,
-                            cargo: userData.cargo,
-                            active: userData.ativo ?? true,
-                        };
-                        setCurrentUser(user);
-                        sessionStorage.setItem('currentUser', JSON.stringify(user));
-                    }
-                } else {
-                    // === CAMINHO 2: Login Customizado (Senha/Tabela) ===
-                    // Como o Login por senha NÃO cria sessão no Supabase (apenas verifica hash no banco),
-                    // dependemos exclusivamente do sessionStorage para persistir o login.
-
-                    console.log('[Auth] Nenhuma sessão Supabase ativa. Verificando fallback local...');
-                    const storedUser = sessionStorage.getItem('currentUser');
-
-                    if (storedUser) {
-                        console.log('[Auth] Usuário recuperado do armazenamento local (Login Customizado).');
-                        try {
-                            const parsedUser = JSON.parse(storedUser);
-                            setCurrentUser(parsedUser);
-                        } catch (err) {
-                            console.error('[Auth] Erro ao parsear usuário armazenado:', err);
-                            sessionStorage.removeItem('currentUser');
-                        }
-                    } else {
-                        console.log('[Auth] Nenhum usuário logado.');
-                        setCurrentUser(null);
-                    }
-                }
-            } catch (error) {
-                console.error('[Auth] Erro geral ao carregar usuário:', error);
-                // Não deslogar forçadamente aqui para não atrapalhar UX em erros transientes
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadUser();
+        return {
+            id: String(userData.ID_Colaborador),
+            name: userData.NomeColaborador,
+            email: userData.email || userData['E-mail'],
+            role: role,
+            avatarUrl: userData.avatar_url,
+            cargo: userData.Cargo || userData.cargo, // Prioriza Cargo (Maiúsculo) do banco
+            active: userData.ativo ?? true,
+        } as User;
     }, []);
 
-    // Listener para mudanças de autenticação
+    const loadUserFromSession = useCallback(async (session: any) => {
+        if (!session?.user?.email) {
+            setCurrentUser(null);
+            setAuthReady(true);
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const { data: userData, error: dbErr } = await supabase
+                .from('dim_colaboradores')
+                .select('*')
+                .eq('email', session.user.email.trim().toLowerCase()) // Busca pela nova coluna padronizada
+                .maybeSingle();
+
+            if (dbErr) console.warn('[Auth] Erro ao buscar dim_colaboradores:', dbErr);
+
+            if (userData) {
+                setCurrentUser(mapUserDataToUser(userData));
+            } else {
+                // Fallback mínimo
+                setCurrentUser({
+                    id: session.user.id,
+                    name: session.user.email,
+                    email: session.user.email,
+                    role: 'developer',
+                    active: true,
+                } as any);
+            }
+        } catch (err) {
+            console.error('[Auth] Erro crítico no loadUser:', err);
+        } finally {
+            setAuthReady(true);
+            setIsLoading(false);
+        }
+    }, [mapUserDataToUser]);
+
     useEffect(() => {
+        // Carga inicial
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            loadUserFromSession(session);
+        });
+
+        // Listener de eventos do Supabase Auth
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('[Auth] onAuthStateChange:', event);
+
             if (event === 'SIGNED_OUT') {
                 setCurrentUser(null);
-                sessionStorage.removeItem('currentUser');
-            } else if (event === 'SIGNED_IN' && session?.user) {
-                const { data: userData } = await supabase
-                    .from('dim_colaboradores')
-                    .select('*')
-                    .eq('E-mail', session.user.email)
-                    .maybeSingle();
+                setAuthReady(true);
+                return;
+            }
 
-                if (userData) {
-                    const user: User = {
-                        id: String(userData.ID_Colaborador),
-                        name: userData.NomeColaborador,
-                        email: userData['E-mail'] || userData.email,
-                        role: userData.papel === 'Administrador' ? 'admin' : 'developer',
-                        avatarUrl: userData.avatar_url,
-                        cargo: userData.cargo,
-                        active: userData.ativo ?? true,
-                    };
-                    setCurrentUser(user);
-                    sessionStorage.setItem('currentUser', JSON.stringify(user));
-                }
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                await loadUserFromSession(session);
             }
         });
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, []);
+        return () => subscription.unsubscribe();
+    }, [loadUserFromSession]);
 
     const login = (user: User) => {
         setCurrentUser(user);
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
     };
 
-    const logout = () => {
+    const logout = async () => {
+        await supabase.auth.signOut({ scope: 'global' });
         setCurrentUser(null);
-        sessionStorage.removeItem('currentUser');
-        supabase.auth.signOut();
+        // Limpeza de cache local do Supabase
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-')) localStorage.removeItem(key);
+        });
     };
 
     const updateUser = (user: User) => {
         setCurrentUser(user);
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
     };
 
     return (
-        <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUser }}>
+        <AuthContext.Provider value={{
+            currentUser,
+            isLoading: !authReady || isLoading,
+            authReady,
+            login,
+            logout,
+            updateUser
+        }}>
             {children}
         </AuthContext.Provider>
     );
@@ -157,8 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
+    if (context === undefined) throw new Error('useAuth must be used within AuthProvider');
     return context;
 };

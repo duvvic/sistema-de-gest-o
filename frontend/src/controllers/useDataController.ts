@@ -214,7 +214,7 @@ export const useDataController = () => {
             .from('dim_colaboradores')
             .insert([{
                 NomeColaborador: userData.name,
-                "E-mail": userData.email,
+                email: userData.email,
                 Cargo: userData.cargo,
                 papel: userData.role === 'admin' ? 'Administrador' : 'Padrão',
                 ativo: userData.active ?? true
@@ -228,7 +228,7 @@ export const useDataController = () => {
     const updateUser = async (userId: string, updates: Partial<User>): Promise<void> => {
         const payload: any = {};
         if (updates.name !== undefined) payload.NomeColaborador = updates.name;
-        if (updates.email !== undefined) payload["E-mail"] = updates.email;
+        if (updates.email !== undefined) payload.email = updates.email;
         if (updates.cargo !== undefined) payload.Cargo = updates.cargo;
         if (updates.role !== undefined) payload.papel = updates.role === 'admin' ? 'Administrador' : 'Padrão';
         if (updates.active !== undefined) payload.ativo = updates.active;

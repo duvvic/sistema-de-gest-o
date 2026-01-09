@@ -57,7 +57,7 @@ const UserForm: React.FC = () => {
       // Preparar payload para dim_colaboradores
       const payload = {
         NomeColaborador: formData.name,
-        "E-mail": formData.email,
+        email: formData.email,
         Cargo: formData.cargo,
         papel: formData.role === 'admin' ? 'Administrador' : 'Padrão',
         ativo: formData.active,

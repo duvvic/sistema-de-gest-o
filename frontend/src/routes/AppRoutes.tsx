@@ -1,6 +1,6 @@
 // routes/AppRoutes.tsx - VERSÃO COMPLETA ADMIN
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Componentes adaptados
@@ -56,11 +56,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
 };
 
 const AppRoutes: React.FC = () => {
+    const navigate = useNavigate();
+
     return (
         <Routes>
             {/* Rota Pública Check */}
             <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword onComplete={() => window.location.href = '/login'} />} />
+            <Route path="/reset-password" element={<ResetPassword onComplete={() => navigate('/login', { replace: true })} />} />
 
             {/* Rota Raiz - Redireciona baseado no role */}
             <Route path="/" element={
