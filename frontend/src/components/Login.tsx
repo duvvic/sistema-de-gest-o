@@ -263,14 +263,14 @@ const Login: React.FC = () => {
                         <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                             <input
-                                type="text"
-                                name="cl_email_field" // Ofuscado para evitar autofill
+                                type="email"
+                                name="email"
                                 value={effectiveEmail}
                                 onChange={(e) => mode === 'login' && setEmail(e.target.value)}
                                 disabled={mode !== 'login'}
-                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-emerald-500 outline-none transition-all"
+                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-emerald-500 outline-none transition-all text-[#1e1b4b] font-medium"
                                 placeholder="nome@empresa.com"
-                                autoComplete="off"
+                                autoComplete="email"
                                 required
                             />
                         </div>
@@ -283,12 +283,12 @@ const Login: React.FC = () => {
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
                                     type={showPass ? "text" : "password"}
-                                    name="cl_pass_field" // Ofuscado
+                                    name="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-purple-500 outline-none transition-all"
+                                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-purple-500 outline-none transition-all text-[#1e1b4b] font-medium"
                                     placeholder="••••••••"
-                                    autoComplete="new-password"
+                                    autoComplete="current-password"
                                     required
                                 />
                                 <button type="button" onClick={() => peekPassword(setShowPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
