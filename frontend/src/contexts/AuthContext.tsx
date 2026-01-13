@@ -89,7 +89,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 } as any);
             }
         } catch (err) {
-            console.error('[Auth] Erro crítico no loadUser:', err);
+            console.error('[Auth] Erro crítico no loadUser (usando fallback):', err);
+            // Fallback imediato: se o banco falhar, não trancamos o usuário.
+            // Ele entra com o perfil que temos na sessão do Supabase Auth.
+            setCurrentUser({
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'Usuário',
+                email: session.user.email,
+                role: 'developer', // Padrão seguro
+                active: true,
+            } as User);
         } finally {
             setAuthReady(true);
             setIsLoading(false);
