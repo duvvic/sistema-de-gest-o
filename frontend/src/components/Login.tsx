@@ -76,22 +76,41 @@ const Login: React.FC = () => {
             const normalizedEmail = email.trim().toLowerCase();
             console.log('[Login] Tentando login para:', normalizedEmail);
 
-            // opcional: limpar sessão antes de logar (evita "travadas" em alguns browsers)
-            await supabase.auth.signOut();
+            // 1. Verifica se o e-mail existe na nossa base de colaboradores primeiro
+            const { data: dbUser, error: dbError } = await supabase
+                .from('dim_colaboradores')
+                .select('ID_Colaborador, email, "E-mail"')
+                .eq('email', normalizedEmail)
+                .maybeSingle();
+
+            if (dbError) throw dbError;
+
+            if (!dbUser) {
+                alert('E-mail não encontrado. Verifique se digitou corretamente ou entre em contato com o administrador.');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Tenta fazer o login no Supabase Auth
+            await supabase.auth.signOut(); // Limpeza preventiva
 
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: normalizedEmail,
                 password,
             });
 
-            console.log('[Login] signInWithPassword result:', { data, error });
-
             if (error) {
-                alert(`Erro no login: ${error.message}`);
+                if (error.message.includes('Invalid login credentials')) {
+                    // Se o usuário existe no banco mas falhou aqui, ou a senha está errada
+                    // ou ele nunca criou uma senha no Auth.
+                    alert('Senha incorreta ou usuário sem senha. Se for seu primeiro login, clique em "Primeiro acesso" abaixo.');
+                } else {
+                    alert(`Erro no login: ${error.message}`);
+                }
                 return;
             }
 
-            // Não use window.location.href (evita race conditions)
+            // Sucesso
             navigate("/", { replace: true });
         } catch (err: any) {
             console.error('[Login] Exception inesperada no login:', err);
