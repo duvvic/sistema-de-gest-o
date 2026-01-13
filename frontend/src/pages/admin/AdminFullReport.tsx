@@ -29,8 +29,11 @@ import {
     Loader2,
     Table as TableIcon,
     TrendingUp,
-    X
+    X,
+    CheckCircle2,
+    AlertCircle
 } from 'lucide-react';
+import { ToastContainer, ToastType } from '@/components/Toast';
 
 type Option = { id: number; label: string };
 type TaskOption = { id: string; label: string };
@@ -306,15 +309,28 @@ const AdminFullReport: React.FC = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
 
-    // Estados dos Filtros
-    const [startDate, setStartDate] = useState(daysAgoISO(30));
-    const [endDate, setEndDate] = useState(todayISO());
-    const [clientIds, setClientIds] = useState<number[]>([]);
-    const [projectIds, setProjectIds] = useState<number[]>([]);
-    const [collaboratorIds, setCollaboratorIds] = useState<number[]>([]);
+    // Estados dos Filtros (com persistência)
+    const [startDate, setStartDate] = useState(() => localStorage.getItem('report_startDate') || daysAgoISO(30));
+    const [endDate, setEndDate] = useState(() => localStorage.getItem('report_endDate') || todayISO());
+    const [clientIds, setClientIds] = useState<number[]>(() => JSON.parse(localStorage.getItem('report_clientIds') || '[]'));
+    const [projectIds, setProjectIds] = useState<number[]>(() => JSON.parse(localStorage.getItem('report_projectIds') || '[]'));
+    const [collaboratorIds, setCollaboratorIds] = useState<number[]>(() => JSON.parse(localStorage.getItem('report_collaboratorIds') || '[]'));
     const [taskIds, setTaskIds] = useState<string[]>([]);
 
-    // Estados das Opções
+    useEffect(() => {
+        document.title = 'Relatório Master | Inteligência Financeira';
+    }, []);
+
+    // Persistir filtros ao mudar
+    useEffect(() => {
+        localStorage.setItem('report_startDate', startDate);
+        localStorage.setItem('report_endDate', endDate);
+        localStorage.setItem('report_clientIds', JSON.stringify(clientIds));
+        localStorage.setItem('report_projectIds', JSON.stringify(projectIds));
+        localStorage.setItem('report_collaboratorIds', JSON.stringify(collaboratorIds));
+    }, [startDate, endDate, clientIds, projectIds, collaboratorIds]);
+
+    // Opções de seletores
     const [clientOptions, setClientOptions] = useState<Option[]>([]);
     const [projectOptions, setProjectOptions] = useState<Option[]>([]);
     const [collaboratorOptions, setCollaboratorOptions] = useState<Option[]>([]);
@@ -325,6 +341,16 @@ const AdminFullReport: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState<'excel' | 'powerbi' | null>(null);
     const [activeTab, setActiveTab] = useState<'preview' | 'costs'>('preview');
+
+    // Toasts state
+    const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+    const addToast = (message: string, type: ToastType) => {
+        const id = Math.random().toString(36).substring(2, 9);
+        setToasts(prev => [...prev, { id, message, type }]);
+    };
+    const removeToast = (id: string) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    };
 
     // Carregamento Inicial
     useEffect(() => {
@@ -389,9 +415,10 @@ const AdminFullReport: React.FC = () => {
                 taskIds: taskIds.length > 0 ? taskIds : undefined,
             });
             setReportData(resp);
-        } catch (err) {
+            addToast('Relatório gerado com sucesso!', 'success');
+        } catch (err: any) {
             console.error('Erro ao gerar prévia:', err);
-            alert('Falha ao gerar prévia do relatório.');
+            addToast('Ocorreu um erro ao processar os dados do relatório.', 'error');
         } finally {
             setLoading(false);
         }
@@ -416,7 +443,7 @@ const AdminFullReport: React.FC = () => {
             downloadBlob(blob, `relatorio-${type}-${todayISO()}.${type === 'excel' ? 'xlsx' : 'json'}`);
         } catch (err) {
             console.error(`Erro ao exportar ${type}:`, err);
-            alert(`Falha na exportação para ${type}.`);
+            addToast(`Não foi possível gerar a exportação para ${type}.`, 'error');
         } finally {
             setExporting(null);
         }
@@ -433,9 +460,10 @@ const AdminFullReport: React.FC = () => {
                 );
                 setReportData({ ...reportData, projectTotals: newTotals });
             }
+            addToast('Custos do projeto atualizados com sucesso!', 'success');
         } catch (err) {
             console.error('Erro ao atualizar custo:', err);
-            alert('Erro ao salvar custo.');
+            addToast('Falha técnica ao tentar salvar o budget do projeto.', 'error');
         }
     };
 
@@ -660,6 +688,8 @@ const AdminFullReport: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    <ToastContainer toasts={toasts} removeToast={removeToast} />
                 </main>
             </div >
         </div >
@@ -680,6 +710,8 @@ const ProjectCostRow: React.FC<ProjectCostRowProps> = ({ pt, onUpdate }) => {
         try {
             const num = inputValue.trim() === '' ? null : Number(inputValue);
             await onUpdate(pt.id_projeto, num);
+        } catch (err) {
+            // Error already handled by parent toast
         } finally {
             setSaving(false);
         }
@@ -702,10 +734,12 @@ const ProjectCostRow: React.FC<ProjectCostRowProps> = ({ pt, onUpdate }) => {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-500">R$</span>
                     <input
                         type="number"
+                        step="0.01"
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
                         placeholder="0.00"
                         onBlur={handleSave}
+                        onKeyDown={e => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
                         disabled={saving}
                         className="w-full pl-9 pr-3 py-2 bg-[#1b1530] border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-purple-600/50 text-sm font-black text-slate-100 transition-all placeholder:text-slate-700"
                     />

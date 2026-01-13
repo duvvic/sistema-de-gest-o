@@ -40,67 +40,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as User;
     }, []);
 
-    const loadUserFromSession = useCallback(async (session: any) => {
-        if (!session?.user?.email) {
-            console.log('[Auth] Sem e-mail na sessão, abortando carga de dados.');
+    const lastLoadedEmail = React.useRef<string | null>(null);
+    const loadingRef = React.useRef<string | null>(null);
+
+    const loadUserFromSession = useCallback(async (session: any, force = false) => {
+        const emailToFind = normalizeEmail(session?.user?.email);
+
+        if (!emailToFind) {
+            lastLoadedEmail.current = null;
             setCurrentUser(null);
             setAuthReady(true);
             setIsLoading(false);
             return;
         }
 
-        const emailToFind = session.user.email.trim().toLowerCase();
-
-        // Evita recarregar se já tivermos o usuário correto carregado
-        if (currentUser?.email?.toLowerCase() === emailToFind) {
-            console.log('[Auth] Usuário já carregado:', emailToFind);
+        // Evita carregar o mesmo usuário múltiplas vezes, a menos que seja forçado
+        if (!force && lastLoadedEmail.current === emailToFind) {
             setAuthReady(true);
             setIsLoading(false);
             return;
         }
 
-        console.log('[Auth] Carregando dados do banco para:', emailToFind);
+        // Evita requisições paralelas para o mesmo e-mail
+        if (loadingRef.current === emailToFind) return;
+        loadingRef.current = emailToFind;
+
+        console.log('[Auth] Carregando dados para:', emailToFind);
 
         try {
-            console.log('[Auth] Iniciando busca em dim_colaboradores (Timeout 12s)...');
-
-            // Cria uma promessa que rejeita após 12 segundos (aumentado de 4s para estabilidade)
-            const queryTimeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Banco de dados não respondeu a tempo (Timeout)')), 12000)
+            // Promessa de Timeout (15s para dar margem em conexões lentas)
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout de rede na carga do usuário')), 15000)
             );
 
-            // Corre a query contra o timeout
-            const userData = await Promise.race([
+            // Tenta buscar o usuário nas tabelas dim_colaboradores ou no fallback
+            const { data: userData, error: dbError } = await Promise.race([
                 supabase
                     .from('dim_colaboradores')
                     .select('*')
-                    .or(`email.eq.${emailToFind}, "E-mail".eq.${emailToFind}`) // Tenta as duas colunas
-                    .maybeSingle()
-                    .then(res => {
-                        if (res.error) throw res.error;
-                        return res.data;
-                    }),
-                queryTimeout
-            ]) as any;
+                    .or(`email.eq.${emailToFind}, "E-mail".eq.${emailToFind}`)
+                    .maybeSingle(),
+                timeoutPromise as any
+            ]);
 
-            console.log('[Auth] Resposta recebida:', userData ? 'Usuário identificado' : 'Usuário não cadastrado no banco');
+            if (dbError) throw dbError;
 
             if (userData) {
-                setCurrentUser(mapUserDataToUser(userData));
+                const normalizedUser = mapUserDataToUser(userData);
+                setCurrentUser(normalizedUser);
+                lastLoadedEmail.current = emailToFind;
             } else {
-                // Fallback mínimo se não encontrar no banco
-                console.warn('[Auth] Usuário não encontrado em dim_colaboradores, usando perfil básico.');
+                console.warn('[Auth] Usuário não encontrado no banco, usando perfil básico.');
                 setCurrentUser({
                     id: session.user.id,
-                    name: session.user.email.split('@')[0],
+                    name: session.user.email?.split('@')[0] || 'Usuário',
                     email: session.user.email,
                     role: 'developer',
                     active: true,
                 } as any);
+                lastLoadedEmail.current = emailToFind;
             }
         } catch (err: any) {
-            console.error('[Auth] Erro crítico no loadUser (usando fallback):', err.message || err);
-            // Fallback imediato: se o banco falhar, não trancamos o usuário.
+            console.error('[Auth] Falha ao carregar perfil completo:', err.message || err);
+            // Fallback para não bloquear o acesso do usuário
             setCurrentUser({
                 id: session.user.id,
                 name: session.user.email?.split('@')[0] || 'Usuário',
@@ -109,44 +111,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 active: true,
             } as User);
         } finally {
+            loadingRef.current = null;
             setAuthReady(true);
             setIsLoading(false);
         }
-    }, [mapUserDataToUser, currentUser?.email]);
+    }, [mapUserDataToUser]);
 
     useEffect(() => {
-        console.log('[Auth] Inicializando AuthProvider...');
         let isMounted = true;
 
-        // Unlock UI if initialization takes too long
-        const safetyTimeout = setTimeout(() => {
+        // Timer de segurança para destravar a UI se nada acontecer em 20s
+        const safetyTimer = setTimeout(() => {
             if (isMounted) {
-                setAuthReady(current => {
-                    if (!current) {
-                        console.warn('[Auth] Safety timeout! Desbloqueando UI.');
+                setAuthReady(ready => {
+                    if (!ready) {
+                        console.warn('[Auth] Safety timeout atingido. Destravando interface.');
                         setIsLoading(false);
                         return true;
                     }
-                    return current;
+                    return ready;
                 });
             }
-        }, 15000);
+        }, 20000);
 
-        // Função única para inicializar
-        const initAuth = async () => {
+        const init = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
-                if (isMounted) {
-                    console.log('[Auth] Sessão inicial:', session ? 'Encontrada' : 'Nenhuma');
-                    if (session) {
-                        await loadUserFromSession(session);
-                    } else {
-                        setAuthReady(true);
-                        setIsLoading(false);
-                    }
+                if (isMounted && session) {
+                    await loadUserFromSession(session);
+                } else if (isMounted) {
+                    setAuthReady(true);
+                    setIsLoading(false);
                 }
-            } catch (err) {
-                console.error('[Auth] Erro na inicialização:', err);
+            } catch (e) {
                 if (isMounted) {
                     setAuthReady(true);
                     setIsLoading(false);
@@ -154,28 +151,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
 
-        initAuth();
+        init();
 
-        // Listener para mudanças de estado de autenticação
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('[Auth] Evento detectado:', event);
-
             if (!isMounted) return;
+            console.log('[Auth] Evento:', event);
 
             if (event === 'SIGNED_OUT') {
+                lastLoadedEmail.current = null;
                 setCurrentUser(null);
                 setAuthReady(true);
                 setIsLoading(false);
-            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-                if (session) {
-                    await loadUserFromSession(session);
-                }
+            } else if (session) {
+                await loadUserFromSession(session);
             }
         });
 
         return () => {
             isMounted = false;
-            clearTimeout(safetyTimeout);
+            clearTimeout(safetyTimer);
             subscription.unsubscribe();
         };
     }, [loadUserFromSession]);
