@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import adminUsersRouter from "./routes/adminUsers.js";
+import adminBaseRouter from "./routes/adminBase.js";
 import reportRoutes from "./routes/report.js";
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.use(
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api", adminUsersRouter);
+app.use("/api/admin", adminBaseRouter);
 app.use("/api/admin/report", reportRoutes);
 
 const port = process.env.PORT || 3000;
