@@ -50,14 +50,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const emailToFind = session.user.email.trim().toLowerCase();
+
+        // Evita recarregar se já tivermos o usuário correto carregado
+        if (currentUser?.email?.toLowerCase() === emailToFind) {
+            console.log('[Auth] Usuário já carregado:', emailToFind);
+            setAuthReady(true);
+            setIsLoading(false);
+            return;
+        }
+
         console.log('[Auth] Carregando dados do banco para:', emailToFind);
 
         try {
-            console.log('[Auth] Iniciando busca em dim_colaboradores (Timeout 4s)...');
+            console.log('[Auth] Iniciando busca em dim_colaboradores (Timeout 12s)...');
 
-            // Cria uma promessa que rejeita após 4 segundos
+            // Cria uma promessa que rejeita após 12 segundos (aumentado de 4s para estabilidade)
             const queryTimeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Banco de dados não respondeu a tempo (Timeout)')), 4000)
+                setTimeout(() => reject(new Error('Banco de dados não respondeu a tempo (Timeout)')), 12000)
             );
 
             // Corre a query contra o timeout
@@ -65,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 supabase
                     .from('dim_colaboradores')
                     .select('*')
-                    .eq('email', emailToFind)
+                    .or(`email.eq.${emailToFind}, "E-mail".eq.${emailToFind}`) // Tenta as duas colunas
                     .maybeSingle()
                     .then(res => {
                         if (res.error) throw res.error;
@@ -79,36 +88,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userData) {
                 setCurrentUser(mapUserDataToUser(userData));
             } else {
-                // Fallback mínimo
+                // Fallback mínimo se não encontrar no banco
+                console.warn('[Auth] Usuário não encontrado em dim_colaboradores, usando perfil básico.');
                 setCurrentUser({
                     id: session.user.id,
-                    name: session.user.email,
+                    name: session.user.email.split('@')[0],
                     email: session.user.email,
                     role: 'developer',
                     active: true,
                 } as any);
             }
-        } catch (err) {
-            console.error('[Auth] Erro crítico no loadUser (usando fallback):', err);
+        } catch (err: any) {
+            console.error('[Auth] Erro crítico no loadUser (usando fallback):', err.message || err);
             // Fallback imediato: se o banco falhar, não trancamos o usuário.
-            // Ele entra com o perfil que temos na sessão do Supabase Auth.
             setCurrentUser({
                 id: session.user.id,
                 name: session.user.email?.split('@')[0] || 'Usuário',
                 email: session.user.email,
-                role: 'developer', // Padrão seguro
+                role: 'developer',
                 active: true,
             } as User);
         } finally {
             setAuthReady(true);
             setIsLoading(false);
         }
-    }, [mapUserDataToUser]);
+    }, [mapUserDataToUser, currentUser?.email]);
 
     useEffect(() => {
         console.log('[Auth] Inicializando AuthProvider...');
         let isMounted = true;
 
+        // Unlock UI if initialization takes too long
         const safetyTimeout = setTimeout(() => {
             if (isMounted) {
                 setAuthReady(current => {
@@ -120,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return current;
                 });
             }
-        }, 6000);
+        }, 15000);
 
         // Função única para inicializar
         const initAuth = async () => {
@@ -128,7 +138,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const { data: { session } } = await supabase.auth.getSession();
                 if (isMounted) {
                     console.log('[Auth] Sessão inicial:', session ? 'Encontrada' : 'Nenhuma');
-                    await loadUserFromSession(session);
+                    if (session) {
+                        await loadUserFromSession(session);
+                    } else {
+                        setAuthReady(true);
+                        setIsLoading(false);
+                    }
                 }
             } catch (err) {
                 console.error('[Auth] Erro na inicialização:', err);
@@ -141,19 +156,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         initAuth();
 
-        // Listener apenas para mudanças reais (não INITIAL_SESSION/SIGNED_IN redundante)
+        // Listener para mudanças de estado de autenticação
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('[Auth] Evento detectado:', event);
 
+            if (!isMounted) return;
+
             if (event === 'SIGNED_OUT') {
-                if (isMounted) {
-                    setCurrentUser(null);
-                    setAuthReady(true);
-                    setIsLoading(false);
-                }
-            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                // Só recarrega se não tivermos o usuário ou for um evento de login novo
-                if (isMounted) {
+                setCurrentUser(null);
+                setAuthReady(true);
+                setIsLoading(false);
+            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+                if (session) {
                     await loadUserFromSession(session);
                 }
             }

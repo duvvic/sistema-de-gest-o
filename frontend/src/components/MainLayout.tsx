@@ -31,6 +31,7 @@ const MainLayout: React.FC = () => {
         { path: '/admin/clients', icon: Users, label: 'Clientes' },
         { path: '/tasks', icon: CheckSquare, label: 'Tarefas' },
         { path: '/admin/team', icon: Users, label: 'Funcionários' },
+        { path: '/admin/reports', icon: LayoutDashboard, label: 'Relatórios' }, // Usando LayoutDashboard ou BarChart3
         { path: '/timesheet', icon: Clock, label: 'Folha de Ponto' },
     ];
 

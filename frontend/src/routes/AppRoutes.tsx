@@ -21,6 +21,7 @@ import TeamList from '@/components/TeamList';
 import TeamMemberDetail from '@/components/TeamMemberDetail';
 import UserForm from '@/components/UserForm';
 import UserProfile from '@/components/UserProfile';
+import AdminFullReport from '@/pages/admin/AdminFullReport';
 
 // Componentes de Timesheet
 import TimesheetAdminDashboard from '@/components/TimesheetAdminDashboard';
@@ -242,6 +243,16 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute requiredRole="admin">
                             <TimesheetAdminDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* === RELATÓRIOS (ADMIN) === */}
+                <Route
+                    path="admin/reports"
+                    element={
+                        <ProtectedRoute requiredRole="admin">
+                            <AdminFullReport />
                         </ProtectedRoute>
                     }
                 />

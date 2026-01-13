@@ -156,7 +156,7 @@ export async function fetchClients(): Promise<Client[]> {
       const clientBase: any = {
         id: String(row.ID_Cliente),
         name: row.NomeCliente || "Sem nome",
-        logoUrl: row.NewLogo || "https://via.placeholder.com/150?text=Logo",
+        logoUrl: row.NewLogo || "https://placehold.co/150?text=Logo",
         active: row.ativo ?? true,
       };
       clientBase.Criado = row.Criado ?? null;

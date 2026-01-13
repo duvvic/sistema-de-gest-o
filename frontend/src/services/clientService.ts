@@ -24,7 +24,7 @@ export async function createClient(data: Partial<Client>): Promise<number> {
 
   const payload: Record<string, any> = {
     NomeCliente: data.name || "(Sem nome)",
-    NewLogo: data.logoUrl || "https://via.placeholder.com/150?text=Logo",
+    NewLogo: data.logoUrl || "https://placehold.co/150?text=Logo",
     ativo: true,
     Criado: toDateStr(now),
   };
