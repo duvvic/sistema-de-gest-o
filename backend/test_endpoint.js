@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 
 async function check() {
-  const url = "http://localhost:3001/api/admin/clients";
+  const url = "https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/clients";
   try {
     const res = await fetch(url);
     const text = await res.text();

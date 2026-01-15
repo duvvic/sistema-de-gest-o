@@ -95,41 +95,28 @@ export default function Login() {
         try {
             const normalizedEmail = email.trim().toLowerCase();
 
-            let apiUrl = import.meta.env.VITE_API_URL;
-            if (!apiUrl || apiUrl === 'undefined') {
-                apiUrl = 'http://localhost:3001/api';
-            }
-            apiUrl = apiUrl.replace(/\/$/, '');
-            const fullUrl = `${apiUrl}/auth/login`;
-
-            const response = await fetch(fullUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: normalizedEmail, password })
+            // Login direto pelo sistema de autenticação do Supabase
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: normalizedEmail,
+                password: password,
             });
 
-
-            const responseText = await response.text();
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (e) {
-                throw new Error('O servidor retornou uma resposta inválida (não JSON). Verifique o console.');
+            if (error) {
+                // Se der erro 400 (senha inválida ou usuário não existe no Auth)
+                throw new Error(error.message === 'Invalid login credentials'
+                    ? 'E-mail ou senha incorretos.'
+                    : error.message);
             }
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Falha na autenticação');
+            if (!data.session) {
+                throw new Error('Não foi possível estabelecer uma sessão de acesso.');
             }
-
-            const { user, session } = data;
-
-            // Usa a nova função que sincroniza tudo sem re-carregar do banco
-            await loginWithSession(user, session);
 
             // Lembrar e-mail para o próximo acesso
             localStorage.setItem('remembered_email', normalizedEmail);
 
-            // Sucesso - o redirecionamento acontecerá pelo useEffect
+            // O redirecionamento acontecerá automaticamente via useEffect
+            // no AuthContext.tsx quando ele detectar o evento SIGNED_IN
         } catch (err: any) {
             showAlert(err.message || 'Erro inesperado no sistema de login', 'Falha no Acesso');
         } finally {

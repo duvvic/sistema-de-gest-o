@@ -87,7 +87,7 @@ Se vir mensagens de erro, copie-as e compartilhe.
 
 ## 📝 Verificação Rápida
 
-Após aplicar as correções, acesse http://localhost:3001 e:
+Após aplicar as correções, acesse https://argilliferous-ingenuous-janiyah.ngrok-free.dev/ e:
 
 1. Abra DevTools (F12)
 2. Vá para a aba **Console**

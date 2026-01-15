@@ -31,13 +31,13 @@ async function test() {
   const headers = { "Authorization": `Bearer ${token}` };
 
   console.log("\n==> 2) Testando /preview");
-  const prevRes = await fetch(`http://localhost:3001/api/admin/report/preview?startDate=${START}&endDate=${END}`, { headers });
+  const prevRes = await fetch(`https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/preview?startDate=${START}&endDate=${END}`, { headers });
   console.log("Status:", prevRes.status);
   const prevData = await prevRes.json();
   console.log("Response (first 500 chars):", JSON.stringify(prevData).substring(0, 500));
 
   console.log("\n==> 3) Testando /excel (baixando relatorio.xlsx)");
-  const excelRes = await fetch(`http://localhost:3001/api/admin/report/excel?startDate=${START}&endDate=${END}`, { headers });
+  const excelRes = await fetch(`https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/excel?startDate=${START}&endDate=${END}`, { headers });
   if (excelRes.ok) {
     const buffer = await excelRes.arrayBuffer();
     fs.writeFileSync("relatorio.xlsx", Buffer.from(buffer));
@@ -47,13 +47,13 @@ async function test() {
   }
 
   console.log("\n==> 4) Testando /powerbi (JSON flat)");
-  const pbiRes = await fetch(`http://localhost:3001/api/admin/report/powerbi?startDate=${START}&endDate=${END}`, { headers });
+  const pbiRes = await fetch(`https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/powerbi?startDate=${START}&endDate=${END}`, { headers });
   console.log("Status:", pbiRes.status);
   const pbiData = await pbiRes.json();
   console.log("Response (first 500 chars):", JSON.stringify(pbiData).substring(0, 500));
 
   console.log("\n==> 5) Salvando budget dos projetos (PUT /project-budgets)");
-  const putRes = await fetch(`http://localhost:3001/api/admin/report/project-budgets`, {
+  const putRes = await fetch(`https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/project-budgets`, {
     method: "PUT",
     headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -68,7 +68,7 @@ async function test() {
   console.log("Response:", putData);
 
   console.log("\n==> 6) Re-testando /preview");
-  const prevRes2 = await fetch(`http://localhost:3001/api/admin/report/preview?startDate=${START}&endDate=${END}`, { headers });
+  const prevRes2 = await fetch(`https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/preview?startDate=${START}&endDate=${END}`, { headers });
   const prevData2 = await prevRes2.json();
   console.log("Response (first 500 chars):", JSON.stringify(prevData2).substring(0, 500));
 

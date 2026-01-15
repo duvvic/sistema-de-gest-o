@@ -73,12 +73,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
                 setTimeout(() => reject(new Error('Timeout de rede na carga do usuário')), 10000)
             );
 
-            // Tenta buscar o usuário nas tabelas dim_colaboradores ou no fallback
+            // Tenta buscar o usuário nas tabelas dim_colaboradores buscando em ambas as colunas de e-mail
             const response = await Promise.race([
                 supabase
                     .from('dim_colaboradores')
                     .select('*')
-                    .eq('email', emailToFind)
+                    .or(`email.eq.${emailToFind},"E-mail".eq.${emailToFind}`)
                     .maybeSingle(),
                 timeoutPromise as any
             ]);

@@ -24,13 +24,13 @@ echo ""
 echo "==> 2) Testando /preview"
 curl -i -sS \
   -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:3001/api/admin/report/preview?startDate=$START&endDate=$END" | head -n 40
+  "https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/preview?startDate=$START&endDate=$END" | head -n 40
 
 echo ""
 echo "==> 3) Testando /excel (baixando relatorio.xlsx)"
 curl -L -sS \
   -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:3001/api/admin/report/excel?startDate=$START&endDate=$END" \
+  "https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/excel?startDate=$START&endDate=$END" \
   -o relatorio.xlsx
 ls -lh relatorio.xlsx || true
 
@@ -38,7 +38,7 @@ echo ""
 echo "==> 4) Testando /powerbi (JSON flat)"
 curl -sS \
   -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:3001/api/admin/report/powerbi?startDate=$START&endDate=$END" | head -n 40
+  "https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/powerbi?startDate=$START&endDate=$END" | head -n 40
 
 echo ""
 echo "==> 5) Salvando budget dos projetos (PUT /project-budgets)"
@@ -46,13 +46,13 @@ curl -i -sS -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"budgets\":[{\"id_projeto\":6,\"budget\":45000},{\"id_projeto\":7,\"budget\":12500}]}" \
-  "http://localhost:3001/api/admin/report/project-budgets" | head -n 60
+  "https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/project-budgets" | head -n 60
 
 echo ""
 echo "==> 6) Re-testando /preview (pra conferir budget/valor_hora/valor_rateado)"
 curl -i -sS \
   -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:3001/api/admin/report/preview?startDate=$START&endDate=$END" | head -n 60
+  "https://argilliferous-ingenuous-janiyah.ngrok-free.dev//api/admin/report/preview?startDate=$START&endDate=$END" | head -n 60
 
 echo ""
 echo "FIM. Se der 401: token inválido. Se der 403: usuário não é admin/ativo ou não mapeou no dim_colaboradores."
