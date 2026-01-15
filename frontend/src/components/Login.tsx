@@ -96,9 +96,15 @@ const Login: React.FC = () => {
             const normalizedEmail = email.trim().toLowerCase();
             console.log('[Login] Tentando login via backend para:', normalizedEmail);
 
-            const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+            let apiUrl = import.meta.env.VITE_API_URL;
+            if (!apiUrl || apiUrl === 'undefined') {
+                console.warn('[Login] VITE_API_URL não encontrada nos envs. Usando fallback localhost:3001');
+                apiUrl = 'http://localhost:3001/api';
+            }
+            apiUrl = apiUrl.replace(/\/$/, '');
             const fullUrl = `${apiUrl}/auth/login`;
             console.log('[Login] Efetuando POST em:', fullUrl);
+            console.log('[Login] Origem detectada:', window.location.origin);
 
             const response = await fetch(fullUrl, {
                 method: 'POST',

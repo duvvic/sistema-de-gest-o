@@ -2,7 +2,7 @@
 import { supabase } from '@/services/supabaseClient';
 
 const API_BASE =
-    (import.meta as any).env?.VITE_API_URL?.toString()?.trim() || '/api';
+    (import.meta as any).env?.VITE_API_URL?.toString()?.trim() || 'http://localhost:3001/api';
 
 type PreviewFilters = {
     startDate?: string; // YYYY-MM-DD
