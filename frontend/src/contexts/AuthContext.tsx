@@ -1,5 +1,5 @@
 // contexts/AuthContext.tsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, PropsWithChildren } from 'react';
 import { User } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 
@@ -21,7 +21,7 @@ export const normalizeEmail = (email: string | undefined | null): string => {
     return (email || '').trim().toLowerCase();
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function AuthProvider({ children }: PropsWithChildren) {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [authReady, setAuthReady] = useState(false);
@@ -67,8 +67,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (loadingRef.current === emailToFind) return;
         loadingRef.current = emailToFind;
 
-        console.log('[Auth] Carregando dados para:', emailToFind);
-
         try {
             // Promessa de Timeout (10s)
             const timeoutPromise = new Promise((_, reject) =>
@@ -96,7 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCurrentUser(normalizedUser);
                 lastLoadedEmail.current = emailToFind;
             } else {
-                console.warn('[Auth] Usuário não encontrado no banco, usando perfil básico.');
                 const isVictor = emailToFind === 'victor.picoli@nic-labs.com.br';
                 setCurrentUser({
                     id: session.user.id,
@@ -164,8 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!isMounted) return;
-            console.log('[Auth] Evento:', event);
-
             if (event === 'SIGNED_OUT') {
                 lastLoadedEmail.current = null;
                 setCurrentUser(null);
@@ -193,8 +188,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loginWithSession = async (user: User, session: any) => {
         setIsLoading(true);
         try {
-            console.log('[Auth] Login manual com sessão backend para:', user.email);
-
             // 1. Marca como carregado ANTES de disparar o evento de auth
             if (user.email) {
                 lastLoadedEmail.current = normalizeEmail(user.email);
@@ -246,7 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             {children}
         </AuthContext.Provider>
     );
-};
+}
 
 export const useAuth = () => {
     const context = useContext(AuthContext);

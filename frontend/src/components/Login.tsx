@@ -30,7 +30,7 @@ async function hashPassword(password: string): Promise<string> {
     return hash.toString(16);
 }
 
-const Login: React.FC = () => {
+export default function Login() {
     const navigate = useNavigate();
     const { login, loginWithSession, currentUser, authReady } = useAuth();
 
@@ -94,17 +94,13 @@ const Login: React.FC = () => {
 
         try {
             const normalizedEmail = email.trim().toLowerCase();
-            console.log('[Login] Tentando login via backend para:', normalizedEmail);
 
             let apiUrl = import.meta.env.VITE_API_URL;
             if (!apiUrl || apiUrl === 'undefined') {
-                console.warn('[Login] VITE_API_URL não encontrada nos envs. Usando fallback localhost:3001');
                 apiUrl = 'http://localhost:3001/api';
             }
             apiUrl = apiUrl.replace(/\/$/, '');
             const fullUrl = `${apiUrl}/auth/login`;
-            console.log('[Login] Efetuando POST em:', fullUrl);
-            console.log('[Login] Origem detectada:', window.location.origin);
 
             const response = await fetch(fullUrl, {
                 method: 'POST',
@@ -112,14 +108,12 @@ const Login: React.FC = () => {
                 body: JSON.stringify({ email: normalizedEmail, password })
             });
 
-            console.log('[Login] Status da resposta:', response.status, response.statusText);
 
             const responseText = await response.text();
             let data;
             try {
                 data = JSON.parse(responseText);
             } catch (e) {
-                console.error('[Login] Erro ao parsear JSON. Resposta bruta:', responseText);
                 throw new Error('O servidor retornou uma resposta inválida (não JSON). Verifique o console.');
             }
 
@@ -137,7 +131,6 @@ const Login: React.FC = () => {
 
             // Sucesso - o redirecionamento acontecerá pelo useEffect
         } catch (err: any) {
-            console.error('[Login] Erro no login:', err);
             showAlert(err.message || 'Erro inesperado no sistema de login', 'Falha no Acesso');
         } finally {
             setLoading(false);
@@ -416,4 +409,3 @@ const Login: React.FC = () => {
     );
 };
 
-export default Login;
