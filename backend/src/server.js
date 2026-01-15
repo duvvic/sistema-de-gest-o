@@ -34,9 +34,9 @@ app.use(
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/auth", authRoutes);
-app.use("/api", adminUsersRouter);
 app.use("/api/admin", adminBaseRouter);
 app.use("/api/admin/report", reportRoutes);
+app.use("/api/admin/users", adminUsersRouter);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`✅ Backend rodando na porta ${port}`));

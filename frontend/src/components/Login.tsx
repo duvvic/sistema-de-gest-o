@@ -96,9 +96,9 @@ const Login: React.FC = () => {
             const normalizedEmail = email.trim().toLowerCase();
             console.log('[Login] Tentando login via backend para:', normalizedEmail);
 
-            const apiUrl = import.meta.env.VITE_API_URL;
+            const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
             const fullUrl = `${apiUrl}/auth/login`;
-            console.log('[Login] Chamando URL:', fullUrl);
+            console.log('[Login] Efetuando POST em:', fullUrl);
 
             const response = await fetch(fullUrl, {
                 method: 'POST',
@@ -132,7 +132,7 @@ const Login: React.FC = () => {
             // Sucesso - o redirecionamento acontecerá pelo useEffect
         } catch (err: any) {
             console.error('[Login] Erro no login:', err);
-            showAlert(`[V3] ${err.message || 'Erro inesperado no sistema de login'}`, 'Falha no Acesso');
+            showAlert(err.message || 'Erro inesperado no sistema de login', 'Falha no Acesso');
         } finally {
             setLoading(false);
         }
