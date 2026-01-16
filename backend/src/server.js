@@ -20,13 +20,7 @@ const allowedOrigins = [
 
 app.use(
     cors({
-        origin: function (origin, callback) {
-            if (!origin) return callback(null, true);
-            if (allowedOrigins.includes(origin) || String(process.env.CORS_ORIGIN) === '*') {
-                return callback(null, true);
-            }
-            return callback(new Error('Not allowed by CORS'));
-        },
+        origin: true, // Reflete o origin da requisição (mais flexível que *)
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "ngrok-skip-browser-warning"],
         credentials: true

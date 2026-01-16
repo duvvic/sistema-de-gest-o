@@ -1,8 +1,16 @@
 // src/services/reportApi.ts
 import { supabase } from '@/services/supabaseClient';
 
-const API_BASE =
-    (import.meta as any).env?.VITE_API_URL?.toString()?.trim() || 'https://argilliferous-ingenuous-janiyah.ngrok-free.dev/api';
+const getApiBase = () => {
+    let url = (import.meta as any).env?.VITE_API_URL?.toString()?.trim() || 'https://argilliferous-ingenuous-janiyah.ngrok-free.dev/api';
+    url = url.replace(/\/$/, ''); // Remove barra final
+    if (!url.endsWith('/api')) {
+        url += '/api';
+    }
+    return url;
+};
+
+const API_BASE = getApiBase();
 
 type PreviewFilters = {
     startDate?: string; // YYYY-MM-DD
