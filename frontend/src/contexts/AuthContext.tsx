@@ -68,9 +68,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         loadingRef.current = emailToFind;
 
         try {
-            // Promessa de Timeout (10s)
+            // Promessa de Timeout (aumentado para 20s para conexões lentas)
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout de rede na carga do usuário')), 10000)
+                setTimeout(() => reject(new Error('Timeout de rede na carga do usuário (20s)')), 20000)
             );
 
             // Tenta buscar o usuário nas tabelas dim_colaboradores buscando em ambas as colunas de e-mail
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
                 supabase
                     .from('dim_colaboradores')
                     .select('*')
-                    .or(`email.eq.${emailToFind},"E-mail".eq.${emailToFind}`)
+                    .or(`email.eq."${emailToFind}","E-mail".eq."${emailToFind}"`) // Aspas para garantir segurança no .or
                     .maybeSingle(),
                 timeoutPromise as any
             ]);
