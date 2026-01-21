@@ -304,13 +304,77 @@ export default function Login() {
     };
 
     const handleFindUser = async (modeName: 'first' | 'forgot') => {
-        setMode('first-access');
+        // Limpar estados
         setOtpToken('');
         setNewPassword('');
         setConfirmPassword('');
-        if (!email) {
+
+        // Recuperar e-mail se não estiver preenchido
+        let emailToUse = email.trim().toLowerCase();
+        if (!emailToUse) {
             const savedEmail = localStorage.getItem('remembered_email');
-            if (savedEmail) setEmail(savedEmail);
+            if (savedEmail) {
+                emailToUse = savedEmail;
+                setEmail(savedEmail);
+            } else {
+                showAlert('Por favor, informe seu e-mail primeiro.', 'E-mail Necessário');
+                return;
+            }
+        }
+
+        // Auto-correção (.com -> .com.br)
+        if (emailToUse.endsWith('.com') && !emailToUse.includes('.com.br')) {
+            emailToUse = emailToUse + '.br';
+            setEmail(emailToUse);
+        }
+
+        setLoading(true);
+        try {
+            // 1. Validar se o usuário existe na base dim_colaboradores
+            const { data: dbUser, error: dbError } = await supabase
+                .from('dim_colaboradores')
+                .select('*')
+                .eq('email', emailToUse)
+                .maybeSingle();
+
+            if (dbError) throw dbError;
+
+            if (!dbUser) {
+                showAlert('E-mail não encontrado em nossa base de colaboradores. Verifique o endereço digitado.', 'E-mail Inválido');
+                return;
+            }
+
+            // 2. Enviar OTP via Supabase automaticamente
+            const { error: otpErr } = await supabase.auth.signInWithOtp({
+                email: emailToUse,
+                options: {
+                    shouldCreateUser: true,
+                }
+            });
+
+            if (otpErr) throw otpErr;
+
+            // 3. Guardar dados temporários do usuário
+            setSelectedUser({
+                id: String(dbUser.ID_Colaborador),
+                name: dbUser.NomeColaborador,
+                email: dbUser.email,
+                role: String(dbUser.papel || '').toLowerCase().includes('admin') ? 'admin' : 'developer'
+            } as User);
+
+            // 4. Ir direto para modo de verificação
+            setMode('otp-verification');
+            showAlert(
+                modeName === 'forgot'
+                    ? 'Código de recuperação enviado! Verifique sua caixa de entrada.'
+                    : 'Código de segurança enviado! Verifique sua caixa de entrada.',
+                'E-mail Enviado'
+            );
+        } catch (err: any) {
+            console.error('Erro ao enviar OTP:', err);
+            showAlert('Falha ao processar solicitação: ' + (err.message || 'Erro de conexão'), 'Erro');
+        } finally {
+            setLoading(false);
         }
     };
 
