@@ -46,11 +46,24 @@ export async function requireAdmin(req, res, next) {
             colab = rColab;
         }
 
-        if (!colab) return res.status(403).json({ error: 'User not mapped in dim_colaboradores' });
-        if (colab.ativo === false) return res.status(403).json({ error: 'User is inactive' });
+        if (!colab) {
+            console.warn(`[requireAdmin] User not found in dim_colaboradores. Email: ${email}, AuthUserId: ${authUserId}`);
+            return res.status(403).json({ error: 'User not mapped in dim_colaboradores' });
+        }
+
+        if (colab.ativo === false) {
+            console.warn(`[requireAdmin] User is inactive. Email: ${email}`);
+            return res.status(403).json({ error: 'User is inactive' });
+        }
 
         const papel = String(colab.papel || '').toLowerCase();
-        if (papel !== 'administrador' && papel !== 'admin') {
+        console.log(`[requireAdmin] User: ${colab.NomeColaborador}, Email: ${email}, Papel: "${papel}"`);
+
+        // Aceita qualquer valor que contenha 'admin' ou 'administrador'
+        const isAdmin = papel.includes('admin') || papel.includes('administrador');
+
+        if (!isAdmin) {
+            console.warn(`[requireAdmin] Access denied. User papel: "${papel}" is not admin.`);
             return res.status(403).json({ error: 'Admin only' });
         }
 
