@@ -15,6 +15,7 @@ const UserForm: React.FC = () => {
   const initialUser = !isNew ? users.find(u => u.id === userId) : undefined;
 
   const [loading, setLoading] = useState(false);
+  const [isManualCargo, setIsManualCargo] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -170,23 +171,41 @@ const UserForm: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Cargo */}
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-[var(--brand)]" />
-                  Cargo
-                </label>
-                <input
-                  type="text"
-                  list="cargo-options"
-                  value={formData.cargo}
-                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                  className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
-                  placeholder="Ex: Full Stack Dev"
-                />
-                <datalist id="cargo-options">
-                  {existingCargos.map(cargo => (
-                    <option key={cargo} value={cargo} />
-                  ))}
-                </datalist>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-[var(--text)] flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-[var(--brand)]" />
+                    Cargo
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualCargo(!isManualCargo)}
+                    className="text-xs font-bold text-[var(--brand)] hover:opacity-80 transition-opacity"
+                  >
+                    {isManualCargo ? 'Selecionar da lista' : '+ Criar novo cargo'}
+                  </button>
+                </div>
+
+                {isManualCargo ? (
+                  <input
+                    type="text"
+                    value={formData.cargo}
+                    onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                    className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
+                    placeholder="Digite o novo cargo..."
+                    autoFocus
+                  />
+                ) : (
+                  <select
+                    value={formData.cargo}
+                    onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                    className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
+                  >
+                    <option value="">Selecione um cargo...</option>
+                    {existingCargos.map(cargo => (
+                      <option key={cargo} value={cargo}>{cargo}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Role (Permissão) */}
