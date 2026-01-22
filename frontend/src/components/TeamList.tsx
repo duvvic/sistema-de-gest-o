@@ -93,10 +93,19 @@ const TeamList: React.FC = () => {
         return p?.name.toLowerCase().includes('treinamento') || p?.name.toLowerCase().includes('capacitação');
       });
 
-      let userStatus: 'Livre' | 'Ocupado' | 'Estudando' | 'Atrasado' = 'Livre';
-      if (hasDelayed) userStatus = 'Atrasado';
-      else if (hasInProgress) userStatus = 'Ocupado';
-      else if (hasStudy) userStatus = 'Estudando';
+      let userStatus: 'Livre' | 'Ocupado' | 'Estudando' | 'Atrasado' | 'Indisponível' = 'Livre';
+      const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+      const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
+
+      if (!isSystemCollaborator) {
+        userStatus = 'Indisponível';
+      } else if (hasDelayed) {
+        userStatus = 'Atrasado';
+      } else if (hasInProgress) {
+        userStatus = 'Ocupado';
+      } else if (hasStudy) {
+        userStatus = 'Estudando';
+      }
 
       const matchesStatus = statusFilter === 'Todos' || userStatus === statusFilter;
 
@@ -178,7 +187,8 @@ const TeamList: React.FC = () => {
                   { id: 'Livre', label: 'Livres', color: '#10b981' },
                   { id: 'Estudando', label: 'Estudando', color: '#3b82f6' },
                   { id: 'Ocupado', label: 'Ocupados', color: '#f59e0b' },
-                  { id: 'Atrasado', label: 'Atrasados', color: '#ef4444' }
+                  { id: 'Atrasado', label: 'Atrasados', color: '#ef4444' },
+                  { id: 'Indisponível', label: 'Outros', color: 'var(--muted)' }
                 ].map((f) => {
                   const isActive = statusFilter === f.id;
                   return (
@@ -357,6 +367,10 @@ const TeamList: React.FC = () => {
                     });
                     const hasInProgress = userActiveTasks.some(t => t.status === 'In Progress');
 
+                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                    const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
+
+                    if (!isSystemCollaborator) return 'indisponível';
                     if (hasDelayed) return 'atrasado';
                     if (hasInProgress) return 'ocupado';
                     if (hasStudy) return 'estudando';
@@ -389,12 +403,20 @@ const TeamList: React.FC = () => {
                     });
                     const hasInProgress = userActiveTasks.some(t => t.status === 'In Progress');
 
-                    let statusType: 'atrasado' | 'estudando' | 'ocupado' | 'livre' = 'livre';
+                    let statusType: 'atrasado' | 'estudando' | 'ocupado' | 'livre' | 'indisponível' = 'livre';
                     let statusLabel = 'Livre';
                     let accentColor = '#10b981'; // Verde
                     let accentBg = 'rgba(16, 185, 129, 0.1)';
 
-                    if (hasDelayed) {
+                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                    const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
+
+                    if (!isSystemCollaborator) {
+                      statusType = 'indisponível';
+                      statusLabel = 'N/A';
+                      accentColor = 'var(--muted)';
+                      accentBg = 'var(--surface-2)';
+                    } else if (hasDelayed) {
                       statusType = 'atrasado';
                       statusLabel = 'Atrasado';
                       accentColor = '#ef4444'; // Vermelho

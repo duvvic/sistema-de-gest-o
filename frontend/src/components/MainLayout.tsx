@@ -14,6 +14,7 @@ import {
     X,
     Moon,
     Sun,
+    Book,
     GraduationCap,
     StickyNote,
     Zap,
@@ -43,6 +44,7 @@ const MainLayout: React.FC = () => {
 
         { path: '/timesheet', icon: Clock, label: 'Timesheet' },
         { path: '/notes', icon: StickyNote, label: 'Notas' },
+        { path: '/docs', icon: Book, label: 'Documentação' },
     ];
 
     const developerMenuItems = [
@@ -51,9 +53,14 @@ const MainLayout: React.FC = () => {
         { path: '/timesheet', icon: Clock, label: 'Timesheet' },
         { path: '/developer/learning', icon: GraduationCap, label: 'Estudo' },
         { path: '/notes', icon: StickyNote, label: 'Notas' },
+        { path: '/docs', icon: Book, label: 'Documentação' },
     ];
 
-    const menuItems = currentUser?.role === 'admin' ? adminMenuItems : developerMenuItems;
+    const menuItems = currentUser?.role === 'admin'
+        ? adminMenuItems.filter(item =>
+            item.label !== 'Sincronização' || currentUser?.cargo?.toLowerCase() === 'manutenção'
+        )
+        : developerMenuItems;
 
     // Listamos as rotas "raiz" do menu para forçar a animação
     const MAIN_PATHS = menuItems.map(m => m.path).concat(['/profile']);
@@ -221,7 +228,7 @@ const MainLayout: React.FC = () => {
                 </button>
 
                 {/* Menu Items */}
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto no-scrollbar">
                     {menuItems.map((item) => {
                         const Icon = item.icon;
                         const active = isActive(item.path);
@@ -253,11 +260,11 @@ const MainLayout: React.FC = () => {
                             </button>
                         );
                     })}
-                </nav>
 
-                {/* Footer Actions */}
-                <div className="p-4 border-t border-white/10 space-y-1">
-                    {/* Theme Toggle Button */}
+                    {/* Divider visual subtle */}
+                    <div className="my-4 h-px bg-white/10 mx-2" />
+
+                    {/* Theme Toggle Button - Now Integrated */}
                     <button
                         onClick={toggleTheme}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/10 transition-colors ${!sidebarOpen && 'justify-center'}`}
@@ -270,7 +277,7 @@ const MainLayout: React.FC = () => {
                         {sidebarOpen && <span className="font-medium">{themeMode === 'light' ? 'Escuro' : 'Claro'}</span>}
                     </button>
 
-                    {/* Logout */}
+                    {/* Logout - Now Integrated */}
                     <button
                         onClick={handleLogout}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-red-500/80 hover:text-white transition-colors ${!sidebarOpen && 'justify-center'}`}
@@ -278,7 +285,8 @@ const MainLayout: React.FC = () => {
                         <LogOut className="w-5 h-5 flex-shrink-0" />
                         {sidebarOpen && <span className="font-medium">Sair</span>}
                     </button>
-                </div>
+                </nav>
+
             </div>
 
             {/* Main Content - iOS Navigation Wrapper */}

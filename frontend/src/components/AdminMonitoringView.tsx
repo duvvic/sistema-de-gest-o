@@ -88,7 +88,13 @@ const AdminMonitoringView: React.FC = () => {
 
 
 
-    const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
+    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+    const filteredUsers = useMemo(() =>
+        allUsers.filter(u => u.active !== false && activeCargos.includes(u.cargo?.toLowerCase() || '')),
+        [allUsers]);
+
+    const userMap = useMemo(() => new Map(filteredUsers.map(u => [u.id, u])), [filteredUsers]);
+
     const clientMap = useMemo(() => new Map(allClients.map(c => [c.id, c])), [allClients]);
 
     const isTaskDelayed = (task: Task) => {
@@ -110,7 +116,7 @@ const AdminMonitoringView: React.FC = () => {
     }, [allProjects, allTasks]);
 
     const teamStatus = useMemo(() => {
-        const members = allUsers.filter(u => u.active !== false).map(user => {
+        const members = filteredUsers.map(user => {
             const userTasks = allTasks.filter(t => t.developerId === user.id);
             const activeTasks = userTasks.filter(t => t.status === 'In Progress' || t.status === 'Review');
             const delayedTasks = userTasks.filter(t => isTaskDelayed(t));
@@ -201,8 +207,11 @@ const AdminMonitoringView: React.FC = () => {
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
                             >
                                 {tasksInProgress.slice(taskPage * 6, (taskPage + 1) * 6).map((task) => {
-                                    const client = clientMap.get(task.clientId || '');
                                     const dev = userMap.get(task.developerId || '');
+                                    // Skip tasks assigned to non-filtered users (safety)
+                                    if (!dev && task.developerId) return null;
+
+                                    const client = clientMap.get(task.clientId || '');
                                     const delayed = isTaskDelayed(task);
                                     const isReview = task.status === 'Review';
                                     const statusLabel = task.status === 'In Progress' ? 'Trabalhando' :

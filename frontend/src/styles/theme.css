@@ -184,28 +184,31 @@ body {
   box-shadow: var(--shadow-md);
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Subtle Purple */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--surface-2);
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
+  background: rgba(109, 40, 217, 0.2);
+  /* Very subtle purple */
+  border-radius: 20px;
+  transition: background 0.3s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: rgba(109, 40, 217, 0.5);
+  /* Stronger purple on hover */
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
+  height: 4px;
+  width: 4px;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-track {
@@ -213,7 +216,7 @@ body {
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: rgba(109, 40, 217, 0.2);
   border-radius: 10px;
 }
 

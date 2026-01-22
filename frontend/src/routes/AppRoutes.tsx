@@ -32,6 +32,7 @@ import TimesheetCalendar from '@/components/TimesheetCalendar';
 import TimesheetForm from '@/components/TimesheetForm';
 import LearningCenter from '@/components/LearningCenter';
 import ResetPassword from '@/components/ResetPassword';
+import SystemDocs from '@/components/SystemDocs';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -389,6 +390,16 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute>
                             <Notes />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Documentação */}
+                <Route
+                    path="docs"
+                    element={
+                        <ProtectedRoute>
+                            <SystemDocs />
                         </ProtectedRoute>
                     }
                 />

@@ -44,12 +44,16 @@ const TimesheetAdminDashboard: React.FC = () => {
 
       for (let d = new Date(firstDayOfMonth); d <= yesterday; d.setDate(d.getDate() + 1)) {
          const dayOfWeek = d.getDay();
-         if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Seg-Sex
+         if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Seg-Mex
             workDaysUntilYesterday.push(d.toISOString().split('T')[0]);
          }
       }
 
-      return users.filter(u => u.active !== false && (u.role === 'developer' || u.role === 'admin')).map(user => {
+      const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+      return users.filter(u =>
+         u.active !== false &&
+         activeCargos.includes(u.cargo?.toLowerCase() || '')
+      ).map(user => {
          const userEntries = entries.filter(e =>
             e.userId === user.id &&
             new Date(e.date).getMonth() === currentMonth &&
@@ -155,9 +159,16 @@ const TimesheetAdminDashboard: React.FC = () => {
          });
       });
 
-      collabMap.forEach(collab => {
+      const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+      collabMap.forEach((collab, userId) => {
+         const user = users.find(u => u.id === userId);
+         if (!activeCargos.includes(user?.cargo?.toLowerCase() || '')) {
+            collabMap.delete(userId);
+            return;
+         }
          collab.taskEntries.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
       });
+
 
       return Array.from(collabMap.values()).sort((a: any, b: any) => b.hours - a.hours);
    }, [selectedClientId, selectedClientData, projects, tasks, users]);

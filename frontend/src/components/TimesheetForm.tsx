@@ -253,9 +253,19 @@ const TimesheetForm: React.FC = () => {
 
   const availableClientIds = React.useMemo(() => {
     if (isAdmin) return clients.map(c => c.id);
+
+    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+    const isOperational = activeCargos.includes(currentUser?.cargo?.toLowerCase() || '');
+
+    if (!isOperational) {
+      return clients
+        .filter(c => c.name.toLowerCase().includes('nic-labs'))
+        .map(c => c.id);
+    }
+
     const userProjects = projects.filter(p => availableProjectsIds.includes(p.id));
     return [...new Set(userProjects.map(p => p.clientId))];
-  }, [clients, projects, availableProjectsIds, isAdmin]);
+  }, [clients, projects, availableProjectsIds, isAdmin, currentUser]);
 
   const filteredClients = clients.filter(c => availableClientIds.includes(c.id));
   const filteredProjects = availableProjects;

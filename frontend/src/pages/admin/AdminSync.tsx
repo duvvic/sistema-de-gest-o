@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
     CloudUpload,
     RefreshCw,
@@ -11,6 +13,16 @@ import { syncExcel } from '@/services/reportApi';
 import { ToastContainer, ToastType } from '@/components/Toast';
 
 const AdminSync: React.FC = () => {
+    const { currentUser } = useAuth();
+    const navigate = useNavigate();
+
+    // Redirecionamento de segurança (cargo Manutenção apenas)
+    useEffect(() => {
+        if (currentUser && currentUser.cargo?.toLowerCase() !== 'manutenção') {
+            navigate('/dashboard');
+        }
+    }, [currentUser, navigate]);
+
     const [file, setFile] = useState<File | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -73,11 +85,11 @@ const AdminSync: React.FC = () => {
 
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                    <h1 className="text-3xl font-bold flex items-center gap-3" style={{ color: 'var(--text)' }}>
                         <RefreshCw className="w-8 h-8 text-indigo-500" />
                         Sincronização de Planilha
                     </h1>
-                    <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-2xl">
+                    <p className="mt-2 text-sm max-w-2xl font-medium" style={{ color: 'var(--muted)' }}>
                         Atualize os dados do sistema em massa subindo a planilha mestre consolidada.
                         O sistema atualizará registros existentes e inserirá novos automaticamente baseando-se nos IDs.
                     </p>
@@ -92,9 +104,10 @@ const AdminSync: React.FC = () => {
                             relative border-2 border-dashed rounded-3xl p-12 transition-all cursor-pointer
                             flex flex-col items-center justify-center gap-4
                             ${file
-                                ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-500/5'
-                                : 'border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-white dark:bg-slate-900'}
+                                ? 'border-indigo-500 bg-indigo-50/30'
+                                : 'border-slate-300 hover:border-indigo-400'}
                         `}
+                        style={{ backgroundColor: file ? 'var(--surface-2)' : 'var(--surface)', borderColor: !file ? 'var(--border)' : undefined }}
                     >
                         <input
                             type="file"
@@ -104,21 +117,21 @@ const AdminSync: React.FC = () => {
                             className="hidden"
                         />
 
-                        <div className={`p-4 rounded-2xl ${file ? 'bg-indigo-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                        <div className={`p-4 rounded-2xl ${file ? 'bg-indigo-500 text-white' : 'bg-[var(--surface-2)] text-[var(--muted)]'}`}>
                             {file ? <Table className="w-12 h-12" /> : <CloudUpload className="w-12 h-12" />}
                         </div>
 
                         <div className="text-center">
                             {file ? (
-                                <span className="font-semibold text-slate-900 dark:text-white text-lg">
+                                <span className="font-semibold text-lg" style={{ color: 'var(--text)' }}>
                                     {file.name}
                                 </span>
                             ) : (
                                 <>
-                                    <p className="font-semibold text-slate-900 dark:text-white text-lg underline decoration-indigo-500 underline-offset-4">
+                                    <p className="font-semibold text-lg underline decoration-indigo-500 underline-offset-4" style={{ color: 'var(--text)' }}>
                                         Clique para selecionar a planilha
                                     </p>
-                                    <p className="text-sm text-slate-500 mt-1">Formato suportado: Microsoft Excel (.xlsx)</p>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Formato suportado: Microsoft Excel (.xlsx)</p>
                                 </>
                             )}
                         </div>
@@ -128,7 +141,8 @@ const AdminSync: React.FC = () => {
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setFile(null)}
-                                className="px-6 py-3 rounded-2xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="px-6 py-3 rounded-2xl font-medium hover:bg-black/5 transition-colors"
+                                style={{ color: 'var(--muted)' }}
                                 disabled={isSyncing}
                             >
                                 Cancelar
@@ -139,7 +153,7 @@ const AdminSync: React.FC = () => {
                                 className={`
                                     px-8 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2
                                     ${isSyncing
-                                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                                        ? 'opacity-50 cursor-not-allowed'
                                         : 'bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95'}
                                 `}
                             >
@@ -159,12 +173,12 @@ const AdminSync: React.FC = () => {
                     )}
 
                     {progress > 0 && (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div className="rounded-3xl p-6 border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                             <div className="flex justify-between items-center mb-4">
-                                <span className="text-sm font-medium text-slate-500">Progresso da Operação</span>
+                                <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>Progresso da Operação</span>
                                 <span className="text-sm font-bold text-indigo-500">{progress}%</span>
                             </div>
-                            <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-3 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
                                 <div
                                     className="h-full bg-indigo-500 transition-all duration-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]"
                                     style={{ width: `${progress}%` }}
@@ -174,21 +188,21 @@ const AdminSync: React.FC = () => {
                     )}
 
                     {results && (
-                        <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-3xl p-8 space-y-6">
-                            <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+                        <div className="border rounded-3xl p-8 space-y-6" style={{ backgroundColor: 'var(--success-bg)', borderColor: 'var(--border)' }}>
+                            <div className="flex items-center gap-3" style={{ color: 'var(--success)' }}>
                                 <CheckCircle2 className="w-7 h-7" />
                                 <h3 className="text-xl font-bold">Relatório de Importação</h3>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                 {Object.entries(results).map(([table, count]) => (
-                                    <div key={table} className="bg-white dark:bg-slate-800/50 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-500/10 shadow-sm">
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                    <div key={table} className="p-4 rounded-2xl border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                        <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>
                                             {table.replace('dim_', '').replace('fato_', '')}
                                         </p>
-                                        <p className="text-2xl font-black text-slate-900 dark:text-white">
+                                        <p className="text-2xl font-black" style={{ color: 'var(--text)' }}>
                                             {count as number}
                                         </p>
-                                        <p className="text-xs text-emerald-500 font-medium">unidades</p>
+                                        <p className="text-xs font-medium" style={{ color: 'var(--success)' }}>unidades</p>
                                     </div>
                                 ))}
                             </div>
@@ -197,12 +211,12 @@ const AdminSync: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-slate-900 dark:bg-indigo-950 text-white rounded-3xl p-8 shadow-xl shadow-slate-200 dark:shadow-none">
+                    <div className="text-white rounded-3xl p-8 shadow-xl" style={{ backgroundColor: 'var(--sidebar-bg)' }}>
                         <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
                             <Info className="w-5 h-5 text-indigo-400" />
                             Regras de Negócio
                         </h3>
-                        <ul className="space-y-4 text-sm text-slate-300">
+                        <ul className="space-y-4 text-sm opacity-80">
                             <li className="flex gap-3">
                                 <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mt-1.5 shrink-0" />
                                 <span><b>Nomes Iguais:</b> As abas (ex: dim_clientes) e colunas devem ter exatamente os mesmos nomes do Supabase.</span>
@@ -218,12 +232,12 @@ const AdminSync: React.FC = () => {
                         </ul>
                     </div>
 
-                    <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-3xl p-8">
-                        <h3 className="text-amber-800 dark:text-amber-400 font-bold flex items-center gap-2 mb-3">
+                    <div className="border rounded-3xl p-8" style={{ backgroundColor: 'var(--warning-bg)', borderColor: 'var(--border)' }}>
+                        <h3 className="font-bold flex items-center gap-2 mb-3" style={{ color: 'var(--warning-text)' }}>
                             <AlertTriangle className="w-5 h-5" />
                             Atenção
                         </h3>
-                        <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--warning-text)' }}>
                             Certifique-se de que a planilha mestre está correta. Dados incorretos podem afetar os relatórios financeiros.
                         </p>
                     </div>

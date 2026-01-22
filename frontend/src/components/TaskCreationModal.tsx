@@ -76,7 +76,15 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
         // If admin, show all active clients
         if (isAdmin) return true;
 
-        // If collaborator, check if they have any project in this client
+        const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+        const isOperational = activeCargos.includes(currentUser?.cargo?.toLowerCase() || '');
+
+        // Non-operational roles can only see NIC-LABS
+        if (!isOperational) {
+            return c.name.toLowerCase().includes('nic-labs');
+        }
+
+        // Operational collaborators only see clients that they have projects in
         return projects.some(p =>
             p.clientId === c.id &&
             p.active !== false &&
@@ -85,8 +93,9 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
     });
 
     const filteredUsers = projectId
-        ? users.filter(u => u.active !== false && projectMembers.some(pm => pm.projectId === projectId && pm.userId === u.id))
+        ? users.filter(u => u.active !== false && (isAdmin || projectMembers.some(pm => pm.projectId === projectId && pm.userId === u.id)))
         : [];
+
 
     const handleSave = async () => {
         if (!title.trim()) {
@@ -170,7 +179,8 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                             <select
                                 value={clientId}
                                 onChange={(e) => { setClientId(e.target.value); setProjectId(''); }}
-                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
+                                disabled={!!preSelectedClientId}
+                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50"
                             >
                                 <option value="">Selecione o Cliente...</option>
                                 {availableClients.map(c => (
@@ -185,7 +195,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                             <select
                                 value={projectId}
                                 onChange={(e) => { setProjectId(e.target.value); }}
-                                disabled={!clientId}
+                                disabled={!clientId || !!preSelectedProjectId}
                                 className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50"
                             >
                                 <option value="">Selecione o Projeto...</option>

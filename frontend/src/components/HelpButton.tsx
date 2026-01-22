@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { HelpCircle, X } from 'lucide-react';
+import { HelpCircle, X, Book } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHelpContent } from '@/data/helpContent';
@@ -85,7 +85,17 @@ const HelpButton: React.FC = () => {
                                     ))}
                                 </div>
 
-                                <div className="mt-6 pt-4 border-t border-[var(--border)]">
+                                <div className="mt-6 pt-4 border-t border-[var(--border)] space-y-3">
+                                    <button
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            window.location.href = '/docs';
+                                        }}
+                                        className="w-full py-2 px-4 bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Book size={14} />
+                                        Ver Documentação Completa
+                                    </button>
                                     <p className="text-[10px] text-center text-[var(--muted)]">
                                         Sistema de Ajuda Contextual v1.0
                                     </p>

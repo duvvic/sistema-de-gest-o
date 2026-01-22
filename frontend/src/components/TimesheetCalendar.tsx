@@ -116,8 +116,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const processedUsers = useMemo(() => {
     if (!isAdmin) return [];
 
+    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
     return safeUsers
-      .filter(u => u.active !== false)
+      .filter(u => u.active !== false && activeCargos.includes(u.cargo?.toLowerCase() || ''))
       .map(u => {
         const missing = calculateDaysMissing(u.id);
         const status = missing > 2 ? 'late' : 'ontime';
@@ -290,8 +291,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
             </div>
           </div>
         ) : (
-          <>
-            {/* Header do Calendário */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+            {/* Header do Calendário Agora dentro do Scroll para não ficar fixo */}
             <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 text-white flex-shrink-0"
               style={{ background: 'linear-gradient(to right, var(--primary), var(--primary-hover))' }}>
               <div className="flex items-center gap-4">
@@ -337,7 +338,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
               </div>
             </div>
 
-            {/* Grid Days Header (Sticky) */}
+            {/* Grid Days Header (Sticky) - Agora dentro do Scroll */}
             <div className="grid grid-cols-7 border-b flex-shrink-0 sticky top-0 z-10"
               style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
               {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((day, idx) => (
@@ -348,129 +349,132 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
               ))}
             </div>
 
-            {/* Grid Body (Scrollable) */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar relative" style={{ backgroundColor: 'var(--border)' }}>
-              <div className="grid grid-cols-7 min-h-full auto-rows-fr gap-[1px] border-b" style={{ backgroundColor: 'var(--border)', borderColor: 'var(--border)' }}>
-                {/* Empty Slots */}
-                {Array.from({ length: firstDay }).map((_, i) => (
-                  <div key={`empty-${i}`} className="min-h-[100px]" style={{ backgroundColor: 'var(--surface-2)', opacity: 0.5 }}></div>
-                ))}
+            <div className="grid grid-cols-7 min-h-full auto-rows-fr gap-[1px] border-b" style={{ backgroundColor: 'var(--border)', borderColor: 'var(--border)' }}>
+              {/* Empty Slots */}
+              {Array.from({ length: firstDay }).map((_, i) => (
+                <div key={`empty-${i}`} className="min-h-[100px]" style={{ backgroundColor: 'var(--surface-2)', opacity: 0.5 }}></div>
+              ))}
 
-                {/* Days */}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                  const d = i + 1;
-                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                  const dayEntries = currentEntries.filter(e => e.date === dateStr);
-                  const totalDayHours = dayEntries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
-                  const hasEntries = dayEntries.length > 0;
-                  const isToday = new Date().toISOString().split('T')[0] === dateStr;
-                  const dayOfWeek = new Date(year, month, d).getDay();
-                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+              {/* Days */}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const d = i + 1;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayEntries = currentEntries.filter(e => e.date === dateStr);
+                const totalDayHours = dayEntries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
+                const hasEntries = dayEntries.length > 0;
+                const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                const dayOfWeek = new Date(year, month, d).getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-                  return (
-                    <div
-                      key={d}
-                      onClick={() => navigate(`/timesheet/new?date=${dateStr}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
-                      className={`
+                return (
+                  <div
+                    key={d}
+                    onClick={() => navigate(`/timesheet/new?date=${dateStr}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
+                    className={`
                                         p-2 relative cursor-pointer min-h-[120px] transition-all group hover:z-10 hover:shadow-xl
                                     `}
-                      style={{
-                        backgroundColor: isToday ? 'var(--primary-soft)' : (isWeekend ? 'var(--surface-2)' : 'var(--surface)')
-                      }}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full transition-colors`}
-                          style={{
-                            backgroundColor: isToday ? 'var(--primary)' : 'transparent',
-                            color: isToday ? 'white' : 'var(--muted)',
-                            boxShadow: isToday ? 'var(--shadow-md)' : 'none'
-                          }}>
-                          {d}
-                        </span>
-                        {hasEntries && (
-                          <span className="text-[10px] font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-full border border-emerald-600 shadow-sm">
+                    style={{
+                      backgroundColor: isToday ? 'var(--primary-soft)' : (isWeekend ? 'var(--surface-2)' : 'var(--surface)')
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full transition-colors`}
+                        style={{
+                          backgroundColor: isToday ? 'var(--primary)' : 'transparent',
+                          color: isToday ? 'white' : 'var(--muted)',
+                          boxShadow: isToday ? 'var(--shadow-md)' : 'none'
+                        }}>
+                        {d}
+                      </span>
+                      {hasEntries && (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`text-[10px] font-bold text-white px-2 py-0.5 rounded-full border shadow-sm flex items-center gap-1 ${totalDayHours > 8 ? 'bg-red-500 border-red-500' : 'bg-emerald-600 border-emerald-600'}`}>
+                            {totalDayHours > 8 && <AlertTriangle className="w-3 h-3" />}
                             {totalDayHours.toFixed(1)}h
                           </span>
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5">
-                        {dayEntries.map(entry => {
-                          const task = safeTasks.find(t => t.id === entry.taskId);
-                          const client = safeClients.find(c => c.id === entry.clientId);
-                          const project = safeProjects.find(p => p.id === entry.projectId);
-
-                          // Título Inteligente: Tarefa > Descrição > Projeto > "Horas Avulsas"
-                          let displayTitle = task?.title;
-                          if (!displayTitle) {
-                            if (entry.description) displayTitle = entry.description;
-                            else if (project) displayTitle = `${project.name} (S/ Tarefa)`;
-                            else displayTitle = 'Horas Avulsas';
-                          }
-
-                          return (
-                            <div
-                              key={entry.id}
-                              onClick={(e) => { e.stopPropagation(); navigate(`/timesheet/${entry.id}`); }}
-                              className="border shadow-sm rounded-md px-2 py-1.5 text-[10px] truncate transition-all flex justify-between items-center group/item flex-col items-start gap-0.5 h-auto"
-                              style={{
-                                backgroundColor: 'var(--surface-2)',
-                                borderColor: 'var(--border)',
-                                color: 'var(--text)',
-                                boxShadow: 'var(--shadow-sm)'
-                              }}
-                              title={`${client?.name || 'Cliente?'} - ${project?.name || 'Projeto?'}\n${entry.description || ''}`}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--primary)';
-                                e.currentTarget.style.color = 'var(--primary)';
-                                e.currentTarget.style.backgroundColor = 'var(--surface)';
-                                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.color = 'var(--text)';
-                                e.currentTarget.style.backgroundColor = 'var(--surface-2)';
-                                e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                              }}
-                            >
-                              <div className="flex w-full justify-between items-center">
-                                <div className="flex items-center gap-2 truncate">
-                                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.totalHours >= 8 ? 'bg-emerald-400' : 'bg-purple-400'}`}></div>
-                                  <span className="truncate font-medium">{displayTitle}</span>
-                                </div>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setEntryToDelete(entry); setDeleteModalOpen(true); }}
-                                  className="opacity-0 group-hover/item:opacity-100 transition-opacity hover:text-red-500"
-                                  style={{ color: 'var(--muted)' }}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-
-                              {/* Subtitle with Project/Client */}
-                              {(project || client) && (
-                                <div className="text-[9px] opacity-70 truncate w-full pl-3.5" style={{ color: 'var(--muted)' }}>
-                                  {project?.name || client?.name}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {!hasEntries && !isWeekend && (
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                          <div className="bg-primary-soft p-2 rounded-full shadow-sm" style={{ backgroundColor: 'var(--primary-soft)' }}>
-                            <Plus className="w-5 h-5 text-primary" style={{ color: 'var(--primary)' }} />
-                          </div>
+                          {totalDayHours > 8 && (
+                            <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter">Excesso de horas</span>
+                          )}
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+
+                    <div className="space-y-1.5">
+                      {dayEntries.map(entry => {
+                        const task = safeTasks.find(t => t.id === entry.taskId);
+                        const client = safeClients.find(c => c.id === entry.clientId);
+                        const project = safeProjects.find(p => p.id === entry.projectId);
+
+                        // Título Inteligente: Tarefa > Descrição > Projeto > "Horas Avulsas"
+                        let displayTitle = task?.title;
+                        if (!displayTitle) {
+                          if (entry.description) displayTitle = entry.description;
+                          else if (project) displayTitle = `${project.name} (S/ Tarefa)`;
+                          else displayTitle = 'Horas Avulsas';
+                        }
+
+                        return (
+                          <div
+                            key={entry.id}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/timesheet/${entry.id}`); }}
+                            className="border shadow-sm rounded-md px-2 py-1.5 text-[10px] truncate transition-all flex justify-between items-center group/item flex-col items-start gap-0.5 h-auto"
+                            style={{
+                              backgroundColor: 'var(--surface-2)',
+                              borderColor: 'var(--border)',
+                              color: 'var(--text)',
+                              boxShadow: 'var(--shadow-sm)'
+                            }}
+                            title={`${client?.name || 'Cliente?'} - ${project?.name || 'Projeto?'}\n${entry.description || ''}`}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                              e.currentTarget.style.color = 'var(--primary)';
+                              e.currentTarget.style.backgroundColor = 'var(--surface)';
+                              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                              e.currentTarget.style.color = 'var(--text)';
+                              e.currentTarget.style.backgroundColor = 'var(--surface-2)';
+                              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                            }}
+                          >
+                            <div className="flex w-full justify-between items-center">
+                              <div className="flex items-center gap-2 truncate">
+                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.totalHours >= 8 ? 'bg-emerald-400' : 'bg-purple-400'}`}></div>
+                                <span className="truncate font-medium">{displayTitle}</span>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setEntryToDelete(entry); setDeleteModalOpen(true); }}
+                                className="opacity-0 group-hover/item:opacity-100 transition-opacity hover:text-red-500"
+                                style={{ color: 'var(--muted)' }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            {/* Subtitle with Project/Client */}
+                            {(project || client) && (
+                              <div className="text-[9px] opacity-70 truncate w-full pl-3.5" style={{ color: 'var(--muted)' }}>
+                                {project?.name || client?.name}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {!hasEntries && !isWeekend && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                        <div className="bg-primary-soft p-2 rounded-full shadow-sm" style={{ backgroundColor: 'var(--primary-soft)' }}>
+                          <Plus className="w-5 h-5 text-primary" style={{ color: 'var(--primary)' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </>
+          </div>
         )}
       </div>
 

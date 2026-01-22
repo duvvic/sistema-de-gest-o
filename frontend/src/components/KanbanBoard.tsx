@@ -59,7 +59,8 @@ const KanbanCard = ({
   onDelete,
   isAdmin,
   isHighlighted,
-  users
+  users,
+  currentUserId
 }: {
   task: Task;
   client?: Client;
@@ -69,6 +70,7 @@ const KanbanCard = ({
   isAdmin: boolean;
   isHighlighted?: boolean;
   users: User[];
+  currentUserId?: string;
 }) => {
   const navigate = useNavigate();
   const {
@@ -167,10 +169,10 @@ const KanbanCard = ({
           )}
         </div>
 
-        {isAdmin && onDelete && (
+        {(isAdmin || (task.developerId === currentUserId)) && onDelete && (
           <button
             onClick={(e) => onDelete(e, task)}
-            className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
             style={{ color: 'var(--muted)' }}
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--muted)'}
@@ -310,7 +312,8 @@ const KanbanColumn = ({
   users,
   onLoadMore,
   hasMore,
-  totalCount
+  totalCount,
+  currentUserId
 }: {
   col: typeof STATUS_COLUMNS[0];
   tasks: Task[];
@@ -324,6 +327,7 @@ const KanbanColumn = ({
   onLoadMore?: () => void;
   hasMore?: boolean;
   totalCount?: number;
+  currentUserId?: string;
 }) => {
   const { setNodeRef } = useSortable({
     id: col.id,
@@ -363,6 +367,7 @@ const KanbanColumn = ({
               isAdmin={isAdmin}
               isHighlighted={highlightedTaskId === task.id}
               users={users}
+              currentUserId={currentUserId}
             />
           ))}
         </SortableContext>
@@ -718,40 +723,45 @@ export const KanbanBoard = () => {
 
                         <div className="h-px bg-white/5 my-1 mx-2" />
 
-                        {users
-                          .filter(u => u.active !== false && (searchTerm === '' || u.name.toLowerCase().includes(searchTerm.toLowerCase())))
-                          .filter(u => !showOnlyDelayed || lateDevelopers.some(ld => ld.user.id === u.id))
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map(user => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onClick={() => {
-                                if (selectedDeveloperId === user.id) {
-                                  // Deselect if clicking on already selected user
-                                  setSelectedDeveloperId('');
-                                } else {
-                                  // Select the user
-                                  setSelectedDeveloperId(user.id);
-                                }
-                                setShowDevMenu(false);
-                                setSearchTerm('');
-                              }}
-                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedDeveloperId === user.id ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
-                            >
-                              <div className="flex items-center gap-3 truncate">
-                                <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                  {user.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                  ) : (
-                                    <span className="text-[10px] uppercase font-black">{user.name.charAt(0)}</span>
-                                  )}
+                        {(() => {
+                          const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                          return users
+                            .filter(u => u.active !== false &&
+                              activeCargos.includes(u.cargo?.toLowerCase() || '') &&
+                              (searchTerm === '' || u.name.toLowerCase().includes(searchTerm.toLowerCase())))
+                            .filter(u => !showOnlyDelayed || lateDevelopers.some(ld => ld.user.id === u.id))
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(user => (
+                              <button
+                                key={user.id}
+                                type="button"
+                                onClick={() => {
+                                  if (selectedDeveloperId === user.id) {
+                                    // Deselect if clicking on already selected user
+                                    setSelectedDeveloperId('');
+                                  } else {
+                                    // Select the user
+                                    setSelectedDeveloperId(user.id);
+                                  }
+                                  setShowDevMenu(false);
+                                  setSearchTerm('');
+                                }}
+                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedDeveloperId === user.id ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                              >
+                                <div className="flex items-center gap-3 truncate">
+                                  <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    {user.avatarUrl ? (
+                                      <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-[10px] uppercase font-black">{user.name.charAt(0)}</span>
+                                    )}
+                                  </div>
+                                  <span className="truncate">{user.name}</span>
                                 </div>
-                                <span className="truncate">{user.name}</span>
-                              </div>
-                              {selectedDeveloperId === user.id && <Check size={14} />}
-                            </button>
-                          ))}
+                                {selectedDeveloperId === user.id && <Check size={14} />}
+                              </button>
+                            ));
+                        })()}
                       </div>
                     </motion.div>
                   </>
@@ -909,6 +919,7 @@ export const KanbanBoard = () => {
                     isAdmin={isAdmin}
                     highlightedTaskId={highlightedTaskId}
                     users={users}
+                    currentUserId={currentUser?.id}
                     onLoadMore={isDone ? () => setDoneLimit(prev => prev + 10) : undefined}
                     hasMore={isDone ? displayedTasks.length < columnTasks.length : false}
                   />

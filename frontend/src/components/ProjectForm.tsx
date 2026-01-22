@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
+import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Save } from 'lucide-react';
 
 const ProjectForm: React.FC = () => {
   const { projectId, clientId: routeClientId } = useParams<{ projectId?: string; clientId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { currentUser, isAdmin } = useAuth();
 
   // Incluindo funções de membros do projeto
   const {
@@ -145,11 +147,23 @@ const ProjectForm: React.FC = () => {
               disabled={isEdit} // Não pode mudar cliente em edição
             >
               <option value="">Selecione um cliente</option>
-              {clients.filter(c => c.active !== false).map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
+              {(() => {
+                const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                const isOperational = isAdmin || activeCargos.includes(currentUser?.cargo?.toLowerCase() || '');
+
+                return clients
+                  .filter(c => c.active !== false)
+                  .filter(c => {
+                    if (isOperational) return true;
+                    // Non-operational roles can only see NIC-LABS
+                    return c.name.toLowerCase().includes('nic-labs');
+                  })
+                  .map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ));
+              })()}
             </select>
           </div>
 
@@ -235,6 +249,18 @@ const ProjectForm: React.FC = () => {
                   </div>
                 </label>
               ))}
+              {(() => {
+                const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                if (users.some(u => u.active !== false && !activeCargos.includes(u.cargo?.toLowerCase() || ''))) {
+                  return (
+                    <div className="col-span-full p-2 text-[10px] font-bold uppercase tracking-widest text-[var(--muted)] opacity-50 border-t border-[var(--border)] mt-2">
+                      * Usuários de outros cargos não participam de projetos.
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
               Selecione os colaboradores que trabalharão neste projeto.
