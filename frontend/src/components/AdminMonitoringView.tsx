@@ -66,8 +66,9 @@ const AdminMonitoringView: React.FC = () => {
     const lastNotificationEndTime = useRef<number>(0);
     const rotationIndexRef = useRef<{ [key: string]: number }>({});
     const lastRotationTime = useRef<number>(0);
+    const processingRef = useRef(false);
 
-    // Sincronizar ref
+    // Sincronizar ref para acesso em intervalos
     useEffect(() => {
         currentNotificationRef.current = currentNotification;
     }, [currentNotification]);
@@ -155,9 +156,6 @@ const AdminMonitoringView: React.FC = () => {
         ];
 
         const runRotation = () => {
-            // Se já tem algo na tela, não inicia nova rotação
-            if (currentNotificationRef.current) return;
-
             const now = new Date();
             const hour = now.getHours();
             const min = now.getMinutes();
@@ -173,26 +171,21 @@ const AdminMonitoringView: React.FC = () => {
 
             const nowTs = Date.now();
             if (nowTs - lastRotationTime.current >= 15000) {
-                setNotifications(prev => {
-                    // Só agenda se a fila estiver realmente vazia e nada na tela (via ref fresca)
-                    if (prev.length === 0 && !currentNotificationRef.current) {
-                        const periodKey = currentPeriod.id.includes('fora_horario') ? 'fora_horario' : currentPeriod.id;
-                        const idx = rotationIndexRef.current[periodKey] || 0;
-                        const msg = currentPeriod.messages[idx];
+                // Se já tem algo na tela ou na fila, espera um pouco mais para não acumular
+                if (currentNotificationRef.current) return;
 
-                        rotationIndexRef.current[periodKey] = (idx + 1) % currentPeriod.messages.length;
-                        lastRotationTime.current = Date.now();
+                const periodKey = currentPeriod.id.includes('fora_horario') ? 'fora_horario' : currentPeriod.id;
+                const idx = rotationIndexRef.current[periodKey] || 0;
+                const msg = currentPeriod.messages[idx];
 
-                        return [{ id: 'rot-' + Date.now(), message: msg, timestamp: Date.now(), priority: 'LOW' }];
-                    }
-                    return prev;
-                });
+                addNotification(msg, 'LOW');
+                rotationIndexRef.current[periodKey] = (idx + 1) % currentPeriod.messages.length;
+                lastRotationTime.current = Date.now();
             }
         };
 
-        const timer = setInterval(runRotation, 2000);
-        runRotation();
-        return () => clearInterval(timer);
+        const interval = setInterval(runRotation, 2000);
+        return () => clearInterval(interval);
     }, []);
 
     // Sistema de notificações em tempo real (HIGH Priority)
@@ -220,43 +213,51 @@ const AdminMonitoringView: React.FC = () => {
         };
     }, [allUsersMap]);
 
-    // Processar fila de notificações (8s visível + 2s gap)
+    // 1. Timer para limpar a notificação atual
     useEffect(() => {
-        if (notifications.length === 0) return;
+        if (!currentNotification) return;
 
-        const now = Date.now();
+        const duration = 8000;
+        const timer = setTimeout(() => {
+            const idToRemove = currentNotification.id;
+            setCurrentNotification(null);
+            setNotifications(prev => prev.filter(n => n.id !== idToRemove));
+            lastNotificationEndTime.current = Date.now();
+        }, duration);
+
+        return () => clearTimeout(timer);
+    }, [currentNotification?.id]);
+
+    // 2. Gerenciador da Fila e Preempt
+    useEffect(() => {
         const firstHighIndex = notifications.findIndex(n => n.priority === 'HIGH');
         const hasHighQueued = firstHighIndex !== -1;
 
-        // Lógica de Preempt (Interrupção): 
-        // Se houver uma HIGH na fila e a atual for LOW, interrompe imediatamente.
+        // Lógica de Preempt: Se houver uma HIGH na fila e a atual for LOW, interrompe.
         if (currentNotification) {
             const currentObj = notifications.find(n => n.id === currentNotification.id);
             if (currentObj?.priority === 'LOW' && hasHighQueued) {
-                setCurrentNotification(null); // Gatilha re-render para pegar a HIGH
-                return;
+                // Ao setar null, o useEffect de Timer é limpo e este effect rodará de novo no próximo ciclo
+                setCurrentNotification(null);
             }
-            return; // Continua exibindo a atual
+            return;
         }
 
-        // Regra de Gap: transition_gap_seconds = 2s
+        if (notifications.length === 0) return;
+
+        // Regra de Gap: 2s entre mensagens
+        const now = Date.now();
         const timeSinceLast = now - lastNotificationEndTime.current;
         if (timeSinceLast < 2000) {
-            return; // Aguarda o gap de 2s entre qualquer mensagem
+            // Re-checa em breve para não ficar parado
+            const retry = setTimeout(() => setNotifications(prev => [...prev]), 500);
+            return () => clearTimeout(retry);
         }
 
         const nextIndex = hasHighQueued ? firstHighIndex : 0;
         const next = notifications[nextIndex];
 
         setCurrentNotification({ message: next.message, id: next.id });
-
-        const timer = setTimeout(() => {
-            setCurrentNotification(null);
-            setNotifications(prev => prev.filter(n => n.id !== next.id));
-            lastNotificationEndTime.current = Date.now();
-        }, 8000); // 8 segundos visível
-
-        return () => clearTimeout(timer);
     }, [notifications, currentNotification]);
 
     const [taskPage, setTaskPage] = useState(0);
