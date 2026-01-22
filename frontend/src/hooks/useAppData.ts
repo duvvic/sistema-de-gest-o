@@ -46,103 +46,14 @@ const MOCK_TIMESHEETS: TimesheetEntry[] = [];
 // FUNÇÕES DE NORMALIZAÇÃO
 // =====================================================
 
-/**
- * Normaliza o status da tarefa do português para o padrão do front-end
- */
-function normalizeStatus(raw: string | null): Status {
-  if (!raw) return "Todo";
-
-  const s = raw.toLowerCase().trim();
-
-  // Concluído / Done
-  if (s.includes("conclu") || s.includes("done") || s.includes("finaliz")) {
-    return "Done";
-  }
-
-  // Trabalhando / Em Andamento / In Progress
-  if (s.includes("trabalhando") || s.includes("andamento") || s.includes("progresso") || s.includes("progress") || s.includes("execu")) {
-    return "In Progress";
-  }
-
-  // Teste / Revisão / Review
-  if (s.includes("teste") || s.includes("revis") || s.includes("review") || s.includes("valida")) {
-    return "Review";
-  }
-
-  // Padrão: Não Iniciado / A fazer / Todo
-  return "Todo";
-}
-
-/**
- * Normaliza a prioridade
- */
-function normalizePriority(raw: string | null): Priority | undefined {
-  if (!raw) return undefined;
-
-  const s = raw.toLowerCase().trim();
-
-  if (s.includes("crítica") || s.includes("critica") || s.includes("critical") || s.includes("urgente")) {
-    return "Critical";
-  }
-  if (s.includes("alta") || s.includes("high")) return "High";
-  if (s.includes("média") || s.includes("media") || s.includes("medium")) return "Medium";
-  if (s.includes("baixa") || s.includes("low")) return "Low";
-
-  return undefined;
-}
-
-/**
- * Normaliza o impacto
- */
-function normalizeImpact(raw: string | null): Impact | undefined {
-  if (!raw) return undefined;
-
-  const s = raw.toLowerCase().trim();
-
-  if (s.includes("alto") || s.includes("high")) return "High";
-  if (s.includes("médio") || s.includes("medio") || s.includes("medium")) return "Medium";
-  if (s.includes("baixo") || s.includes("low")) return "Low";
-
-  return undefined;
-}
-
-/**
- * Formata data para string YYYY-MM-DD
- * Se a data for nula, retorna uma data padrão (7 dias no futuro)
- */
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) {
-    // Data padrão: 7 dias no futuro
-    const defaultDate = new Date();
-    defaultDate.setDate(defaultDate.getDate() + 7);
-    return defaultDate.toISOString().split("T")[0];
-  }
-
-  // Se já está no formato YYYY-MM-DD, retorna direto (evita new Date() que aplica fuso)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return dateStr;
-  }
-
-  // Se for ISO com tempo (T), pega só a primeira parte
-  if (dateStr.includes('T')) {
-    return dateStr.split('T')[0];
-  }
-
-  // Fallback: Tenta parsear mas compensando o fuso para UTC
-  try {
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      // Ajusta para o dia correto em UTC, ignorando o horario local
-      const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-      const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-      return adjustedDate.toISOString().split("T")[0];
-    }
-  } catch {
-    // Ignora erro
-  }
-
-  return new Date().toISOString().split("T")[0];
-}
+import {
+  normalizeStatus,
+  normalizePriority,
+  normalizeImpact,
+  formatDate,
+  mapDbTaskToTask,
+  mapDbTimesheetToEntry
+} from "@/utils/normalizers";
 
 // =====================================================
 // HOOK PRINCIPAL
@@ -194,11 +105,15 @@ export function useAppData(): AppData {
         setLoading(true);
         setError(null);
 
-        // Verificar se está autenticado no Supabase
+        // Verificar se está autenticado no Supabase ou se tem um token válido
         const { supabase } = await import('@/services/supabaseClient');
         const { data: { session } } = await supabase.auth.getSession();
 
-        if (!session && !currentUser) {
+        // Check for monitoring token
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasValidToken = urlParams.get('token') === 'xyz123';
+
+        if (!session && !currentUser && !hasValidToken) {
           console.log('[useAppData] Sem sessão ativa no Supabase, aguardando login...');
           setLoading(false);
           return;

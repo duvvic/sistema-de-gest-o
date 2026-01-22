@@ -116,6 +116,11 @@ export default function Login() {
     // Redirecionamento baseado em Role
     useEffect(() => {
         if (!authReady) return;
+
+        // Se tiver token de monitoramento, não redireciona (deixa a rota /monitoring carregar)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('token') === 'xyz123') return;
+
         if (currentUser && mode === 'login') {
             const path = currentUser.role === 'admin' ? '/admin/clients' : '/developer/projects';
             navigate(path, { replace: true });

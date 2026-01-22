@@ -4,6 +4,7 @@ import { useAppData } from '@/hooks/useAppData';
 import { Task, Project, Client, User, TimesheetEntry } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { mapDbTaskToTask, mapDbTimesheetToEntry } from '@/utils/normalizers';
 
 interface DataContextType {
     clients: Client[];
@@ -60,24 +61,81 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsers(loadedUsers);
     }, [dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers]);
 
-    // Realtime para Membros (opcional, mas bom manter se já existia algo similar)
+    // === REALTIME SUBSCRIPTIONS ===
     useEffect(() => {
+
         const channel = supabase
-            .channel('project_members_changes_global')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'project_members'
-            }, (payload) => {
+            .channel('app_realtime_changes')
+            // 1. Clientes
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_clientes' }, (payload) => {
                 if (payload.eventType === 'INSERT') {
-                    setProjectMembers(prev => [...prev, {
-                        projectId: String(payload.new.id_projeto),
-                        userId: String(payload.new.id_colaborador)
-                    }]);
+                    const newItem: Client = { id: String(payload.new.ID_Cliente), name: payload.new.NomeCliente, logoUrl: payload.new.NewLogo, active: payload.new.ativo };
+                    setClients(prev => [...prev, newItem]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setClients(prev => prev.map(c => c.id === String(payload.new.ID_Cliente)
+                        ? { ...c, name: payload.new.NomeCliente, logoUrl: payload.new.NewLogo, active: payload.new.ativo } : c));
                 } else if (payload.eventType === 'DELETE') {
-                    setProjectMembers(prev => prev.filter(pm =>
-                        !(pm.projectId === String(payload.old.id_projeto) && pm.userId === String(payload.old.id_colaborador))
-                    ));
+                    setClients(prev => prev.filter(c => c.id !== String(payload.old.ID_Cliente)));
+                }
+            })
+            // 2. Projetos
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_projetos' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const newItem: Project = {
+                        id: String(payload.new.ID_Projeto), name: payload.new.NomeProjeto, clientId: String(payload.new.ID_Cliente),
+                        status: payload.new.StatusProjeto, active: payload.new.ativo, budget: payload.new.budget
+                    };
+                    setProjects(prev => [...prev, newItem]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setProjects(prev => prev.map(p => p.id === String(payload.new.ID_Projeto)
+                        ? { ...p, name: payload.new.NomeProjeto, active: payload.new.ativo, status: payload.new.StatusProjeto } : p));
+                }
+            })
+            // 3. Tarefas (Com Normalização)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'fato_tarefas' }, (payload) => {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const userMap = new Map(users.map(u => [u.id, u]));
+                    const task = mapDbTaskToTask(payload.new, userMap);
+                    setTasks(prev => {
+                        const exists = prev.find(t => t.id === task.id);
+                        if (exists) return prev.map(t => t.id === task.id ? { ...t, ...task } : t);
+                        return [task, ...prev];
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setTasks(prev => prev.filter(t => t.id !== String(payload.old.id_tarefa_novo)));
+                }
+            })
+            // 4. Colaboradores
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_colaboradores' }, (payload) => {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const role = payload.new.papel === 'Administrador' ? 'admin' : 'developer';
+                    const user: User = { id: String(payload.new.ID_Colaborador), name: payload.new.NomeColaborador, email: payload.new.email, role, cargo: payload.new.Cargo, active: payload.new.ativo };
+                    setUsers(prev => {
+                        const exists = prev.find(u => u.id === user.id);
+                        if (exists) return prev.map(u => u.id === user.id ? user : u);
+                        return [...prev, user];
+                    });
+                }
+            })
+            // 5. Timesheet
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'horas_trabalhadas' }, (payload) => {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const entry = mapDbTimesheetToEntry(payload.new);
+                    setTimesheetEntries(prev => {
+                        const exists = prev.find(e => e.id === entry.id);
+                        if (exists) return prev.map(e => e.id === entry.id ? entry : e);
+                        return [entry, ...prev];
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setTimesheetEntries(prev => prev.filter(e => e.id !== String(payload.old.ID_Horas_Trabalhadas)));
+                }
+            })
+            // 6. Membros
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setProjectMembers(prev => [...prev, { projectId: String(payload.new.id_projeto), userId: String(payload.new.id_colaborador) }]);
+                } else if (payload.eventType === 'DELETE') {
+                    setProjectMembers(prev => prev.filter(pm => !(pm.projectId === String(payload.old.id_projeto) && pm.userId === String(payload.old.id_colaborador))));
                 }
             })
             .subscribe();
@@ -85,7 +143,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [users]);
 
     const value = {
         clients,
@@ -94,7 +152,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         users,
         timesheetEntries,
         projectMembers,
-        loading: dataLoading && (clients.length === 0), // Só mostra loading se estiver vazio
+        loading: dataLoading && (clients.length === 0),
         error: dataError,
         setClients,
         setProjects,

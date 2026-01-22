@@ -42,6 +42,10 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
     const { currentUser, isLoading } = useAuth();
 
+    // Check for monitoring token
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasValidToken = urlParams.get('token') === 'xyz123';
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -50,11 +54,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
         );
     }
 
-    if (!currentUser) {
+    if (!currentUser && !hasValidToken) {
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole === 'admin' && currentUser.role !== 'admin') {
+    if (requiredRole === 'admin' && currentUser?.role !== 'admin' && !hasValidToken) {
         return <Navigate to="/developer/projects" replace />;
     }
 
@@ -71,6 +75,27 @@ const AppRoutes: React.FC = () => {
             {/* Rota Pública Check */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword onComplete={() => navigate('/login', { replace: true })} />} />
+
+            {/* Rota Direta para Monitoramento (TV Mode) - Sem o Menu Lateral */}
+            <Route
+                path="/monitoring"
+                element={
+                    (() => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const hasValidToken = urlParams.get('token') === 'xyz123';
+
+                        if (hasValidToken) {
+                            return <AdminMonitoringView />;
+                        }
+
+                        return (
+                            <ProtectedRoute requiredRole="admin">
+                                <AdminMonitoringView />
+                            </ProtectedRoute>
+                        );
+                    })()
+                }
+            />
 
             {/* Rota Raiz - Redireciona baseado no role */}
             <Route path="/" element={

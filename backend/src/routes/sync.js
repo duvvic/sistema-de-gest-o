@@ -8,7 +8,7 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-const normalizeKey = (key) => key?.toString().toLowerCase().trim().replace(/[-_]/g, '').replace(/\s/g, '') || '';
+const normalizeKey = (key) => key?.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[-_]/g, '').replace(/\s/g, '') || '';
 
 async function syncTable(sheet, tableName, onConflict) {
     const rows = [];
@@ -20,8 +20,12 @@ async function syncTable(sheet, tableName, onConflict) {
         'idcliente': 'ID_Cliente',
         'idcolaborador': 'ID_Colaborador',
         'idcolaborado': 'ID_Colaborador',
-        'oqueprecisaserfeito': 'Afazer',    // Mapping based on user image -> DB "Afazer"
-        'statustaref': 'StatusTarefa',      // Mapping based on user image -> DB "StatusTarefa"
+        'oqueprecisaserfeito': 'Afazer',
+        'tarefa': 'Afazer',
+        'atividades': 'Afazer',
+        'titulo': 'Afazer',
+        'nome': 'Afazer',
+        'statustaref': 'StatusTarefa',
         'contatoprincipal': 'contato_principal', // Fix for the 500 error
         'inicioprevist': 'inicio_previsto',
         'inicioreal': 'inicio_real',
@@ -185,10 +189,19 @@ router.post("/excel", requireAdmin, upload.single("file"), async (req, res) => {
         };
         const results = {};
 
-        // ORDEM IMPORTANTE: Primeiro sincronizamos Tarefas, depois Horas (para o vínculo funcionar)
+        // ORDEM CRÍTICA: Clientes -> Colaboradores -> Projetos -> Tarefas -> Horas
+        const priority = {
+            "dim_clientes": 1,
+            "dim_colaboradores": 2,
+            "dim_projetos": 3,
+            "fato_tarefas": 4,
+            "horas_trabalhadas": 5
+        };
+
         const sheets = workbook.worksheets.sort((a, b) => {
-            if (normalizeKey(a.name).includes('tarefa')) return -1;
-            return 1;
+            const nameA = Object.keys(mapping).find(m => normalizeKey(a.name) === normalizeKey(m));
+            const nameB = Object.keys(mapping).find(m => normalizeKey(b.name) === normalizeKey(m));
+            return (priority[nameA] || 99) - (priority[nameB] || 99);
         });
 
         for (const sheet of sheets) {
