@@ -49,6 +49,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>([]);
     const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
 
+    // Ref para evitar ciclos de re-subscrição e garantir acesso a dados frescos nos callbacks
+    const usersRef = React.useRef<User[]>([]);
+    useEffect(() => { usersRef.current = users; }, [users]);
+
     // Sincronizar dados globais quando o carregamento termina
     useEffect(() => {
         if (dataLoading) return;
@@ -63,7 +67,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // === REALTIME SUBSCRIPTIONS ===
     useEffect(() => {
-
         const channel = supabase
             .channel('app_realtime_changes')
             // 1. Clientes
@@ -94,7 +97,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 3. Tarefas (Com Normalização)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'fato_tarefas' }, (payload) => {
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const userMap = new Map(users.map(u => [u.id, u]));
+                    const userMap = new Map((usersRef.current).map(u => [u.id, u]));
                     const task = mapDbTaskToTask(payload.new, userMap);
                     setTasks(prev => {
                         const exists = prev.find(t => t.id === task.id);
@@ -109,7 +112,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_colaboradores' }, (payload) => {
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                     const role = payload.new.papel === 'Administrador' ? 'admin' : 'developer';
-                    const user: User = { id: String(payload.new.ID_Colaborador), name: payload.new.NomeColaborador, email: payload.new.email, role, cargo: payload.new.Cargo, active: payload.new.ativo };
+                    const user: User = {
+                        id: String(payload.new.ID_Colaborador),
+                        name: payload.new.NomeColaborador,
+                        email: payload.new.email,
+                        role,
+                        cargo: payload.new.Cargo,
+                        active: payload.new.ativo,
+                        avatarUrl: payload.new.avatar_url
+                    };
                     setUsers(prev => {
                         const exists = prev.find(u => u.id === user.id);
                         if (exists) return prev.map(u => u.id === user.id ? user : u);
@@ -143,9 +154,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [users]);
+    }, []);
 
-    const value = {
+    const value = React.useMemo(() => ({
         clients,
         projects,
         tasks,
@@ -160,7 +171,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsers,
         setTimesheetEntries,
         setProjectMembers
-    };
+    }), [clients, projects, tasks, users, timesheetEntries, projectMembers, dataLoading, dataError]);
 
     return (
         <DataContext.Provider value={value}>
