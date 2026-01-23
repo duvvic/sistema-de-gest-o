@@ -1,6 +1,6 @@
 // components/TimesheetCalendar.tsx - Com Busca Dropdown
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { useAuth } from '@/contexts/AuthContext';
 import { TimesheetEntry } from '@/types';
@@ -18,7 +18,8 @@ interface TimesheetCalendarProps {
 
 const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded }) => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { currentUser, isAdmin } = useAuth();
   const { timesheetEntries, deleteTimesheet, tasks, users, loading, clients, projects } = useDataController();
 
   // Safety checks
@@ -28,13 +29,23 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const safeClients = clients || [];
   const safeProjects = projects || [];
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const queryMonth = searchParams.get('month');
+  const queryYear = searchParams.get('year');
+  const initialDate = useMemo(() => {
+    if (queryMonth && queryYear) {
+      return new Date(Number(queryYear), Number(queryMonth), 1);
+    }
+    return new Date();
+  }, [queryMonth, queryYear]);
+
+  const [currentDate, setCurrentDate] = useState(initialDate);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<TimesheetEntry | null>(null);
 
-  const isAdmin = currentUser?.role === 'admin';
-  // Use passed userId as initial state if provided
-  const [selectedUserId, setSelectedUserId] = useState<string>(userId || '');
+
+  // Use URL search param for userId if available, otherwise use prop or currentUser
+  const queryUserId = searchParams.get('userId');
+  const [selectedUserId, setSelectedUserId] = useState<string>(queryUserId || userId || '');
 
   // Search States
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,14 +63,26 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Update selectedUserId when prop changes
+  // Update selectedUserId and URL when selection or prop changes
   useEffect(() => {
     if (userId) {
       setSelectedUserId(userId);
+    } else if (queryUserId) {
+      setSelectedUserId(queryUserId);
     } else if (!selectedUserId && currentUser) {
       setSelectedUserId(currentUser.id);
     }
-  }, [currentUser, userId]);
+  }, [currentUser, userId, queryUserId]);
+
+  const handleUserSelect = (uid: string) => {
+    setSelectedUserId(uid);
+    setSearchParams(prev => {
+      prev.set('userId', uid);
+      return prev;
+    }, { replace: true });
+    setIsDropdownOpen(false);
+    setSearchTerm('');
+  };
 
   // Data Helpers
   const year = currentDate.getFullYear();
@@ -174,9 +197,26 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     }
   };
 
-  const navPrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const updateDateParams = (date: Date) => {
+    setSearchParams(prev => {
+      prev.set('month', String(date.getMonth()));
+      prev.set('year', String(date.getFullYear()));
+      return prev;
+    }, { replace: true });
+  };
+
+  const navPrevMonth = () => {
+    const newDate = new Date(year, month - 1, 1);
+    setCurrentDate(newDate);
+    updateDateParams(newDate);
+  };
+
   const navNextMonth = () => {
-    if (canGoNext) setCurrentDate(new Date(year, month + 1, 1));
+    if (canGoNext) {
+      const newDate = new Date(year, month + 1, 1);
+      setCurrentDate(newDate);
+      updateDateParams(newDate);
+    }
   };
 
 
@@ -236,7 +276,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                       searchedUsers.map(user => (
                         <button
                           key={user.id}
-                          onClick={() => { setSelectedUserId(user.id); setIsDropdownOpen(false); setSearchTerm(''); }}
+                          onClick={() => handleUserSelect(user.id)}
                           className={`
                                                  w-full flex items-center gap-3 p-3 rounded-lg transition-colors group
                                              `}
@@ -360,7 +400,20 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                 const d = i + 1;
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayEntries = currentEntries.filter(e => e.date === dateStr);
-                const totalDayHours = dayEntries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
+
+                // Recalculate total hours to fix any inconsistencies
+                const totalDayHours = dayEntries.reduce((acc, entry) => {
+                  // Recalculate based on actual start/end times
+                  const [startH, startM] = (entry.startTime || '00:00').split(':').map(Number);
+                  const [endH, endM] = (entry.endTime || '00:00').split(':').map(Number);
+                  let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+                  if (diffMinutes < 0) diffMinutes += 24 * 60;
+                  if (entry.lunchDeduction) diffMinutes = Math.max(0, diffMinutes - 60);
+                  const calculatedHours = diffMinutes / 60;
+
+                  return acc + calculatedHours;
+                }, 0);
+
                 const hasEntries = dayEntries.length > 0;
                 const isToday = new Date().toISOString().split('T')[0] === dateStr;
                 const dayOfWeek = new Date(year, month, d).getDay();
@@ -388,13 +441,10 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                       </span>
                       {hasEntries && (
                         <div className="flex flex-col items-end gap-1">
-                          <span className={`text-[10px] font-bold text-white px-2 py-0.5 rounded-full border shadow-sm flex items-center gap-1 ${totalDayHours > 8 ? 'bg-red-500 border-red-500' : 'bg-emerald-600 border-emerald-600'}`}>
-                            {totalDayHours > 8 && <AlertTriangle className="w-3 h-3" />}
+                          <span className={`text-[10px] font-black text-white px-2.5 py-1 rounded-lg border shadow-sm flex items-center gap-1.5 transition-all ${totalDayHours > 9 ? 'bg-amber-500 border-amber-500' : totalDayHours >= 8 ? 'bg-emerald-600 border-emerald-600' : 'bg-blue-500 border-blue-500'}`}>
+                            {totalDayHours > 9 && <AlertTriangle className="w-3.5 h-3.5" />}
                             {totalDayHours.toFixed(1)}h
                           </span>
-                          {totalDayHours > 8 && (
-                            <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter">Excesso de horas</span>
-                          )}
                         </div>
                       )}
                     </div>
@@ -440,7 +490,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                           >
                             <div className="flex w-full justify-between items-center">
                               <div className="flex items-center gap-2 truncate">
-                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.totalHours >= 8 ? 'bg-emerald-400' : 'bg-purple-400'}`}></div>
+                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.totalHours >= 4 ? 'bg-emerald-400' : 'bg-amber-400'}`}></div>
                                 <span className="truncate font-medium">{displayTitle}</span>
                               </div>
                               <button
@@ -485,7 +535,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
         onConfirm={handleDelete}
         onCancel={() => setDeleteModalOpen(false)}
       />
-    </div>
+    </div >
   );
 };
 

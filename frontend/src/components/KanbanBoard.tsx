@@ -83,6 +83,7 @@ const KanbanCard = ({
   } = useSortable({
     id: task.id,
     data: { type: 'Task', task },
+    disabled: !isAdmin && task.developerId !== currentUserId
   });
 
   const style = {
@@ -128,7 +129,7 @@ const KanbanCard = ({
         {...attributes}
         {...listeners}
         className={`
-          relative group flex flex-col gap-3 p-4 rounded-xl border shadow-sm cursor-grab active:cursor-grabbing
+          relative group flex flex-col gap-3 p-4 rounded-xl border shadow-sm ${(!isAdmin && task.developerId !== currentUserId) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
           transition-all duration-300 ease-out
         `}
         style={{
@@ -153,7 +154,11 @@ const KanbanCard = ({
         <div className="flex justify-between items-start text-left">
           <div className="flex items-center gap-2 max-w-[85%]">
             <div style={{ color: 'var(--muted)' }}>
-              <GripVertical size={14} />
+              {(!isAdmin && task.developerId !== currentUserId) ? (
+                <div className="w-3.5" /> // Spacer
+              ) : (
+                <GripVertical size={14} />
+              )}
             </div>
             {client?.logoUrl && (
               <img src={client.logoUrl} className="w-4 h-4 rounded-sm object-contain" alt="" />

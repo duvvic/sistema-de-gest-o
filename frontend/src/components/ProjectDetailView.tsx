@@ -9,8 +9,7 @@ const ProjectDetailView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { projects, clients, tasks, users, projectMembers } = useDataController();
-  const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const { currentUser, isAdmin } = useAuth();
 
   const project = projects.find(p => p.id === projectId);
   const client = project ? clients.find(c => c.id === project.clientId) : null;
@@ -299,17 +298,9 @@ const TaskCard: React.FC<TaskCardProps & { project?: any, client?: any }> = ({ t
 
   // Border Color Logic
   const getBorderColor = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     if (task.status === 'Done') return 'var(--success)'; // Green
     if (task.status === 'Review') return 'var(--warning-text)'; // Yellow
-
-    if (task.estimatedDelivery) {
-      const due = new Date(task.estimatedDelivery);
-      if (due < today) return '#ef4444'; // Red (Delayed)
-    }
-
+    if ((task.daysOverdue ?? 0) > 0) return '#ef4444'; // Red (Delayed)
     return 'var(--border)'; // Default
   };
 

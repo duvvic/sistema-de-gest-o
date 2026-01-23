@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
-import { ArrowLeft, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Trash2 } from 'lucide-react';
+import ConfirmationModal from './ConfirmationModal';
 
 const ClientForm: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { getClientById, createClient, updateClient } = useDataController();
+  const { getClientById, createClient, updateClient, deleteClient } = useDataController();
 
   const isEdit = !!clientId;
   const client = clientId ? getClientById(clientId) : null;
@@ -15,6 +16,7 @@ const ClientForm: React.FC = () => {
   const [name, setName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -60,6 +62,22 @@ const ClientForm: React.FC = () => {
       alert('Erro ao salvar cliente. Tente novamente.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!clientId) return;
+    try {
+      setLoading(true);
+      await deleteClient(clientId);
+      alert('Cliente excluído com sucesso!');
+      navigate('/admin/clients');
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      alert('Erro ao excluir cliente. Verifique se existem projetos vinculados.');
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -173,26 +191,50 @@ const ClientForm: React.FC = () => {
           )}
 
           {/* Botões */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="px-6 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surfaceHover)]"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-[var(--brand)] text-white rounded-lg hover:bg-[var(--brandHover)] flex items-center gap-2 disabled:opacity-50"
-              disabled={loading}
-            >
-              <Save className="w-4 h-4" />
-              {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Cliente'}
-            </button>
+          <div className="flex justify-between items-center pt-4">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="px-6 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surfaceHover)]"
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-[var(--brand)] text-white rounded-lg hover:bg-[var(--brandHover)] flex items-center gap-2 disabled:opacity-50"
+                disabled={loading}
+              >
+                <Save className="w-4 h-4" />
+                {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Cliente'}
+              </button>
+            </div>
+
+            {isEdit && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="px-6 py-3 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2 transition-colors"
+                disabled={loading}
+              >
+                <Trash2 className="w-4 h-4" />
+                Excluir Cliente
+              </button>
+            )}
           </div>
         </div>
       </form>
+
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        title="Excluir Cliente"
+        message={`Tem certeza que deseja excluir o cliente "${name}"? Esta ação não poderá ser desfeita.`}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteModal(false)}
+        confirmText={loading ? 'Excluindo...' : 'Excluir'}
+        confirmColor="red"
+      />
     </div>
   );
 };

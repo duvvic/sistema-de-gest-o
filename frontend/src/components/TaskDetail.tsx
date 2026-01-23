@@ -7,13 +7,15 @@ import { Task, Status, Priority, Impact } from '@/types';
 import { ArrowLeft, Save, Calendar, PieChart, Briefcase, User as UserIcon, StickyNote, AlertTriangle, ShieldAlert, CheckSquare } from 'lucide-react';
 import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt';
 import ConfirmationModal from './ConfirmationModal';
+import TransferResponsibilityModal from './TransferResponsibilityModal';
 
 const TaskDetail: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { tasks, clients, projects, users, createTask, updateTask } = useDataController();
+  const isDeveloper = !isAdmin;
 
   const isNew = !taskId || taskId === 'new';
   const task = !isNew ? tasks.find(t => t.id === taskId) : undefined;
@@ -21,9 +23,6 @@ const TaskDetail: React.FC = () => {
   // Query params for defaults
   const preSelectedClientId = searchParams.get('clientId') || searchParams.get('client');
   const preSelectedProjectId = searchParams.get('projectId') || searchParams.get('project');
-
-  const isAdmin = currentUser?.role === 'admin';
-  const isDeveloper = currentUser?.role === 'developer';
 
   // Verifica se a tarefa está concluída - Corrigido para não considerar string vazia como concluído
   const isTaskCompleted = !isNew && task?.status === 'Done';
@@ -55,6 +54,7 @@ const TaskDetail: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
 
   const { isDirty, showPrompt, markDirty, requestBack, discardChanges, continueEditing } = useUnsavedChangesPrompt();
 
@@ -129,6 +129,50 @@ const TaskDetail: React.FC = () => {
     const canGoBack = requestBack();
     if (canGoBack) navigate(-1);
   }, [requestBack, navigate]);
+
+  const handleTransferResponsibility = async (newOwnerId: string) => {
+    if (!task || !currentUser) return;
+
+    try {
+      setLoading(true);
+
+      // Get new owner info
+      const newOwner = users.find(u => u.id === newOwnerId);
+      if (!newOwner) {
+        alert('Colaborador não encontrado');
+        return;
+      }
+
+      // Update task: swap owner and add old owner as collaborator
+      const updatedCollaboratorIds = [...(task.collaboratorIds || [])];
+
+      // Remove new owner from collaborators if present
+      const newOwnerIndex = updatedCollaboratorIds.indexOf(newOwnerId);
+      if (newOwnerIndex > -1) {
+        updatedCollaboratorIds.splice(newOwnerIndex, 1);
+      }
+
+      // Add current owner as collaborator
+      if (!updatedCollaboratorIds.includes(currentUser.id)) {
+        updatedCollaboratorIds.push(currentUser.id);
+      }
+
+      await updateTask(task.id, {
+        developerId: newOwnerId,
+        developer: newOwner.name,
+        collaboratorIds: updatedCollaboratorIds
+      });
+
+      setTransferModalOpen(false);
+      alert(`Responsabilidade transferida para ${newOwner.name} com sucesso!`);
+      navigate(-1);
+    } catch (error) {
+      console.error('Erro ao transferir responsabilidade:', error);
+      alert('Erro ao transferir responsabilidade. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Derived values
   const selectedClient = clients.find(c => c.id === formData.clientId);
@@ -301,7 +345,7 @@ const TaskDetail: React.FC = () => {
                   placeholder="Ex: Criar Wireframes da Home"
                   className="w-full p-4 text-lg font-bold border rounded-xl outline-none shadow-sm transition-all disabled:opacity-60 focus:ring-2 focus:ring-[var(--ring)]"
                   style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  disabled={!canEdit || isTaskCompleted}
+                  disabled={!canEdit || isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
                   required
                 />
               </div>
@@ -315,7 +359,7 @@ const TaskDetail: React.FC = () => {
                   className="w-full p-4 border rounded-xl outline-none shadow-sm resize-none transition-all disabled:opacity-60 focus:ring-2 focus:ring-[var(--ring)]"
                   style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   placeholder="Detalhes adicionais sobre a tarefa..."
-                  disabled={isTaskCompleted}
+                  disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
                 />
               </div>
 
@@ -331,7 +375,7 @@ const TaskDetail: React.FC = () => {
                   placeholder="Ex: Aguardando aprovação do cliente"
                   className="w-full p-3 border rounded-xl outline-none transition-all disabled:opacity-60 shadow-sm focus:ring-2 focus:ring-[var(--ring)]"
                   style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  disabled={!canEdit || isTaskCompleted}
+                  disabled={!canEdit || isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
                 />
               </div>
 
@@ -353,7 +397,7 @@ const TaskDetail: React.FC = () => {
                   onChange={(e) => { markDirty(); setFormData({ ...formData, status: e.target.value as Status }); }}
                   className="w-full p-3 border rounded-xl outline-none transition-all disabled:opacity-60 shadow-sm focus:ring-2 focus:ring-[var(--ring)]"
                   style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  disabled={isTaskCompleted}
+                  disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
                 >
                   <option value="Todo">Não Iniciado</option>
                   <option value="In Progress">Trabalhando</option>
@@ -375,7 +419,7 @@ const TaskDetail: React.FC = () => {
                   onChange={(e) => { markDirty(); setFormData({ ...formData, progress: Number(e.target.value) }); }}
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
                   style={{ backgroundColor: 'var(--border)' }}
-                  disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
+                  disabled={isTaskCompleted || !canEdit}
                 />
               </div>
 
@@ -479,6 +523,24 @@ const TaskDetail: React.FC = () => {
                   <p className="text-[9px] mt-1 italic" style={{ color: 'var(--muted)' }}>* Apenas membros do mesmo projeto podem ser adicionados.</p>
                 </div>
               )}
+
+              {/* Transfer Responsibility Button - Only for owners with collaborators */}
+              {isOwner && !isAdmin && !isNew && task && (task.collaboratorIds || []).length > 0 && (
+                <button
+                  onClick={() => setTransferModalOpen(true)}
+                  className="w-full p-3 rounded-xl border font-bold text-sm transition-all flex items-center justify-center gap-2 mt-4"
+                  style={{
+                    backgroundColor: 'var(--warning-soft)',
+                    borderColor: 'var(--warning)',
+                    color: 'var(--warning-text)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--warning)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--warning-soft)'}
+                >
+                  <ArrowLeft className="w-4 h-4 rotate-180" />
+                  Transferir Responsabilidade
+                </button>
+              )}
             </div>
 
             {/* Dates Block */}
@@ -518,6 +580,19 @@ const TaskDetail: React.FC = () => {
             discardChanges();
             navigate(-1);
           }}
+        />
+      )}
+
+      {task && isOwner && !isAdmin && (
+        <TransferResponsibilityModal
+          isOpen={transferModalOpen}
+          currentOwner={{ id: currentUser?.id || '', name: currentUser?.name || '' }}
+          collaborators={(task.collaboratorIds || [])
+            .map(id => users.find(u => u.id === id))
+            .filter((u): u is typeof users[0] => !!u)
+            .map(u => ({ id: u.id, name: u.name }))}
+          onConfirm={handleTransferResponsibility}
+          onCancel={() => setTransferModalOpen(false)}
         />
       )}
     </div>

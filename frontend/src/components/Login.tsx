@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, Key, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { User } from '@/types';
+import { User, Role } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth, normalizeEmail } from '@/contexts/AuthContext';
 import { fetchUsers } from '@/services/api';
@@ -104,7 +104,8 @@ export default function Login() {
         setAlertConfig(prev => ({ ...prev, show: false }));
         if (pendingRedirect) {
             const userToUse = currentUser || selectedUser;
-            const path = userToUse?.role === 'admin' ? '/admin/clients' : '/developer/projects';
+            const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+            const path = adminRoles.includes(userToUse?.role as Role) ? '/admin/clients' : '/developer/projects';
             navigate(path, { replace: true });
         }
     };
@@ -122,7 +123,8 @@ export default function Login() {
         if (urlParams.get('token') === 'xyz123') return;
 
         if (currentUser && mode === 'login') {
-            const path = currentUser.role === 'admin' ? '/admin/clients' : '/developer/projects';
+            const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+            const path = adminRoles.includes(currentUser.role) ? '/admin/clients' : '/developer/projects';
             navigate(path, { replace: true });
         }
     }, [authReady, currentUser, mode, navigate]);
@@ -191,12 +193,19 @@ export default function Login() {
 
                     if (otpErr) throw otpErr;
 
-                    // Guarda dados temporários
+                    const papelStr = String(colab.papel || '').toLowerCase();
+                    const isAdminRole = papelStr.includes('admin') ||
+                        papelStr.includes('gestor') ||
+                        papelStr.includes('diretoria') ||
+                        papelStr.includes('pmo') ||
+                        papelStr.includes('financeiro') ||
+                        papelStr.includes('tech_lead');
+
                     setSelectedUser({
                         id: String(colab.ID_Colaborador),
                         name: colab.NomeColaborador,
                         email: colab.email,
-                        role: String(colab.papel || '').toLowerCase().includes('admin') ? 'admin' : 'developer'
+                        role: isAdminRole ? 'admin' : 'developer' // Temporário até normalizar
                     } as User);
 
                     // Vai direto para verificação
@@ -360,11 +369,19 @@ export default function Login() {
             if (otpErr) throw otpErr;
 
             // 3. Guardar dados temporários do usuário
+            const papelStr = String(dbUser.papel || '').toLowerCase();
+            const isAdminRole = papelStr.includes('admin') ||
+                papelStr.includes('gestor') ||
+                papelStr.includes('diretoria') ||
+                papelStr.includes('pmo') ||
+                papelStr.includes('financeiro') ||
+                papelStr.includes('tech_lead');
+
             setSelectedUser({
                 id: String(dbUser.ID_Colaborador),
                 name: dbUser.NomeColaborador,
                 email: dbUser.email,
-                role: String(dbUser.papel || '').toLowerCase().includes('admin') ? 'admin' : 'developer'
+                role: isAdminRole ? 'admin' : 'developer'
             } as User);
 
             // 4. Ir direto para modo de verificação
@@ -418,11 +435,19 @@ export default function Login() {
             if (otpErr) throw otpErr;
 
             // 3. Guardar dados temporários do usuário para a próxima fase
+            const papelStr = String(dbUser.papel || '').toLowerCase();
+            const isAdminRole = papelStr.includes('admin') ||
+                papelStr.includes('gestor') ||
+                papelStr.includes('diretoria') ||
+                papelStr.includes('pmo') ||
+                papelStr.includes('financeiro') ||
+                papelStr.includes('tech_lead');
+
             setSelectedUser({
                 id: String(dbUser.ID_Colaborador),
                 name: dbUser.NomeColaborador,
                 email: dbUser.email,
-                role: String(dbUser.papel || '').toLowerCase().includes('admin') ? 'admin' : 'developer'
+                role: isAdminRole ? 'admin' : 'developer'
             } as User);
 
             // 4. Mudar para modo de verificação

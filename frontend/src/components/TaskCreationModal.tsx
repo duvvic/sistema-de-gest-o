@@ -24,6 +24,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
     const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [notes, setNotes] = useState('');
     const [priority, setPriority] = useState<Priority>('Medium');
     const [estimatedDelivery, setEstimatedDelivery] = useState('');
 
@@ -41,6 +42,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
             setCollaboratorIds([]);
             setTitle('');
             setDescription('');
+            setNotes('');
             setPriority('Medium');
 
             // Set default estimated delivery to 7 days from now
@@ -120,6 +122,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                 projectId,
                 title,
                 description,
+                notes,
                 developerId: developerId || undefined,
                 collaboratorIds: collaboratorIds || undefined,
                 priority,
@@ -287,8 +290,20 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Detalhes da tarefa..."
-                                rows={3}
+                                rows={2}
                                 className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm resize-none focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
+                            />
+                        </div>
+
+                        {/* Observações Rápidas */}
+                        <div>
+                            <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Observações Rápidas</label>
+                            <input
+                                type="text"
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                placeholder="Notas rápidas..."
+                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
                             />
                         </div>
 

@@ -2,7 +2,7 @@
 // Funções de comunicação com o Supabase
 
 import { supabase } from "./supabaseClient";
-import { User, Client, Project } from "@/types";
+import { User, Client, Project, Role } from "@/types";
 
 // =====================================================
 // INTERFACES DO BANCO DE DADOS (Raw Data)
@@ -103,7 +103,7 @@ export async function fetchUsers(): Promise<User[]> {
       avatarUrl: row.avatar_url || undefined,
       cargo: row.Cargo || row.cargo || undefined,
       // 'Administrador' -> admin, 'Padrão' ou qualquer outro -> developer
-      role: row.papel === 'Administrador' ? 'admin' : 'developer',
+      role: normalizeRole(row.papel),
       active: row.ativo !== false,
     }));
 
@@ -244,13 +244,18 @@ export async function fetchTasks(): Promise<DbTaskRow[]> {
 /**
  * Normaliza o papel/role do usuário
  */
-function normalizeRole(papel: string | null): "admin" | "developer" | "gestor" {
+function normalizeRole(papel: string | null): Role {
   if (!papel) return "developer";
 
   const p = papel.toLowerCase().trim();
 
   if (p === "admin" || p === "administrador") return "admin";
   if (p === "gestor" || p === "gerente" || p === "manager") return "gestor";
+  if (p === "diretoria" || p === "diretor") return "diretoria";
+  if (p === "pmo") return "pmo";
+  if (p === "financeiro") return "financeiro";
+  if (p === "tech_lead" || p === "techlead") return "tech_lead";
+  if (p === "consultor") return "consultor";
 
   return "developer";
 }

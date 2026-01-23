@@ -29,6 +29,21 @@ export function normalizeImpact(raw: string | null): Impact | undefined {
     return undefined;
 }
 
+export function getRoleDisplayName(role: string): string {
+    const r = role.toLowerCase().trim();
+    switch (r) {
+        case 'admin': return 'Administrador';
+        case 'gestor': return 'Gestor / Gerente';
+        case 'diretoria': return 'Diretoria';
+        case 'pmo': return 'PMO';
+        case 'financeiro': return 'Financeiro';
+        case 'tech_lead': return 'Tech Lead';
+        case 'consultor': return 'Consultor';
+        case 'developer': return 'Desenvolvedor';
+        default: return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+}
+
 export function formatDate(dateStr: string | null): string {
     if (!dateStr) {
         const defaultDate = new Date();
@@ -48,7 +63,7 @@ export function formatDate(dateStr: string | null): string {
     return new Date().toISOString().split("T")[0];
 }
 
-export function mapDbTaskToTask(row: any, userMap?: Map<string, any>): Task {
+export function mapDbTaskToTask(row: any, userMap?: Map<string, any>, projectName?: string, clientName?: string): Task {
     let developerName = undefined;
     if (row.ID_Colaborador && userMap) {
         const dev = userMap.get(String(row.ID_Colaborador));
@@ -62,7 +77,9 @@ export function mapDbTaskToTask(row: any, userMap?: Map<string, any>): Task {
         externalId: row.ID_Tarefa || undefined,
         title: (row.Afazer && row.Afazer !== 'null') ? row.Afazer : "(Sem título)",
         projectId: String(row.ID_Projeto),
+        projectName: projectName,
         clientId: String(row.ID_Cliente),
+        clientName: clientName,
         developer: developerName,
         developerId: row.ID_Colaborador ? String(row.ID_Colaborador) : undefined,
         collaboratorIds: [],
@@ -76,6 +93,7 @@ export function mapDbTaskToTask(row: any, userMap?: Map<string, any>): Task {
         impact: normalizeImpact(row.Impacto),
         risks: row.Riscos || undefined,
         notes: row["Observações"] || row.notes || undefined,
+        description: row.description || undefined,
         em_testes: !!row.em_testes,
         link_ef: row.link_ef || undefined,
         id_tarefa_novo: row.id_tarefa_novo,
@@ -87,15 +105,19 @@ function calculateDaysOverdue(estimated: string | null, actual: string | null, s
     if (!estimated) return 0;
     if (status === 'Review') return 0;
 
-    const deadline = new Date(estimated);
-    deadline.setHours(0, 0, 0, 0);
+    // Use local midnight to avoid timezone shifts
+    const parseLocalDate = (dateStr: string) => {
+        const parts = dateStr.split('T')[0].split('-');
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    };
+
+    const deadline = parseLocalDate(estimated);
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
     if (status === 'Done') {
         if (actual) {
-            const delivery = new Date(actual);
-            delivery.setHours(0, 0, 0, 0);
+            const delivery = parseLocalDate(actual);
             return Math.ceil((delivery.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24));
         }
         return 0;

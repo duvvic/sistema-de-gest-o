@@ -1,6 +1,6 @@
 // contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback, PropsWithChildren } from 'react';
-import { User } from '@/types';
+import { User, Role } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 
 interface AuthContextType {
@@ -46,8 +46,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const mapUserDataToUser = useCallback((userData: any): User => {
         const papel = String(userData.papel || '').trim().toLowerCase();
-        // admin se papel (case-insensitive) contém “admin” ou “administrador”
-        const role = (papel.includes('admin') || papel.includes('administrador')) ? 'admin' : 'developer';
+
+        // Mapeamento granular de papéis
+        let role: Role = 'developer';
+
+        if (papel.includes('admin') || papel.includes('administrador')) {
+            role = 'admin';
+        } else if (papel.includes('gestor') || papel.includes('gerente')) {
+            role = 'gestor';
+        } else if (papel.includes('diretoria') || papel.includes('diretor')) {
+            role = 'diretoria';
+        } else if (papel.includes('pmo')) {
+            role = 'pmo';
+        } else if (papel.includes('financeiro')) {
+            role = 'financeiro';
+        } else if (papel.includes('tech_lead') || papel.includes('techlead')) {
+            role = 'tech_lead';
+        } else if (papel.includes('consultor')) {
+            role = 'consultor';
+        }
 
         return {
             id: String(userData.ID_Colaborador),
@@ -283,7 +300,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             currentUser,
             isLoading: !authReady || isLoading,
             authReady,
-            isAdmin: currentUser?.role === 'admin',
+            isAdmin: !!currentUser && ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'].includes(currentUser.role),
             login,
             loginWithSession,
             logout,

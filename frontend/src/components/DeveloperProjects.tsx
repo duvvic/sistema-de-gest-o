@@ -9,7 +9,7 @@ type ViewMode = 'grid' | 'list';
 
 const DeveloperProjects: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { tasks, projects, clients, projectMembers, users, loading } = useDataController();
 
   const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
@@ -25,7 +25,7 @@ const DeveloperProjects: React.FC = () => {
   // === FILTRAGEM DE DADOS (Limitação do Colaborador) ===
   const myTasks = React.useMemo(() => {
     if (!currentUser) return [];
-    if (currentUser.role === 'admin') return tasks;
+    if (isAdmin) return tasks;
     return tasks.filter(t => t.developerId === currentUser.id);
   }, [tasks, currentUser]);
 
@@ -42,7 +42,7 @@ const DeveloperProjects: React.FC = () => {
 
   const myProjects = React.useMemo(() => {
     if (!currentUser) return [];
-    if (currentUser.role === 'admin') return projects;
+    if (isAdmin) return projects;
 
     // Projetos onde tem tarefa OU é membro
     return projects.filter(p => myProjectIdsFromTasks.has(p.id) || myMemberProjectIds.has(p.id));
@@ -136,7 +136,7 @@ const DeveloperProjects: React.FC = () => {
                       const getMyTasks = () => {
                         const allProjectTasks = tasks.filter(t => t.projectId === project.id);
                         if (!currentUser) return [];
-                        if (currentUser.role === 'admin') return allProjectTasks;
+                        if (isAdmin) return allProjectTasks;
                         return allProjectTasks.filter(t =>
                           t.developerId === currentUser.id ||
                           (t.collaboratorIds && t.collaboratorIds.includes(currentUser.id))
@@ -255,7 +255,7 @@ const DeveloperProjects: React.FC = () => {
               const getMyTasks = () => {
                 const allProjectTasks = tasks.filter(t => t.projectId === project.id);
                 if (!currentUser) return [];
-                if (currentUser.role === 'admin') return allProjectTasks;
+                if (isAdmin) return allProjectTasks;
                 return allProjectTasks.filter(t =>
                   t.developerId === currentUser.id ||
                   (t.collaboratorIds && t.collaboratorIds.includes(currentUser.id))

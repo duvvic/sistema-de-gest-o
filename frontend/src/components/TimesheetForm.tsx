@@ -13,7 +13,7 @@ const TimesheetForm: React.FC = () => {
   const { entryId } = useParams<{ entryId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { users, clients, projects, tasks, timesheetEntries, createTimesheet, updateTimesheet, deleteTimesheet, updateTask } = useDataController();
 
   const isNew = !entryId || entryId === 'new';
@@ -25,7 +25,7 @@ const TimesheetForm: React.FC = () => {
   const preSelectedClientId = searchParams.get('clientId');
   const user = currentUser;
 
-  const isAdmin = currentUser?.role === 'admin';
+
   const isEditing = !!initialEntry;
 
   const [formData, setFormData] = useState<Partial<TimesheetEntry>>({
@@ -80,18 +80,31 @@ const TimesheetForm: React.FC = () => {
         }));
       }
     } else if (user) {
+      // SMART DEFAULT: Find existing entries for this user on this day to suggest a start time
+      const targetDate = preSelectedDate || new Date().toISOString().split('T')[0];
+      const targetUserId = preSelectedUserId || user.id;
+
+      const dayEntries = timesheetEntries
+        .filter(e => e.date === targetDate && e.userId === targetUserId)
+        .sort((a, b) => (b.endTime || '').localeCompare(a.endTime || ''));
+
+      const lastEndTime = dayEntries.length > 0 ? dayEntries[0].endTime : '09:00';
+      const suggestedEnd = lastEndTime === '18:00' ? '18:00' : (lastEndTime > '18:00' ? lastEndTime : '18:00');
+
       setFormData(prev => ({
         ...prev,
-        userId: user.id,
-        userName: user.name,
+        userId: targetUserId,
+        userName: isAdmin ? (users.find(u => u.id === targetUserId)?.name || user.name) : user.name,
         clientId: preSelectedClientId || prev.clientId,
         projectId: preSelectedProjectId || prev.projectId,
         taskId: preSelectedTaskId || prev.taskId,
-        date: preSelectedDate || prev.date,
-        lunchDeduction: true
+        date: targetDate,
+        startTime: lastEndTime,
+        endTime: suggestedEnd,
+        lunchDeduction: dayEntries.length === 0 // Default to true only for the first entry of the day
       }));
     }
-  }, [initialEntry, user, isAdmin, preSelectedUserId, users, preSelectedClientId, preSelectedProjectId, preSelectedTaskId, preSelectedDate]);
+  }, [initialEntry, user, isAdmin, preSelectedUserId, users, preSelectedClientId, preSelectedProjectId, preSelectedTaskId, preSelectedDate, timesheetEntries]);
 
   // Update progress when task changes
   useEffect(() => {
@@ -365,8 +378,9 @@ const TimesheetForm: React.FC = () => {
                           markDirty();
                           setFormData({ ...formData, userId: u?.id || '', userName: u?.name || '' });
                         }}
-                        className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--ring)]"
-                        style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                        disabled={isEditing}
+                        className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-70 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: isEditing ? 'var(--surface-2)' : 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       >
                         <option value="">Selecione...</option>
                         {users.filter(u => u.active !== false).map(u => (
@@ -388,8 +402,9 @@ const TimesheetForm: React.FC = () => {
                       <select
                         value={formData.clientId}
                         onChange={(e) => { markDirty(); setFormData({ ...formData, clientId: e.target.value, projectId: '', taskId: '' }); }}
-                        className="w-full p-2.5 border rounded-lg outline-none font-bold text-sm transition-all focus:ring-1 focus:ring-[var(--ring)]"
-                        style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                        disabled={isEditing}
+                        className="w-full p-2.5 border rounded-lg outline-none font-bold text-sm transition-all focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-70 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: isEditing ? 'var(--surface-2)' : 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       >
                         <option value="">Selecione...</option>
                         {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -400,9 +415,9 @@ const TimesheetForm: React.FC = () => {
                       <select
                         value={formData.projectId}
                         onChange={(e) => { markDirty(); setFormData({ ...formData, projectId: e.target.value, taskId: '' }); }}
-                        className="w-full p-2.5 border rounded-lg outline-none font-bold text-sm transition-all focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                        disabled={!formData.clientId}
+                        disabled={!formData.clientId || isEditing}
+                        className="w-full p-2.5 border rounded-lg outline-none font-bold text-sm transition-all focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: isEditing ? 'var(--surface-2)' : 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       >
                         <option value="">Selecione...</option>
                         {filteredProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -416,9 +431,9 @@ const TimesheetForm: React.FC = () => {
                     <select
                       value={formData.taskId}
                       onChange={(e) => { markDirty(); setFormData({ ...formData, taskId: e.target.value }); }}
-                      className="w-full p-2.5 border rounded-lg outline-none font-bold text-sm transition-all focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-50"
-                      style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                      disabled={!formData.projectId}
+                      disabled={!formData.projectId || isEditing}
+                      className="w-full p-2.5 border rounded-lg outline-none font-bold text-sm transition-all focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: isEditing ? 'var(--surface-2)' : 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
                     >
                       <option value="">Selecione a tarefa...</option>
                       {filteredTasks.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
@@ -541,10 +556,13 @@ const TimesheetForm: React.FC = () => {
                 {/* Total & Progress */}
                 <div className="flex justify-between items-center p-4 rounded-xl border shadow-inner mt-2"
                   style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-xs uppercase tracking-widest opacity-70" style={{ color: 'var(--text)' }}>Total:</span>
+                  <div className="flex flex-col">
+                    <span className="font-extrabold text-[10px] uppercase tracking-widest opacity-50" style={{ color: 'var(--text)' }}>Total deste lançamento:</span>
+                    <span className="text-[10px] font-bold" style={{ color: 'var(--muted)' }}>
+                      {deductLunch ? '(Considerando 1h de almoço)' : '(Sem desconto de almoço)'}
+                    </span>
                   </div>
-                  <div className={`text-3xl font-black ${adjustedTotalHours > 11 ? 'text-red-500' : ''}`} style={{ color: adjustedTotalHours > 11 ? undefined : 'var(--primary)' }}>
+                  <div className={`text-4xl font-black transition-all ${adjustedTotalHours > 11 ? 'text-red-500 scale-110' : ''}`} style={{ color: adjustedTotalHours > 11 ? undefined : 'var(--primary)' }}>
                     {timeDisplay}
                   </div>
                 </div>

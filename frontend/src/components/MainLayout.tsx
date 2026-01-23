@@ -3,6 +3,7 @@ import { ThemeContext } from '@/App';
 import HelpButton from './HelpButton';
 import { Outlet, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Role } from '@/types';
 import {
     LayoutDashboard,
     Users,
@@ -56,7 +57,9 @@ const MainLayout: React.FC = () => {
         { path: '/docs', icon: Book, label: 'Documentação' },
     ];
 
-    const menuItems = currentUser?.role === 'admin'
+    const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+
+    const menuItems = adminRoles.includes(currentUser?.role as Role)
         ? adminMenuItems.filter(item =>
             item.label !== 'Sincronização' || currentUser?.cargo?.toLowerCase() === 'manutenção'
         )

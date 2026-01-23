@@ -49,21 +49,7 @@ const UserTasks: React.FC<UserTasksProps> = ({
     return myTasks.filter((t) => t.projectId === filterProjectId);
   }, [myTasks, filterProjectId]);
 
-  const isTaskDelayed = (task: Task) => {
-    if (task.status === 'Done' || task.status === 'Review') return false;
-    if (!task.estimatedDelivery) return false;
-    if (task.actualDelivery) return false; // already done
-    try {
-      const due = new Date(task.estimatedDelivery);
-      const today = new Date();
-      // normalize dates (compare yyyy-mm-dd only)
-      const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-      const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      return dueDay < todayDay;
-    } catch (e) {
-      return false;
-    }
-  };
+  const isTaskDelayed = (task: Task) => (task.daysOverdue ?? 0) > 0;
 
 
   // ================================

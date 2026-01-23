@@ -6,6 +6,7 @@ import { User, Task } from '@/types';
 import { Briefcase, Mail, CheckSquare, ShieldCheck, User as UserIcon, Search, Trash2, AlertCircle, CheckCircle, Plus, ChevronUp, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmationModal from './ConfirmationModal';
+import { getRoleDisplayName } from '@/utils/normalizers';
 
 const TeamList: React.FC = () => {
   const navigate = useNavigate();
@@ -37,14 +38,7 @@ const TeamList: React.FC = () => {
 
   // Helpers
   const isTaskDelayed = (task: Task): boolean => {
-    if (task.status === 'Done' || task.status === 'Review') return false;
-    if (!task.estimatedDelivery) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const parts = task.estimatedDelivery.split('-');
-    if (parts.length !== 3) return false;
-    const dueDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    return today > dueDate;
+    return (task.daysOverdue ?? 0) > 0;
   };
 
   // Filter Logic
@@ -461,7 +455,7 @@ const TeamList: React.FC = () => {
                             <div className="flex items-center gap-2 mt-1">
                               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase shadow-sm border`}
                                 style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', borderColor: 'rgba(76, 29, 149, 0.1)' }}>
-                                {user.role === 'admin' ? 'Admin' : 'Equipe'}
+                                {getRoleDisplayName(user.role)}
                               </span>
                               {user.cargo && (
                                 <p className="text-xs font-semibold truncate" style={{ color: 'var(--muted)' }}>{user.cargo}</p>

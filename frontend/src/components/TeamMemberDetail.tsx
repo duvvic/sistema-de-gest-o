@@ -5,6 +5,7 @@ import { useDataController } from '@/controllers/useDataController';
 import { Task } from '@/types';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer, Edit, Trash2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
+import { getRoleDisplayName } from '@/utils/normalizers';
 
 import TimesheetCalendar from './TimesheetCalendar';
 
@@ -21,17 +22,7 @@ const TeamMemberDetail: React.FC = () => {
    const user = users.find(u => u.id === userId);
 
    // Helpers
-   const getDelayDays = (task: Task) => {
-      if (task.status === 'Done' || task.status === 'Review') return 0;
-      if (!task.estimatedDelivery) return 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const parts = task.estimatedDelivery.split('-');
-      const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const diffTime = today.getTime() - due.getTime();
-      const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return today > due ? (days > 0 ? days : 0) : 0;
-   };
+   const getDelayDays = (task: Task) => (task.daysOverdue ?? 0);
 
    const getTaskPriority = (task: Task) => {
       const delay = getDelayDays(task);
@@ -211,7 +202,7 @@ const TeamMemberDetail: React.FC = () => {
                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-sm border"
                      style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
-                     {user.role === 'admin' ? 'Administrador' : 'Equipe'}
+                     {getRoleDisplayName(user.role)}
                   </span>
                   {user.cargo && (
                      <>

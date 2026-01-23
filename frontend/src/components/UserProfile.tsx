@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
 import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft, Zap } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
+import { getRoleDisplayName } from '@/utils/normalizers';
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, updateUser: updateAuthUser } = useAuth();
+  const { currentUser, updateUser: updateAuthUser, isAdmin } = useAuth();
   // Use controller to get fresh data about current user if needed, or rely on AuthContext
   const { users, updateUser } = useDataController();
 
@@ -179,14 +180,14 @@ const UserProfile: React.FC = () => {
                     color: 'var(--primary)',
                     borderColor: 'rgba(76, 29, 149, 0.2)'
                   }}>
-                  {user.role === 'admin' ? '👑 Administrador' : '💼 Equipe'}
+                  {getRoleDisplayName(user.role)}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Infra / Sincronização Section (Admin Only & Disabled) */}
-          {user.role === 'admin' && (
+          {isAdmin && (
             <div className="p-8 rounded-2xl border shadow-sm space-y-4 opacity-50 grayscale pointer-events-none select-none"
               style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
               <div className="flex items-center justify-between">

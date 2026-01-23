@@ -292,13 +292,7 @@ const AdminMonitoringView: React.FC = () => {
     const clientMap = useMemo(() => new Map(allClients.map(c => [c.id, c])), [allClients]);
     const projectMap = useMemo(() => new Map(allProjects.map(p => [p.id, p])), [allProjects]);
 
-    const isTaskDelayed = (task: Task) => {
-        if (task.status === 'Done' || task.status === 'Review') return false;
-        if (!task.estimatedDelivery) return false;
-        const deadline = new Date(task.estimatedDelivery);
-        deadline.setHours(23, 59, 59, 999);
-        return deadline < new Date();
-    };
+    const isTaskDelayed = (task: Task) => (task.daysOverdue ?? 0) > 0;
 
     const activeProjects = useMemo(() => {
         return allProjects.filter(p => {
@@ -458,7 +452,7 @@ const AdminMonitoringView: React.FC = () => {
                                             (task.status as any) === 'Todo' ? 'Não Iniciado' : 'Concluído';
 
                                     const shadowClass = delayed
-                                        ? 'shadow-[0_0_20px_rgba(239,68,68,0.15)] border-red-100'
+                                        ? 'shadow-[0_0_20px_rgba(239,68,68,0.3)] border-red-500 border-2'
                                         : isReview
                                             ? 'shadow-[0_0_20px_rgba(245,158,11,0.2)] border-amber-200'
                                             : 'shadow-sm';

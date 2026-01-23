@@ -87,6 +87,11 @@ export const useDataController = () => {
         ));
     };
 
+    const deleteClient = async (clientId: string): Promise<void> => {
+        await clientService.deleteClient(clientId);
+        setClients(prev => prev.filter(c => c.id !== clientId));
+    };
+
     // === PROJECT CONTROLLERS ===
 
     const getProjectById = (id: string): Project | undefined => {
@@ -221,7 +226,7 @@ export const useDataController = () => {
                 NomeColaborador: userData.name,
                 email: userData.email,
                 Cargo: userData.cargo,
-                papel: userData.role === 'admin' ? 'Administrador' : 'Padrão',
+                papel: userData.role ? userData.role.charAt(0).toUpperCase() + userData.role.slice(1) : 'Padrão',
                 ativo: userData.active ?? true
             }])
             .select('ID_Colaborador')
@@ -235,7 +240,7 @@ export const useDataController = () => {
         if (updates.name !== undefined) payload.NomeColaborador = updates.name;
         if (updates.email !== undefined) payload.email = updates.email;
         if (updates.cargo !== undefined) payload.Cargo = updates.cargo;
-        if (updates.role !== undefined) payload.papel = updates.role === 'admin' ? 'Administrador' : 'Padrão';
+        if (updates.role !== undefined) payload.papel = updates.role.charAt(0).toUpperCase() + updates.role.slice(1);
         if (updates.active !== undefined) payload.ativo = updates.active;
         if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
 
@@ -282,7 +287,7 @@ export const useDataController = () => {
 
     return {
         clients, projects, tasks, users, timesheetEntries, projectMembers, loading, error,
-        getClientById, getActiveClients, createClient, updateClient, deactivateClient,
+        getClientById, getActiveClients, createClient, updateClient, deactivateClient, deleteClient,
         getProjectById, getProjectsByClient, createProject, updateProject,
         getTaskById, getTasksByProject, getTasksByUser, createTask, updateTask, deleteTask,
         getTimesheetsByUser, createTimesheet, updateTimesheet, deleteTimesheet,

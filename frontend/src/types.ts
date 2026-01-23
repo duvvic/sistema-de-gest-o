@@ -3,7 +3,7 @@
 
 export type Status = 'Todo' | 'In Progress' | 'Review' | 'Done';
 
-export type Role = 'admin' | 'developer' | 'gestor';
+export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'financeiro' | 'tech_lead' | 'consultor';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Impact = 'Low' | 'Medium' | 'High';
@@ -48,7 +48,9 @@ export interface Task {
   externalId?: string;
   title: string;
   projectId: string;
+  projectName?: string; // NOVO: Nome do projeto para facilitar exibição
   clientId: string;
+  clientName?: string; // NOVO: Nome do cliente para facilitar exibição
   status: Status;
   estimatedDelivery: string;
   progress: number;
