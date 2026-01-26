@@ -177,9 +177,10 @@ export function mapDbProjectToProject(row: any): Project {
 }
 
 export function mapDbUserToUser(row: any): User {
-    const normalizeRole = (papel: string | null): Role => {
-        if (!papel) return "developer";
-        const p = papel.toLowerCase().trim();
+    const normalizeUserRole = (roleValue: string | null): Role => {
+        if (!roleValue) return "developer";
+        const p = roleValue.toLowerCase().trim();
+        if (p === 'system_admin' || p === 'system admin') return 'system_admin';
         if (p === 'diretoria') return 'diretoria';
         if (p === 'pmo') return 'pmo';
         if (p === 'gestor') return 'gestor';
@@ -195,7 +196,7 @@ export function mapDbUserToUser(row: any): User {
         email: String(row.email || "").trim().toLowerCase(),
         avatarUrl: row.avatar_url || undefined,
         cargo: row.Cargo || undefined,
-        role: normalizeRole(row.role),
+        role: normalizeUserRole(row.role),
         active: row.ativo !== false,
         tower: row.tower || row.torre || undefined,
         hourlyCost: row.custo_hora ? Number(row.custo_hora) : undefined,

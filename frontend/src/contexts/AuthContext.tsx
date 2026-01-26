@@ -313,7 +313,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             currentUser,
             isLoading: !authReady || isLoading,
             authReady,
-            isAdmin: !!currentUser && ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'].includes(currentUser.role),
+            isAdmin: !!currentUser && ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive'].includes(currentUser.role),
             login,
             loginWithSession,
             logout,

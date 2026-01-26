@@ -14,8 +14,7 @@ type SortOption = 'recent' | 'alphabetical' | 'creation';
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { clients: initialClients, projects: initialProjects, tasks: initialTasks, error, loading, users, deleteProject } = useDataController();
-  const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const { currentUser, isAdmin } = useAuth();
 
   const [clients, setClients] = useState(initialClients);
   const [projects, setProjects] = useState(initialProjects);

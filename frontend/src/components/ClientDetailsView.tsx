@@ -10,8 +10,7 @@ const ClientDetailsView: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { clients, projects, tasks, users, getClientById, projectMembers, deleteProject, deleteTask } = useDataController();
-  const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const { currentUser, isAdmin } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'projects' | 'tasks'>('projects');
   const [selectedDeveloperId, setSelectedDeveloperId] = useState<string>('');

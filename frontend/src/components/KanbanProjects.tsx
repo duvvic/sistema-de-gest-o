@@ -203,7 +203,7 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
 
   const safeProjects = projects || [];
   const safeClients = clients || [];
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'system_admin';
 
   // Filtrar por cliente específico (se fornecido)
   const clientFilteredProjects = filteredClientId

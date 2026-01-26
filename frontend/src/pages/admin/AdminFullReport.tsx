@@ -158,7 +158,7 @@ const DateButton = ({ label, value, onChange }: { label: string, value: string, 
 // --- Tela Principal ---
 const AdminFullReport: React.FC = () => {
     const navigate = useNavigate();
-    const { currentUser } = useAuth();
+    const { currentUser, isAdmin } = useAuth();
     const { clients: ctxClients, projects: ctxProjects, users: ctxUsers, loading: dataLoading } = useData();
 
     // Estados de Filtros (sempre começam limpos)
@@ -242,7 +242,7 @@ const AdminFullReport: React.FC = () => {
 
     // Carregar Opções (Simplificado: apenas valida acesso)
     useEffect(() => {
-        if (currentUser?.role !== 'admin') {
+        if (!isAdmin) {
             navigate('/dashboard');
             return;
         }

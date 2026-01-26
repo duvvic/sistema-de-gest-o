@@ -104,7 +104,7 @@ export default function Login() {
         setAlertConfig(prev => ({ ...prev, show: false }));
         if (pendingRedirect) {
             const userToUse = currentUser || selectedUser;
-            const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+            const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive'];
             const path = adminRoles.includes(userToUse?.role as Role) ? '/admin/clients' : '/developer/projects';
             navigate(path, { replace: true });
         }
@@ -123,7 +123,7 @@ export default function Login() {
         if (urlParams.get('token') === 'xyz123') return;
 
         if (currentUser && mode === 'login') {
-            const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+            const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive'];
             const path = adminRoles.includes(currentUser.role) ? '/admin/clients' : '/developer/projects';
             navigate(path, { replace: true });
         }
@@ -199,7 +199,9 @@ export default function Login() {
                         papelStr.includes('diretoria') ||
                         papelStr.includes('pmo') ||
                         papelStr.includes('financeiro') ||
-                        papelStr.includes('tech_lead');
+                        papelStr.includes('tech_lead') ||
+                        papelStr.includes('system_admin') ||
+                        papelStr.includes('executive');
 
                     setSelectedUser({
                         id: String(colab.ID_Colaborador),
@@ -375,7 +377,9 @@ export default function Login() {
                 papelStr.includes('diretoria') ||
                 papelStr.includes('pmo') ||
                 papelStr.includes('financeiro') ||
-                papelStr.includes('tech_lead');
+                papelStr.includes('tech_lead') ||
+                papelStr.includes('system_admin') ||
+                papelStr.includes('executive');
 
             setSelectedUser({
                 id: String(dbUser.ID_Colaborador),
@@ -441,7 +445,9 @@ export default function Login() {
                 papelStr.includes('diretoria') ||
                 papelStr.includes('pmo') ||
                 papelStr.includes('financeiro') ||
-                papelStr.includes('tech_lead');
+                papelStr.includes('tech_lead') ||
+                papelStr.includes('system_admin') ||
+                papelStr.includes('executive');
 
             setSelectedUser({
                 id: String(dbUser.ID_Colaborador),
