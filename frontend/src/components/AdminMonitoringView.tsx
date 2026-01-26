@@ -573,7 +573,7 @@ const AdminMonitoringView: React.FC = () => {
                         );
                     })()}
 
-                    <div className="relative min-h-[385px]">
+                    <div className="relative min-h-[470px]">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={taskPage}
@@ -622,7 +622,7 @@ const AdminMonitoringView: React.FC = () => {
                                             .filter(Boolean) as User[];
 
                                         return (
-                                            <div key={`${task.id}-${idx}`} className={`bg-white border rounded-2xl p-4 relative flex flex-col group h-[200px] hover:border-purple-200 transition-all ${shadowClass} overflow-hidden shadow-md`}>
+                                            <div key={`${task.id}-${idx}`} className={`bg-white border rounded-2xl p-4 relative flex flex-col group h-[225px] hover:border-purple-200 transition-all ${shadowClass} overflow-hidden shadow-md`}>
                                                 <div className="flex justify-between items-start mb-2">
                                                     <Badge status={delayed ? 'atraso' : statusLabel.toLowerCase()} className="text-[9px] py-0.5 px-2">{finalStatusLabel}</Badge>
                                                     <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 p-1.5 flex items-center justify-center overflow-hidden shadow-sm group-hover:bg-white transition-all shrink-0">
@@ -669,7 +669,7 @@ const AdminMonitoringView: React.FC = () => {
                                                 </div>
 
                                                 {/* Barra de Progresso Visual Compacta */}
-                                                <div className="mt-2 mb-1">
+                                                <div className="mt-1.5 mb-1">
                                                     <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                                                         <div
                                                             className={`h-full transition-all duration-500 ${delayed ? 'bg-red-500' : 'bg-purple-600'}`}
@@ -678,7 +678,7 @@ const AdminMonitoringView: React.FC = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-slate-100">
+                                                <div className="flex items-center justify-between mt-auto pt-1 border-t border-slate-100">
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <div className="flex -space-x-1.5">
                                                             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-purple-200 shadow-sm shrink-0 z-10 bg-white">
