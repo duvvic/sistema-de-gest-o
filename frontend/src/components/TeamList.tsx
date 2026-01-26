@@ -290,7 +290,16 @@ const TeamList: React.FC = () => {
                     <div className={`w-12 h-12 rounded-full border-2 p-0.5 transition-all duration-300 ${isSelected ? 'border-red-500 ring-2 ring-red-500/30' : 'border-red-500/30 group-hover:border-red-500'}`}>
                       <div className="w-full h-full rounded-full overflow-hidden bg-[var(--surface-2)]">
                         {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null; // Prevent infinite loop
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=f8fafc&color=475569`;
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-red-600 to-amber-600">
                             {user.name.charAt(0)}
@@ -445,7 +454,16 @@ const TeamList: React.FC = () => {
                               borderColor: accentColor
                             }}>
                             {user.avatarUrl ? (
-                              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                              <img
+                                src={user.avatarUrl}
+                                alt={user.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.onerror = null;
+                                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=f8fafc&color=475569`;
+                                }}
+                              />
                             ) : (
                               user.name.substring(0, 2).toUpperCase()
                             )}

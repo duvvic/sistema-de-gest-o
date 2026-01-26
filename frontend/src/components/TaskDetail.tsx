@@ -180,11 +180,9 @@ const TaskDetail: React.FC = () => {
 
 
   const availableProjectsIds = React.useMemo(() => {
-    if (isAdmin) return projects.map(p => p.id);
-    return projectMembers
-      .filter(pm => pm.userId === currentUser?.id)
-      .map(pm => pm.projectId);
-  }, [projectMembers, currentUser, isAdmin, projects]);
+    // Permite que qualquer usuário veja todos os projetos ativos ao criar/editar tarefa
+    return projects.map(p => p.id);
+  }, [projects]);
 
   const availableClientIds = React.useMemo(() => {
     if (isAdmin) return clients.map(c => c.id);

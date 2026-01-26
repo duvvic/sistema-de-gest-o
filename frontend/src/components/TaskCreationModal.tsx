@@ -61,13 +61,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
         const matchesClient = p.clientId === clientId;
         const isActive = p.active !== false;
 
-        if (!matchesClient || !isActive) return false;
-
-        // Admin sees all projects
-        if (isAdmin) return true;
-
-        // Collaborators only see projects they are members of
-        return projectMembers.some(pm => pm.projectId === p.id && pm.userId === currentUser?.id);
+        return matchesClient && isActive;
     });
 
     // Filter Clients: Only show clients that have at least one project accessible to the user
@@ -86,12 +80,8 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
             return c.name.toLowerCase().includes('nic-labs');
         }
 
-        // Operational collaborators only see clients that they have projects in
-        return projects.some(p =>
-            p.clientId === c.id &&
-            p.active !== false &&
-            projectMembers.some(pm => pm.projectId === p.id && pm.userId === currentUser?.id)
-        );
+        // Operational collaborators see all active clients
+        return true;
     });
 
     const filteredUsers = projectId

@@ -111,23 +111,24 @@ const AdminMonitoringView: React.FC = () => {
                     let conditionText = 'Nublado';
 
                     // Mapeamento de condições simplificado e mais preciso
+                    // Mapeamento de condições simplificado e mais preciso
                     const mappings: any = {
-                        0: { text: 'Céu Limpo', gif: '2600_fe0f' },
-                        1: { text: 'Céu Limpo', gif: '2600_fe0f' },
-                        2: { text: 'Parcialmente Nublado', gif: '1f324_fe0f' },
-                        3: { text: 'Nublado', gif: '2601_fe0f' },
-                        45: { text: 'Nevoeiro', gif: '1f32b_fe0f' },
-                        48: { text: 'Nevoeiro', gif: '1f32b_fe0f' },
-                        51: { text: 'Chuvisco', gif: '1f327_fe0f' },
-                        61: { text: 'Chuva Leve', gif: '1f327_fe0f' },
-                        63: { text: 'Chuva', gif: '1f327_fe0f' },
-                        80: { text: 'Pancadas de Chuva', gif: '1f327_fe0f' },
-                        95: { text: 'Tempestade', gif: '26c8_fe0f' },
+                        0: { text: 'Céu Limpo', hex: '2600' },
+                        1: { text: 'Céu Limpo', hex: '2600' },
+                        2: { text: 'Parcialmente Nublado', hex: '1f324' },
+                        3: { text: 'Nublado', hex: '2601' },
+                        45: { text: 'Nevoeiro', hex: '1f32b' },
+                        48: { text: 'Nevoeiro', hex: '1f32b' },
+                        51: { text: 'Chuvisco', hex: '1f327' },
+                        61: { text: 'Chuva Leve', hex: '1f327' },
+                        63: { text: 'Chuva', hex: '1f327' },
+                        80: { text: 'Pancadas de Chuva', hex: '1f327' },
+                        95: { text: 'Tempestade', hex: '26c8' },
                     };
 
-                    const match = mappings[code] || { text: 'Nublado', gif: '2601_fe0f' };
+                    const match = mappings[code] || { text: 'Nublado', hex: '2601' };
                     conditionText = match.text;
-                    iconUrl = `https://fonts.gstatic.com/s/e/notoemoji/latest/${match.gif}/512.gif`;
+                    iconUrl = `https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/512/emoji_u${match.hex}.png`;
 
                     setWeather({
                         temp: Math.round(data.current.temperature_2m),
@@ -535,7 +536,15 @@ const AdminMonitoringView: React.FC = () => {
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     {/* Desenvolvedor Responsável */}
                                                     <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-200 shadow-sm shrink-0">
-                                                        <img src={dev?.avatarUrl || `https://ui-avatars.com/api/?name=${task.developer}&background=f8fafc&color=475569`} className="w-full h-full object-cover" />
+                                                        <img
+                                                            src={dev?.avatarUrl || `https://ui-avatars.com/api/?name=${task.developer}&background=f8fafc&color=475569`}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                const target = e.target as HTMLImageElement;
+                                                                target.onerror = null;
+                                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(task.developer)}&background=f8fafc&color=475569`;
+                                                            }}
+                                                        />
                                                     </div>
 
                                                     {/* Colaboradores Extras */}
@@ -550,6 +559,11 @@ const AdminMonitoringView: React.FC = () => {
                                                                     <img
                                                                         src={collab.avatarUrl || `https://ui-avatars.com/api/?name=${collab.name}&background=e0e7ff&color=6366f1`}
                                                                         className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            const target = e.target as HTMLImageElement;
+                                                                            target.onerror = null;
+                                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(collab.name)}&background=e0e7ff&color=6366f1`;
+                                                                        }}
                                                                     />
                                                                 </div>
                                                             ))}
@@ -734,7 +748,15 @@ const AdminMonitoringView: React.FC = () => {
                                         <div key={`${member.id}-${idx}`} className="min-w-[280px] h-[140px] bg-white border border-slate-200 rounded-[2rem] p-5 flex flex-col justify-between shadow-md group hover:border-emerald-300 transition-all relative overflow-hidden">
                                             <div className="flex items-center gap-4 mb-3">
                                                 <div className="w-14 h-14 rounded-full p-0.5 border-2 border-slate-100 shadow-sm shrink-0">
-                                                    <img src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.name}&background=f8fafc&color=475569`} className="w-full h-full rounded-full object-cover" />
+                                                    <img
+                                                        src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.name}&background=f8fafc&color=475569`}
+                                                        className="w-full h-full rounded-full object-cover"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.onerror = null;
+                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=f8fafc&color=475569`;
+                                                        }}
+                                                    />
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
                                                     <h4 className="text-[14px] font-black text-slate-800 uppercase tracking-tight truncate leading-tight">{member.name}</h4>
