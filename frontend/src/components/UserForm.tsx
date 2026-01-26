@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { User, Role } from '@/types';
-import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield } from 'lucide-react';
+import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield, Zap } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 
 const UserForm: React.FC = () => {
@@ -22,7 +22,11 @@ const UserForm: React.FC = () => {
     cargo: '',
     role: 'developer' as Role,
     active: true,
-    avatarUrl: ''
+    avatarUrl: '',
+    tower: '',
+    hourlyCost: 0,
+    dailyAvailableHours: 8,
+    monthlyAvailableHours: 160
   });
 
   useEffect(() => {
@@ -33,7 +37,11 @@ const UserForm: React.FC = () => {
         cargo: initialUser.cargo || '',
         role: initialUser.role,
         active: initialUser.active !== false,
-        avatarUrl: initialUser.avatarUrl || ''
+        avatarUrl: initialUser.avatarUrl || '',
+        tower: initialUser.tower || '',
+        hourlyCost: initialUser.hourlyCost || 0,
+        dailyAvailableHours: initialUser.dailyAvailableHours || 8,
+        monthlyAvailableHours: initialUser.monthlyAvailableHours || 160
       });
     }
   }, [initialUser]);
@@ -60,9 +68,13 @@ const UserForm: React.FC = () => {
         NomeColaborador: formData.name,
         email: formData.email,
         Cargo: formData.cargo,
-        papel: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
+        role: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
         ativo: formData.active,
-        avatar_url: formData.avatarUrl
+        avatar_url: formData.avatarUrl,
+        torre: formData.tower,
+        custo_hora: formData.hourlyCost,
+        horas_disponiveis_dia: formData.dailyAvailableHours,
+        horas_disponiveis_mes: formData.monthlyAvailableHours
       };
 
       if (isNew) {
@@ -231,16 +243,87 @@ const UserForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Avatar URL (Opcional, manual por enquanto) */}
+            {/* Especialização & Torre */}
             <div>
-              <label className="block text-sm font-medium text-[var(--text)] mb-2">Avatar URL (Opcional)</label>
-              <input
-                type="text"
-                value={formData.avatarUrl}
-                onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-                className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-sm font-mono text-[var(--textMuted)]"
-                placeholder="https://..."
-              />
+              <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-purple-500" />
+                Torre de Atuação / Especialidade
+              </label>
+              <select
+                value={formData.tower}
+                onChange={(e) => setFormData({ ...formData, tower: e.target.value })}
+                className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text)]"
+              >
+                <option value="">Selecione a torre...</option>
+                <option value="ABAP">ABAP</option>
+                <option value="Fiori">Fiori / UI5</option>
+                <option value="GP">Gerência de Projetos (GP)</option>
+                <option value="Funcional SD">Funcional SD</option>
+                <option value="Funcional MM">Funcional MM</option>
+                <option value="Funcional FI/CO">Funcional FI/CO</option>
+                <option value="Basis">Basis / Infra</option>
+                <option value="FullStack">FullStack / Web</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+
+            {/* Disponibilidade e Custos (Acesso Restrito) */}
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <Shield className="w-3 h-3" /> Dados Executivos (Restrito)
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Custo Hora (IDL/Nic-Labs)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.hourlyCost}
+                      onChange={(e) => setFormData({ ...formData, hourlyCost: Number(e.target.value) })}
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-emerald-600"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase font-mono">Avatar URL (Opcional)</label>
+                  <input
+                    type="text"
+                    value={formData.avatarUrl}
+                    onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-xs font-mono text-[var(--textMuted)]"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Disponibilidade Diária (Horas)</label>
+                  <input
+                    type="number"
+                    value={formData.dailyAvailableHours}
+                    onChange={(e) => setFormData({ ...formData, dailyAvailableHours: Number(e.target.value) })}
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none font-black text-slate-700 dark:text-slate-200"
+                    min="0"
+                    max="24"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Disponibilidade Mensal (Horas)</label>
+                  <input
+                    type="number"
+                    value={formData.monthlyAvailableHours}
+                    onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: Number(e.target.value) })}
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none font-black text-slate-700 dark:text-slate-200"
+                    min="0"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Active Checkbox */}

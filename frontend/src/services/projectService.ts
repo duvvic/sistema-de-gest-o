@@ -16,9 +16,17 @@ export async function createProject(data: Partial<Project>): Promise<number> {
     budget: data.budget || null,
     description: data.description || null,
     estimatedDelivery: data.estimatedDelivery || null,
-    manager: data.manager || null,
     startDate: data.startDate || null,
     valor_total_rs: data.valor_total_rs || null,
+    partner_id: data.partnerId ? Number(data.partnerId) : null,
+    manager_client: data.managerClient || null,
+    responsible_nic_labs_id: data.responsibleNicLabsId ? Number(data.responsibleNicLabsId) : null,
+    start_date_real: data.startDateReal || null,
+    end_date_real: data.endDateReal || null,
+    risks: data.risks || null,
+    success_factor: data.successFactor || null,
+    critical_date: data.criticalDate || null,
+    doc_link: data.docLink || null,
   };
 
   const { data: inserted, error } = await supabase
@@ -47,9 +55,17 @@ export async function updateProject(projectId: string, data: Partial<Project>): 
   if (data.budget !== undefined) payload.budget = data.budget;
   if (data.description !== undefined) payload.description = data.description;
   if (data.estimatedDelivery !== undefined) payload.estimatedDelivery = data.estimatedDelivery;
-  if (data.manager !== undefined) payload.manager = data.manager;
   if (data.startDate !== undefined) payload.startDate = data.startDate;
   if (data.valor_total_rs !== undefined) payload.valor_total_rs = data.valor_total_rs;
+  if (data.partnerId !== undefined) payload.partner_id = data.partnerId ? Number(data.partnerId) : null;
+  if (data.managerClient !== undefined) payload.manager_client = data.managerClient;
+  if (data.responsibleNicLabsId !== undefined) payload.responsible_nic_labs_id = data.responsibleNicLabsId ? Number(data.responsibleNicLabsId) : null;
+  if (data.startDateReal !== undefined) payload.start_date_real = data.startDateReal;
+  if (data.endDateReal !== undefined) payload.end_date_real = data.endDateReal;
+  if (data.risks !== undefined) payload.risks = data.risks;
+  if (data.successFactor !== undefined) payload.success_factor = data.successFactor;
+  if (data.criticalDate !== undefined) payload.critical_date = data.criticalDate;
+  if (data.docLink !== undefined) payload.doc_link = data.docLink;
 
   const { error } = await supabase
     .from("dim_projetos")

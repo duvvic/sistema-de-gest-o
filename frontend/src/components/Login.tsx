@@ -160,7 +160,7 @@ export default function Login() {
         try {
             const { data: colab } = await supabase
                 .from('dim_colaboradores')
-                .select('ID_Colaborador, email, NomeColaborador, papel')
+                .select('ID_Colaborador, email, NomeColaborador, role')
                 .eq('email', val)
                 .maybeSingle();
 
@@ -193,7 +193,7 @@ export default function Login() {
 
                     if (otpErr) throw otpErr;
 
-                    const papelStr = String(colab.papel || '').toLowerCase();
+                    const papelStr = String(colab.role || '').toLowerCase();
                     const isAdminRole = papelStr.includes('admin') ||
                         papelStr.includes('gestor') ||
                         papelStr.includes('diretoria') ||
@@ -347,7 +347,7 @@ export default function Login() {
             // 1. Validar se o usuário existe na base dim_colaboradores
             const { data: dbUser, error: dbError } = await supabase
                 .from('dim_colaboradores')
-                .select('*')
+                .select('ID_Colaborador, NomeColaborador, email, role')
                 .eq('email', emailToUse)
                 .maybeSingle();
 
@@ -369,7 +369,7 @@ export default function Login() {
             if (otpErr) throw otpErr;
 
             // 3. Guardar dados temporários do usuário
-            const papelStr = String(dbUser.papel || '').toLowerCase();
+            const papelStr = String(dbUser.role || '').toLowerCase();
             const isAdminRole = papelStr.includes('admin') ||
                 papelStr.includes('gestor') ||
                 papelStr.includes('diretoria') ||
@@ -413,7 +413,7 @@ export default function Login() {
             // 1. Validar se o usuário existe na base dim_colaboradores
             const { data: dbUser, error: dbError } = await supabase
                 .from('dim_colaboradores')
-                .select('*')
+                .select('ID_Colaborador, NomeColaborador, email, role')
                 .eq('email', normalizedEmail)
                 .maybeSingle();
 
@@ -435,7 +435,7 @@ export default function Login() {
             if (otpErr) throw otpErr;
 
             // 3. Guardar dados temporários do usuário para a próxima fase
-            const papelStr = String(dbUser.papel || '').toLowerCase();
+            const papelStr = String(dbUser.role || '').toLowerCase();
             const isAdminRole = papelStr.includes('admin') ||
                 papelStr.includes('gestor') ||
                 papelStr.includes('diretoria') ||

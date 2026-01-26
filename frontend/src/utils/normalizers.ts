@@ -1,5 +1,5 @@
 // utils/normalizers.ts
-import { Task, Status, Priority, Impact, TimesheetEntry, Client, Project, User } from "@/types";
+import { Task, Status, Priority, Impact, TimesheetEntry, Client, Project, User, Role } from "@/types";
 
 export function normalizeStatus(raw: string | null): Status {
     if (!raw) return "Todo";
@@ -97,6 +97,7 @@ export function mapDbTaskToTask(row: any, userMap?: Map<string, any>, projectNam
         em_testes: !!row.em_testes,
         link_ef: row.link_ef || undefined,
         id_tarefa_novo: row.id_tarefa_novo,
+        estimatedHours: row.estimated_hours ? Number(row.estimated_hours) : undefined,
         daysOverdue: calculateDaysOverdue(row.entrega_estimada, row.entrega_real, status)
     };
 }
@@ -146,5 +147,59 @@ export function mapDbTimesheetToEntry(r: any, taskExternalMap?: Map<string, stri
         totalHours: Number(r.Horas_Trabalhadas || 0),
         lunchDeduction: !!r.Almoco_Deduzido,
         description: r.Descricao || undefined,
+    };
+}
+export function mapDbProjectToProject(row: any): Project {
+    return {
+        id: String(row.ID_Projeto),
+        name: row.NomeProjeto || "Sem nome",
+        clientId: String(row.ID_Cliente),
+        partnerId: row.partner_id ? String(row.partner_id) : undefined,
+        status: row.StatusProjeto || undefined,
+        active: row.ativo ?? true,
+        budget: row.budget ? Number(row.budget) : undefined,
+        description: row.description || undefined,
+        estimatedDelivery: row.estimatedDelivery || undefined,
+        startDate: row.startDate || undefined,
+        valor_total_rs: row.valor_total_rs ? Number(row.valor_total_rs) : undefined,
+        managerClient: row.manager_client || undefined,
+        responsibleNicLabsId: row.responsible_nic_labs_id ? String(row.responsible_nic_labs_id) : undefined,
+        startDateReal: row.start_date_real || undefined,
+        endDateReal: row.end_date_real || undefined,
+        risks: row.risks || undefined,
+        successFactor: row.success_factor || undefined,
+        criticalDate: row.critical_date || undefined,
+        docLink: row.doc_link || undefined,
+        gapsIssues: row.gaps_issues || undefined,
+        importantConsiderations: row.important_considerations || undefined,
+        weeklyStatusReport: row.weekly_status_report || undefined,
+    };
+}
+
+export function mapDbUserToUser(row: any): User {
+    const normalizeRole = (papel: string | null): Role => {
+        if (!papel) return "developer";
+        const p = papel.toLowerCase().trim();
+        if (p === 'diretoria') return 'diretoria';
+        if (p === 'pmo') return 'pmo';
+        if (p === 'gestor') return 'gestor';
+        if (p === 'tech lead' || p === 'tech_lead') return 'tech_lead';
+        if (p === 'financeiro') return 'financeiro';
+        if (p === 'administrador' || p === 'admin') return 'admin';
+        return 'developer';
+    };
+
+    return {
+        id: String(row.ID_Colaborador),
+        name: row.NomeColaborador || "Sem nome",
+        email: String(row.email || "").trim().toLowerCase(),
+        avatarUrl: row.avatar_url || undefined,
+        cargo: row.Cargo || undefined,
+        role: normalizeRole(row.role),
+        active: row.ativo !== false,
+        tower: row.tower || row.torre || undefined,
+        hourlyCost: row.custo_hora ? Number(row.custo_hora) : undefined,
+        dailyAvailableHours: row.horas_disponiveis_dia ? Number(row.horas_disponiveis_dia) : undefined,
+        monthlyAvailableHours: row.horas_disponiveis_mes ? Number(row.horas_disponiveis_mes) : undefined,
     };
 }

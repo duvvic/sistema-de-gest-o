@@ -45,25 +45,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
 
     const mapUserDataToUser = useCallback((userData: any): User => {
-        const papel = String(userData.papel || '').trim().toLowerCase();
+        // Priorizar campo 'role' do banco de dados se existir
+        if (userData.role) {
+            return {
+                id: String(userData.ID_Colaborador),
+                name: userData.NomeColaborador,
+                email: userData.email || userData['E-mail'],
+                role: userData.role as Role,
+                avatarUrl: userData.avatar_url,
+                cargo: userData.Cargo || userData.cargo,
+                active: userData.ativo ?? true,
+                tower: userData.tower // Capture tower field
+            } as User;
+        }
 
-        // Mapeamento granular de papéis
-        let role: Role = 'developer';
+        // Fallback para lógica baseada em 'papel' (Legacy)
+        const papel = String(userData.papel || '').trim().toLowerCase();
+        let role: Role = 'resource'; // Default to resource
 
         if (papel.includes('admin') || papel.includes('administrador')) {
-            role = 'admin';
+            role = 'system_admin'; // Map to new role
         } else if (papel.includes('gestor') || papel.includes('gerente')) {
-            role = 'gestor';
+            role = 'pmo';
         } else if (papel.includes('diretoria') || papel.includes('diretor')) {
-            role = 'diretoria';
+            role = 'executive'; // Map to new role
         } else if (papel.includes('pmo')) {
             role = 'pmo';
         } else if (papel.includes('financeiro')) {
-            role = 'financeiro';
+            role = 'financial';
         } else if (papel.includes('tech_lead') || papel.includes('techlead')) {
             role = 'tech_lead';
-        } else if (papel.includes('consultor')) {
-            role = 'consultor';
+        } else if (papel.includes('consultor') || papel.includes('desenvolvedor')) {
+            role = 'resource';
         }
 
         return {
@@ -114,7 +127,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             const response = await Promise.race([
                 supabase
                     .from('dim_colaboradores')
-                    .select('*')
+                    .select('ID_Colaborador, NomeColaborador, email, "E-mail", role, avatar_url, Cargo, ativo, tower')
                     .or(`email.eq.${emailToFind},"E-mail".eq.${emailToFind}`)
                     .maybeSingle(),
                 timeoutPromise as any

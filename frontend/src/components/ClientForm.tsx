@@ -15,6 +15,9 @@ const ClientForm: React.FC = () => {
 
   const [name, setName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [cnpj, setCnpj] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [tipo, setTipo] = useState<'parceiro' | 'cliente_final'>('cliente_final');
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -22,6 +25,9 @@ const ClientForm: React.FC = () => {
     if (client) {
       setName(client.name);
       setLogoUrl(client.logoUrl || '');
+      setCnpj(client.cnpj || '');
+      setTelefone(client.telefone || '');
+      setTipo(client.tipo || 'cliente_final');
     }
   }, [client]);
 
@@ -37,7 +43,7 @@ const ClientForm: React.FC = () => {
       setLoading(true);
 
       if (isEdit && clientId) {
-        await updateClient(clientId, { name, logoUrl });
+        await updateClient(clientId, { name, logoUrl, cnpj, telefone, tipo });
         alert('Cliente atualizado com sucesso!');
       } else {
         // Coleta dados extras do formulário nativo (gambiarra controlada para evitar state complexo)
@@ -48,6 +54,9 @@ const ClientForm: React.FC = () => {
         await createClient({
           name,
           logoUrl,
+          cnpj,
+          telefone,
+          tipo,
           active: true,
           // @ts-ignore - Passando propriedades extras que o service sabe lidar
           contractChoice: choice,
@@ -99,19 +108,77 @@ const ClientForm: React.FC = () => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
         <div className="max-w-2xl space-y-6">
-          {/* Nome */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--text)] mb-2">
-              Nome do Cliente *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
-              placeholder="Ex: Empresa XYZ"
-              required
-            />
+          {/* Dados Básicos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                Nome do Cliente *
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
+                placeholder="Ex: Empresa XYZ"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                CNPJ
+              </label>
+              <input
+                type="text"
+                value={cnpj}
+                onChange={(e) => setCnpj(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
+                placeholder="00.000.000/0000-00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                Telefone
+              </label>
+              <input
+                type="text"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                Tipo de Cliente
+              </label>
+              <div className="flex gap-4">
+                <label className={`flex-1 flex items-center justify-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${tipo === 'cliente_final' ? 'border-[var(--brand)] bg-[var(--brandMuted)] text-[var(--brandHover)]' : 'border-[var(--border)] hover:bg-[var(--surfaceHover)]'}`}>
+                  <input
+                    type="radio"
+                    name="tipo"
+                    value="cliente_final"
+                    checked={tipo === 'cliente_final'}
+                    onChange={() => setTipo('cliente_final')}
+                    className="sr-only"
+                  />
+                  <span className="font-semibold">Cliente Final</span>
+                </label>
+                <label className={`flex-1 flex items-center justify-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${tipo === 'parceiro' ? 'border-[var(--brand)] bg-[var(--brandMuted)] text-[var(--brandHover)]' : 'border-[var(--border)] hover:bg-[var(--surfaceHover)]'}`}>
+                  <input
+                    type="radio"
+                    name="tipo"
+                    value="parceiro"
+                    checked={tipo === 'parceiro'}
+                    onChange={() => setTipo('parceiro')}
+                    className="sr-only"
+                  />
+                  <span className="font-semibold">Parceiro Nic-Labs</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           {/* Logo URL */}

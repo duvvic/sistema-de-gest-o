@@ -95,6 +95,7 @@ export async function createTask(data: Partial<Task>): Promise<number> {
     description: data.description || null,
     em_testes: data.em_testes ? 1 : 0,
     link_ef: data.link_ef || null,
+    estimated_hours: data.estimatedHours || null,
   };
 
   const { data: inserted, error } = await supabase
@@ -225,6 +226,9 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
   // Só atualiza link_ef se fornecido
   if (data.link_ef !== undefined) {
     payload.link_ef = data.link_ef || null;
+  }
+  if (data.estimatedHours !== undefined) {
+    payload.estimated_hours = data.estimatedHours || null;
   }
 
   // Se não há nada para atualizar, retorna

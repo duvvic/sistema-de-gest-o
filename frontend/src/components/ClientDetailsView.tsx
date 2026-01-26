@@ -74,8 +74,30 @@ const ClientDetailsView: React.FC = () => {
             <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--textTitle)' }}>{client.name}</h1>
-            <p style={{ color: 'var(--textMuted)' }}>{clientProjects.length} projetos • {clientTasks.length} tarefas</p>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--textTitle)' }}>{client.name}</h1>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm" style={{ color: 'var(--textMuted)' }}>
+              <span>{clientProjects.length} projetos • {clientTasks.length} tarefas</span>
+              {client.cnpj && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-gray-400" />
+                  <span>CNPJ: {client.cnpj}</span>
+                </>
+              )}
+              {client.telefone && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-gray-400" />
+                  <span>Tel: {client.telefone}</span>
+                </>
+              )}
+              {client.tipo && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-gray-400" />
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${client.tipo === 'parceiro' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                    {client.tipo === 'parceiro' ? 'Parceiro' : 'Cliente Final'}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

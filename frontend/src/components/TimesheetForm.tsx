@@ -49,6 +49,8 @@ const TimesheetForm: React.FC = () => {
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [pendingSave, setPendingSave] = useState<TimesheetEntry | null>(null);
+  const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [availabilityWarning, setAvailabilityWarning] = useState('');
   const { isDirty, showPrompt, markDirty, requestBack, discardChanges, continueEditing } = useUnsavedChangesPrompt();
 
   // Validate time range 07:30 - 19:00
@@ -177,6 +179,42 @@ const TimesheetForm: React.FC = () => {
       description: formData.description,
       lunchDeduction: deductLunch,
     };
+
+    // Check Availability
+    const targetUserId = entry.userId;
+    const targetUser = users.find(u => u.id === targetUserId);
+
+    if (targetUser) {
+      const dayHours = timesheetEntries
+        .filter(e => e.userId === targetUserId && e.date === entry.date && e.id !== entry.id)
+        .reduce((sum, e) => sum + e.totalHours, 0);
+
+      const totalDayAfter = dayHours + entry.totalHours;
+      const dailyLimit = targetUser.dailyAvailableHours || 8;
+
+      if (totalDayAfter > dailyLimit) {
+        setAvailabilityWarning(`Este lançamento excederá sua carga horária diária de ${dailyLimit}h (Total no dia: ${totalDayAfter.toFixed(2)}h).`);
+        setPendingSave(entry);
+        setAvailabilityModalOpen(true);
+        return;
+      }
+
+      // Monthly Check (Optional but requested)
+      const monthStart = entry.date.substring(0, 7); // YYYY-MM
+      const monthHours = timesheetEntries
+        .filter(e => e.userId === targetUserId && e.date.startsWith(monthStart) && e.id !== entry.id)
+        .reduce((sum, e) => sum + e.totalHours, 0);
+
+      const totalMonthAfter = monthHours + entry.totalHours;
+      const monthlyLimit = targetUser.monthlyAvailableHours || 160;
+
+      if (totalMonthAfter > monthlyLimit) {
+        setAvailabilityWarning(`Este lançamento excederá seu limite mensal de ${monthlyLimit}h (Total no mês: ${totalMonthAfter.toFixed(2)}h).`);
+        setPendingSave(entry);
+        setAvailabilityModalOpen(true);
+        return;
+      }
+    }
 
     if (willBeCompleted) {
       setPendingSave(entry);
@@ -643,6 +681,21 @@ const TimesheetForm: React.FC = () => {
           }
         }}
         onCancel={() => { setWarningModalOpen(false); setPendingSave(null); }}
+      />
+      <ConfirmationModal
+        isOpen={availabilityModalOpen}
+        title="Limite de Disponibilidade"
+        message={availabilityWarning}
+        confirmText="Salvar Mesmo Assim"
+        cancelText="Revisar"
+        onConfirm={async () => {
+          if (pendingSave) {
+            setAvailabilityModalOpen(false);
+            await saveEntry(pendingSave, tasks.find(t => t.id === pendingSave.taskId)?.progress);
+            setPendingSave(null);
+          }
+        }}
+        onCancel={() => { setAvailabilityModalOpen(false); setPendingSave(null); }}
       />
       {showPrompt && (
         <ConfirmationModal

@@ -3,7 +3,7 @@
 
 export type Status = 'Todo' | 'In Progress' | 'Review' | 'Done';
 
-export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'financeiro' | 'tech_lead' | 'consultor';
+export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'financeiro' | 'financial' | 'tech_lead' | 'consultor' | 'system_admin' | 'executive' | 'resource';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Impact = 'Low' | 'Medium' | 'High';
@@ -16,6 +16,10 @@ export interface User {
   avatarUrl?: string;
   cargo?: string; // Campo adicional do banco
   active?: boolean;
+  tower?: string; // Torre de atuação
+  hourlyCost?: number; // Custo hora
+  dailyAvailableHours?: number; // Horas liberadas dia
+  monthlyAvailableHours?: number; // Horas liberadas mês
 }
 
 export interface Client {
@@ -27,20 +31,34 @@ export interface Client {
   Contrato?: string;
   pais?: string;
   contato_principal?: string;
+  cnpj?: string;
+  telefone?: string;
+  tipo?: 'parceiro' | 'cliente_final';
 }
 
 export interface Project {
   id: string;
   name: string;
-  clientId: string;
-  description?: string;
-  startDate?: string;
-  estimatedDelivery?: string;
+  clientId: string; // Cliente Final
+  partnerId?: string; // Parceiro Nic-Labs
+  description?: string; // Escopo resumido
+  managerClient?: string; // Gerente do projeto pelo cliente
+  responsibleNicLabsId?: string; // Responsável Nic-Labs (ID do Colaborador)
+  startDate?: string; // Data início prevista
+  estimatedDelivery?: string; // Data fim prevista
+  startDateReal?: string;
+  endDateReal?: string;
   budget?: number;
-  manager?: string;
   status?: string;
   active?: boolean;
   valor_total_rs?: number;
+  risks?: string;
+  successFactor?: string; // Fator de sucesso
+  criticalDate?: string; // Data crítica
+  docLink?: string;
+  gapsIssues?: string;
+  importantConsiderations?: string;
+  weeklyStatusReport?: string;
 }
 
 export interface Task {
@@ -70,6 +88,8 @@ export interface Task {
   link_ef?: string;
   id_tarefa_novo?: number;
   collaboratorIds?: string[]; // IDs dos colaboradores vinculados
+  estimatedHours?: number; // Horas previstas para execução
+  allocatedHours?: number; // Horas alocadas para o colaborador (mapa de capacidade)
 }
 
 export interface TimesheetEntry {

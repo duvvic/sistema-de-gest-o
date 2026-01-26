@@ -13,7 +13,7 @@ router.post("/admin/users", async (req, res) => {
         const cargo = String(req.body.cargo || "").trim();
         const emailRaw = String(req.body.email || "").trim().toLowerCase();
         const password = String(req.body.password || "");
-        const papel = String(req.body.papel || "desenvolvedor").trim();
+        const role = String(req.body.role || req.body.papel || "resource").trim();
         const ativo = req.body.ativo ?? true;
 
         if (!nome || !emailRaw || !password) {
@@ -55,7 +55,7 @@ router.post("/admin/users", async (req, res) => {
             "Cargo": cargo || null,
             "E-mail": emailRaw, // legado
             email: emailRaw,    // coluna padrão
-            papel,
+            role,
             ativo: !!ativo,
             auth_user_id: authUserId // se essa coluna existir, ótimo; se não existir, remova essa linha
         };

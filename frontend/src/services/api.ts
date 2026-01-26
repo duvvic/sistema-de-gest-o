@@ -3,6 +3,7 @@
 
 import { supabase } from "./supabaseClient";
 import { User, Client, Project, Role } from "@/types";
+import { mapDbProjectToProject, mapDbUserToUser } from "@/utils/normalizers";
 
 // =====================================================
 // INTERFACES DO BANCO DE DADOS (Raw Data)
@@ -13,9 +14,9 @@ export interface DbUserRow {
   ID_Colaborador: number;
   NomeColaborador: string;
   Cargo: string | null;
-  "email": string;
+  email: string;
   avatar_url: string | null;
-  papel: string | null;
+  role: string | null;
   ativo?: boolean | null;
 }
 
@@ -32,7 +33,6 @@ export interface DbClientRow {
   contato_principal?: string | null;
 }
 
-// dim_projetos
 export interface DbProjectRow {
   ID_Projeto: number;
   NomeProjeto: string;
@@ -42,9 +42,17 @@ export interface DbProjectRow {
   budget: number | null;
   description: string | null;
   estimatedDelivery: string | null;
-  manager: string | null;
   startDate: string | null;
   valor_total_rs: number | null;
+  partner_id: number | null;
+  manager_client: string | null;
+  responsible_nic_labs_id: number | null;
+  start_date_real: string | null;
+  end_date_real: string | null;
+  risks: string | null;
+  success_factor: string | null;
+  critical_date: string | null;
+  doc_link: string | null;
 }
 
 // fato_tarefas (ou fato_tarefas_view)
@@ -81,10 +89,10 @@ export interface DbTaskRow {
  */
 export async function fetchUsers(): Promise<User[]> {
   try {
-    console.log("[API] Buscando...");
+    console.log("[API] Buscando users (v2-fix-role)...");
     const { data, error } = await supabase
       .from("dim_colaboradores")
-      .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, papel, ativo");
+      .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, role, ativo, tower");
 
     if (error) {
       console.error("[API] Erro Supabase:", error);
@@ -96,16 +104,7 @@ export async function fetchUsers(): Promise<User[]> {
       return [];
     }
 
-    const mapped: User[] = data.map((row: any) => ({
-      id: String(row.ID_Colaborador),
-      name: row.NomeColaborador || "Sem nome",
-      email: String(row.email || "").trim().toLowerCase(),
-      avatarUrl: row.avatar_url || undefined,
-      cargo: row.Cargo || row.cargo || undefined,
-      // 'Administrador' -> admin, 'Padrão' ou qualquer outro -> developer
-      role: normalizeRole(row.papel),
-      active: row.ativo !== false,
-    }));
+    const mapped: User[] = data.map((row: any) => mapDbUserToUser(row));
 
     console.log("[API] Usuarios mapeados:", mapped.length);
     return mapped;
@@ -183,7 +182,7 @@ export async function fetchProjects(): Promise<Project[]> {
   try {
     const { data, error } = await supabase
       .from("dim_projetos")
-      .select("ID_Projeto, NomeProjeto, ID_Cliente, StatusProjeto, ativo, budget, description, estimatedDelivery, manager, startDate, valor_total_rs");
+      .select("*");
 
     if (error) {
       throw error;
@@ -193,19 +192,7 @@ export async function fetchProjects(): Promise<Project[]> {
       return [];
     }
 
-    return data.map((row: DbProjectRow): Project => ({
-      id: String(row.ID_Projeto),
-      name: row.NomeProjeto || "Sem nome",
-      clientId: String(row.ID_Cliente),
-      status: row.StatusProjeto || undefined,
-      active: row.ativo ?? true,
-      budget: row.budget || undefined,
-      description: row.description || undefined,
-      estimatedDelivery: row.estimatedDelivery || undefined,
-      manager: row.manager || undefined,
-      startDate: row.startDate || undefined,
-      valor_total_rs: row.valor_total_rs || undefined,
-    }));
+    return data.map((row: any): Project => mapDbProjectToProject(row));
   } catch (err) {
     throw err;
   }

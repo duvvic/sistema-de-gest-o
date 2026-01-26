@@ -1,10 +1,9 @@
-// components/TaskDetail.tsx - Adaptado para Router
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
 import { Task, Status, Priority, Impact } from '@/types';
-import { ArrowLeft, Save, Calendar, PieChart, Briefcase, User as UserIcon, StickyNote, AlertTriangle, ShieldAlert, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, PieChart, Briefcase, User as UserIcon, StickyNote, AlertTriangle, ShieldAlert, CheckSquare, Clock } from 'lucide-react';
 import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt';
 import ConfirmationModal from './ConfirmationModal';
 import TransferResponsibilityModal from './TransferResponsibilityModal';
@@ -14,7 +13,7 @@ const TaskDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentUser, isAdmin } = useAuth();
-  const { tasks, clients, projects, users, projectMembers, createTask, updateTask } = useDataController();
+  const { tasks, clients, projects, users, projectMembers, timesheetEntries, createTask, updateTask } = useDataController();
   const isDeveloper = !isAdmin;
 
   const isNew = !taskId || taskId === 'new';
@@ -23,9 +22,6 @@ const TaskDetail: React.FC = () => {
   // Query params for defaults
   const preSelectedClientId = searchParams.get('clientId') || searchParams.get('client');
   const preSelectedProjectId = searchParams.get('projectId') || searchParams.get('project');
-
-  // Verifica se a tarefa está concluída - Corrigido para não considerar string vazia como concluído
-  const isTaskCompleted = !isNew && task?.status === 'Done';
 
   const getDefaultDate = () => {
     const date = new Date();
@@ -50,8 +46,37 @@ const TaskDetail: React.FC = () => {
     priority: 'Medium',
     impact: 'Medium',
     risks: '',
-    collaboratorIds: []
+    collaboratorIds: [],
+    estimatedHours: 0
   });
+
+  // Cálculos de Horas e Progresso
+  const actualHoursSpent = useMemo(() => {
+    if (isNew) return 0;
+    return timesheetEntries
+      .filter(entry => entry.taskId === taskId)
+      .reduce((sum, entry) => sum + entry.totalHours, 0);
+  }, [timesheetEntries, taskId, isNew]);
+
+  const plannedProgress = useMemo(() => {
+    if (!formData.scheduledStart || !formData.estimatedDelivery) return 0;
+    const start = new Date(formData.scheduledStart);
+    const end = new Date(formData.estimatedDelivery);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (today < start) return 0;
+    if (today > end) return 100;
+
+    const total = end.getTime() - start.getTime();
+    if (total <= 0) return 0;
+
+    const current = today.getTime() - start.getTime();
+    return Math.round((current / total) * 100);
+  }, [formData.scheduledStart, formData.estimatedDelivery]);
+
+  // Verifica se a tarefa está concluída 
+  const isTaskCompleted = !isNew && task?.status === 'Done';
 
   const [loading, setLoading] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -70,6 +95,7 @@ const TaskDetail: React.FC = () => {
         priority: task.priority || 'Medium',
         impact: task.impact || 'Medium',
         risks: task.risks || '',
+        estimatedHours: task.estimatedHours || 0,
       });
     } else {
       // Defaults for new task
@@ -102,6 +128,7 @@ const TaskDetail: React.FC = () => {
         status: (formData.status as Status) || 'Todo',
         progress: Number(formData.progress) || 0,
         estimatedDelivery: formData.estimatedDelivery!,
+        estimatedHours: Number(formData.estimatedHours) || 0,
         // Garante que o responsável seja o usuário logado na criação se nenhum for selecionado
         developerId: formData.developerId || (isNew ? currentUser?.id : formData.developerId),
         developer: formData.developer || (isNew ? currentUser?.name : formData.developer)
@@ -572,7 +599,19 @@ const TaskDetail: React.FC = () => {
                 <Calendar className="w-4 h-4 text-[var(--primary)]" /> Cronograma
               </h3>
               <div>
-                <label className="block text-[10px] font-black mb-2 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Entrega Estimada</label>
+                <label className="block text-[10px] font-black mb-2 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Início Previsto</label>
+                <input
+                  type="date"
+                  value={formData.scheduledStart || ''}
+                  onChange={(e) => { markDirty(); setFormData({ ...formData, scheduledStart: e.target.value }); }}
+                  className="w-full p-3 border border-[var(--border)] rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all disabled:opacity-60"
+                  style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+                  disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black mb-2 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Entrega Estimada (Fim)</label>
                 <input
                   type="date"
                   value={formData.estimatedDelivery}
@@ -585,6 +624,82 @@ const TaskDetail: React.FC = () => {
                   }}
                   disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
                 />
+              </div>
+
+              <div className="pt-2 border-t border-[var(--border)] grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-black mb-1 uppercase tracking-wider text-blue-500">Início Real</label>
+                  <input
+                    type="date"
+                    value={formData.actualStart || ''}
+                    onChange={(e) => { markDirty(); setFormData({ ...formData, actualStart: e.target.value }); }}
+                    className="w-full p-2 border border-[var(--border)] rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-blue-400"
+                    style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+                    disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black mb-1 uppercase tracking-wider text-green-500">Fim Real</label>
+                  <input
+                    type="date"
+                    value={formData.actualDelivery || ''}
+                    onChange={(e) => { markDirty(); setFormData({ ...formData, actualDelivery: e.target.value }); }}
+                    className="w-full p-2 border border-[var(--border)] rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-green-400"
+                    style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+                    disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Gestão de Horas */}
+            <div className="p-6 rounded-2xl border shadow-sm space-y-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <h3 className="text-sm font-bold border-b pb-3 flex items-center gap-2 uppercase tracking-wider" style={{ color: 'var(--text)', borderColor: 'var(--border)' }}>
+                <Clock className="w-4 h-4 text-emerald-500" /> Gestão de Esforço
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black mb-2 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Horas Previstas</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={formData.estimatedHours || 0}
+                    onChange={(e) => { markDirty(); setFormData({ ...formData, estimatedHours: Number(e.target.value) }); }}
+                    className="w-full p-3 border border-[var(--border)] rounded-xl text-sm font-black outline-none focus:ring-2 focus:ring-emerald-400"
+                    style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+                    disabled={isTaskCompleted || (isCollaborator && !isAdmin && !isOwner)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black mb-2 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Consumido (Real)</label>
+                  <div className="w-full p-3 bg-slate-50 dark:bg-slate-800/50 border border-[var(--border)] rounded-xl text-sm font-black flex items-center justify-center gap-2">
+                    <span className={actualHoursSpent > (formData.estimatedHours || 0) ? 'text-red-500' : 'text-emerald-500'}>
+                      {actualHoursSpent}h
+                    </span>
+                    <span className="text-[10px] opacity-40 font-normal">/ {formData.estimatedHours || 0}h</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Summary */}
+              <div className="bg-[var(--surface-2)] p-3 rounded-xl border border-[var(--border)] space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Progresso Planejado</span>
+                  <span className="text-xs font-black text-slate-600">{plannedProgress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-slate-400 transition-all" style={{ width: `${plannedProgress}%` }} />
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase text-purple-400">Progresso Real</span>
+                  <span className="text-xs font-black text-purple-600">{formData.progress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-purple-600 transition-all" style={{ width: `${formData.progress}%` }} />
+                </div>
               </div>
             </div>
           </div>
@@ -621,5 +736,7 @@ const TaskDetail: React.FC = () => {
     </div>
   );
 };
+
+
 
 export default TaskDetail;

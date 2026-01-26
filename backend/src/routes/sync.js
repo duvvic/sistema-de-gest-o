@@ -47,7 +47,10 @@ async function syncTable(sheet, tableName, onConflict) {
         'descricao': 'Descricao',
         'horainicio': 'Hora_Inicio',
         'horafim': 'Hora_Fim',
-        'almocodeduzido': 'Almoco_Deduzido'
+        'almocodeduzido': 'Almoco_Deduzido',
+        'papel': 'role',
+        'role': 'role',
+        'funcao': 'role'
     };
 
     sheet.getRow(1).eachCell((cell, colNumber) => {
@@ -140,7 +143,7 @@ async function syncTable(sheet, tableName, onConflict) {
 
         // SAFETY: dim_colaboradores
         if (hasData && tableName === 'dim_colaboradores') {
-            const ALLOWED = ['ID_Colaborador', 'NomeColaborador', 'email', 'Cargo', 'papel', 'ativo', 'avatar_url', 'auth_user_id'];
+            const ALLOWED = ['ID_Colaborador', 'NomeColaborador', 'email', 'Cargo', 'role', 'ativo', 'avatar_url', 'auth_user_id'];
             Object.keys(rowData).forEach(key => {
                 if (!ALLOWED.includes(key)) delete rowData[key];
             });

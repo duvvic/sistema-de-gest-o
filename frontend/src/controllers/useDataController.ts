@@ -50,11 +50,14 @@ export const useDataController = () => {
             .single();
 
         if (row) {
-            const newClient: any = {
+            const newClient: Client = {
                 id: String(row.ID_Cliente),
                 name: row.NomeCliente,
                 logoUrl: row.NewLogo,
                 active: row.ativo ?? true,
+                cnpj: row.cnpj,
+                telefone: row.telefone,
+                tipo: row.tipo_cliente
             };
             setClients(prev => [...prev, newClient]);
         }
@@ -231,7 +234,7 @@ export const useDataController = () => {
                 NomeColaborador: userData.name,
                 email: userData.email,
                 Cargo: userData.cargo,
-                papel: userData.role ? userData.role.charAt(0).toUpperCase() + userData.role.slice(1) : 'Padrão',
+                role: userData.role ? userData.role.charAt(0).toUpperCase() + userData.role.slice(1) : 'Resource', // Default role
                 ativo: userData.active ?? true
             }])
             .select('ID_Colaborador')
@@ -245,7 +248,7 @@ export const useDataController = () => {
         if (updates.name !== undefined) payload.NomeColaborador = updates.name;
         if (updates.email !== undefined) payload.email = updates.email;
         if (updates.cargo !== undefined) payload.Cargo = updates.cargo;
-        if (updates.role !== undefined) payload.papel = updates.role.charAt(0).toUpperCase() + updates.role.slice(1);
+        if (updates.role !== undefined) payload.role = updates.role.charAt(0).toUpperCase() + updates.role.slice(1);
         if (updates.active !== undefined) payload.ativo = updates.active;
         if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
 

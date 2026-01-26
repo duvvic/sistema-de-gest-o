@@ -32,7 +32,7 @@ export async function requireAdmin(req, res, next) {
         // 1) tenta pelo auth_user_id
         let { data: colab, error: colabErr } = await supabaseAdmin
             .from('dim_colaboradores')
-            .select('ID_Colaborador, NomeColaborador, papel, ativo, auth_user_id, email, "E-mail"')
+            .select('ID_Colaborador, NomeColaborador, role, ativo, auth_user_id, email, "E-mail"')
             .eq('auth_user_id', authUserId)
             .maybeSingle();
 
@@ -40,7 +40,7 @@ export async function requireAdmin(req, res, next) {
             // 2) fallback por email padronizado
             const { data: rColab } = await supabaseAdmin
                 .from('dim_colaboradores')
-                .select('ID_Colaborador, NomeColaborador, papel, ativo, auth_user_id, email, "E-mail"')
+                .select('ID_Colaborador, NomeColaborador, role, ativo, auth_user_id, email, "E-mail"')
                 .eq('email', email)
                 .maybeSingle();
             colab = rColab;
@@ -56,14 +56,14 @@ export async function requireAdmin(req, res, next) {
             return res.status(403).json({ error: 'User is inactive' });
         }
 
-        const papel = String(colab.papel || '').toLowerCase();
-        console.log(`[requireAdmin] User: ${colab.NomeColaborador}, Email: ${email}, Papel: "${papel}"`);
+        const role = String(colab.role || '').toLowerCase();
+        console.log(`[requireAdmin] User: ${colab.NomeColaborador}, Email: ${email}, Role: "${role}"`);
 
-        // Aceita qualquer valor que contenha 'admin' ou 'administrador'
-        const isAdmin = papel.includes('admin') || papel.includes('administrador');
+        // Aceita qualquer valor que contenha 'admin' ou 'administrador' ou 'system_admin'
+        const isAdmin = role.includes('admin') || role.includes('administrador') || role === 'system_admin';
 
         if (!isAdmin) {
-            console.warn(`[requireAdmin] Access denied. User papel: "${papel}" is not admin.`);
+            console.warn(`[requireAdmin] Access denied. User role: "${role}" is not admin.`);
             return res.status(403).json({ error: 'Admin only' });
         }
 

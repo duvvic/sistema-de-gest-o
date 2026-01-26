@@ -32,7 +32,23 @@ const ProjectForm: React.FC = () => {
 
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState(initialClientId);
-  const [status, setStatus] = useState('');
+  const [partnerId, setPartnerId] = useState('');
+  const [status, setStatus] = useState('Planejamento');
+  const [description, setDescription] = useState('');
+  const [managerClient, setManagerClient] = useState('');
+  const [responsibleNicLabsId, setResponsibleNicLabsId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [estimatedDelivery, setEstimatedDelivery] = useState('');
+  const [startDateReal, setStartDateReal] = useState('');
+  const [endDateReal, setEndDateReal] = useState('');
+  const [risks, setRisks] = useState('');
+  const [successFactor, setSuccessFactor] = useState('');
+  const [criticalDate, setCriticalDate] = useState('');
+  const [docLink, setDocLink] = useState('');
+  const [gapsIssues, setGapsIssues] = useState('');
+  const [importantConsiderations, setImportantConsiderations] = useState('');
+  const [weeklyStatusReport, setWeeklyStatusReport] = useState('');
+
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +57,22 @@ const ProjectForm: React.FC = () => {
     if (project) {
       setName(project.name);
       setClientId(project.clientId);
-      setStatus(project.status || '');
+      setPartnerId(project.partnerId || '');
+      setStatus(project.status || 'Planejamento');
+      setDescription(project.description || '');
+      setManagerClient(project.managerClient || '');
+      setResponsibleNicLabsId(project.responsibleNicLabsId || '');
+      setStartDate(project.startDate || '');
+      setEstimatedDelivery(project.estimatedDelivery || '');
+      setStartDateReal(project.startDateReal || '');
+      setEndDateReal(project.endDateReal || '');
+      setRisks(project.risks || '');
+      setSuccessFactor(project.successFactor || '');
+      setCriticalDate(project.criticalDate || '');
+      setDocLink(project.docLink || '');
+      setGapsIssues(project.gapsIssues || '');
+      setImportantConsiderations(project.importantConsiderations || '');
+      setWeeklyStatusReport(project.weeklyStatusReport || '');
     }
   }, [project]);
 
@@ -66,10 +97,32 @@ const ProjectForm: React.FC = () => {
       let targetProjectId = projectId;
 
       // 1. Salvar/Criar Projeto
+      const projectData = {
+        name,
+        clientId,
+        partnerId: partnerId || undefined,
+        status,
+        description,
+        managerClient,
+        responsibleNicLabsId: responsibleNicLabsId || undefined,
+        startDate: startDate || undefined,
+        estimatedDelivery: estimatedDelivery || undefined,
+        startDateReal: startDateReal || undefined,
+        endDateReal: endDateReal || undefined,
+        risks,
+        successFactor,
+        criticalDate: criticalDate || undefined,
+        docLink,
+        gaps_issues: gapsIssues,
+        important_considerations: importantConsiderations,
+        weekly_status_report: weeklyStatusReport,
+        active: true
+      };
+
       if (isEdit && projectId) {
-        await updateProject(projectId, { name, clientId, status });
+        await updateProject(projectId, projectData);
       } else {
-        targetProjectId = await createProject({ name, clientId, status, active: true });
+        targetProjectId = await createProject(projectData);
       }
 
       // 2. Atualizar Membros (apenas se tiver ID de projeto válido)
@@ -129,86 +182,302 @@ const ProjectForm: React.FC = () => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-2xl space-y-6">
-          {/* Cliente */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-              Cliente *
-            </label>
-            <select
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-              style={{
-                backgroundColor: 'var(--surface)',
-                borderColor: 'var(--border)',
-                color: 'var(--text)'
-              }}
-              required
-              disabled={isEdit} // Não pode mudar cliente em edição
-            >
-              <option value="">Selecione um cliente</option>
-              {(() => {
-                const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
-                const isOperational = isAdmin || activeCargos.includes(currentUser?.cargo?.toLowerCase() || '');
+          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
+              Informações Básicas
+            </h3>
 
-                return clients
-                  .filter(c => c.active !== false)
-                  .filter(c => {
-                    if (isOperational) return true;
-                    // Non-operational roles can only see NIC-LABS
-                    return c.name.toLowerCase().includes('nic-labs');
-                  })
-                  .map(client => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ));
-              })()}
-            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Nome do Projeto *
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Ex: Desenvolvimento do Website"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Cliente Final *
+                </label>
+                <select
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  required
+                >
+                  <option value="">Selecione o cliente final</option>
+                  {clients.filter(c => c.active !== false && c.tipo !== 'parceiro').map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Parceiro (Opcional)
+                </label>
+                <select
+                  value={partnerId}
+                  onChange={(e) => setPartnerId(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                >
+                  <option value="">Nenhum parceiro</option>
+                  {clients.filter(c => c.active !== false && c.tipo === 'parceiro').map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Escopo Resumido
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all h-24 resize-none"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Descreva brevemente o objetivo do projeto..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Status do Projeto
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                >
+                  <option value="Planejamento">Planejamento</option>
+                  <option value="Em Andamento">Em Andamento</option>
+                  <option value="Em Pausa">Em Pausa</option>
+                  <option value="Concluído">Concluído</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Link da Documentação
+                </label>
+                <input
+                  type="url"
+                  value={docLink}
+                  onChange={(e) => setDocLink(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="https://docs.exemplo.com/..."
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Nome do Projeto */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-              Nome do Projeto *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-              style={{
-                backgroundColor: 'var(--surface)',
-                borderColor: 'var(--border)',
-                color: 'var(--text)'
-              }}
-              placeholder="Ex: Desenvolvimento do Website"
-              required
-            />
+          {/* Stakeholders Section */}
+          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
+              Responsabilidades
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Gerente (Lado Cliente)
+                </label>
+                <input
+                  type="text"
+                  value={managerClient}
+                  onChange={(e) => setManagerClient(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Nome do gerente no cliente"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Responsável (Nic-Labs)
+                </label>
+                <select
+                  value={responsibleNicLabsId}
+                  onChange={(e) => setResponsibleNicLabsId(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                >
+                  <option value="">Selecione o responsável interno</option>
+                  {users.filter(u => u.active !== false).map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.cargo || u.role})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-              style={{
-                backgroundColor: 'var(--surface)',
-                borderColor: 'var(--border)',
-                color: 'var(--text)'
-              }}
-            >
-              <option value="">Selecione um status</option>
-              <option value="Planejamento">Planejamento</option>
-              <option value="Em Andamento">Em Andamento</option>
-              <option value="Em Pausa">Em Pausa</option>
-              <option value="Concluído">Concluído</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
+          {/* Timeline Section */}
+          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
+              Linha do Tempo
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="md:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Início Previsto</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                />
+              </div>
+              <div className="md:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Fim Previsto</label>
+                <input
+                  type="date"
+                  value={estimatedDelivery}
+                  onChange={(e) => setEstimatedDelivery(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                />
+              </div>
+              <div className="md:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Início Real</label>
+                <input
+                  type="date"
+                  value={startDateReal}
+                  onChange={(e) => setStartDateReal(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                />
+              </div>
+              <div className="md:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Fim Real</label>
+                <input
+                  type="date"
+                  value={endDateReal}
+                  onChange={(e) => setEndDateReal(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Risks & Success Section */}
+          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
+              Riscos e Sucesso
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Riscos do Projeto
+                </label>
+                <textarea
+                  value={risks}
+                  onChange={(e) => setRisks(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-20 resize-none"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Ex: Atraso em aprovações de API..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Fator de Sucesso
+                </label>
+                <input
+                  type="text"
+                  value={successFactor}
+                  onChange={(e) => setSuccessFactor(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="O que define o sucesso..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Data Crítica
+                </label>
+                <input
+                  type="date"
+                  value={criticalDate}
+                  onChange={(e) => setCriticalDate(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Status Report Semanal Section */}
+          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
+              Status Report Semanal
+            </h3>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Gaps / Issues / Impedimentos
+                </label>
+                <textarea
+                  value={gapsIssues}
+                  onChange={(e) => setGapsIssues(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-24 resize-none"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Liste problemas técnicos ou burocráticos..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Considerações Importantes
+                </label>
+                <textarea
+                  value={importantConsiderations}
+                  onChange={(e) => setImportantConsiderations(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-24 resize-none"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Informações relevantes para a diretoria..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
+                  Mensagem para o Status Report
+                </label>
+                <textarea
+                  value={weeklyStatusReport}
+                  onChange={(e) => setWeeklyStatusReport(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-32 resize-none"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Escreva o texto final que será enviado ao cliente/stakeholders..."
+                />
+                <p className="text-[10px] mt-1 text-[var(--muted)] italic">
+                  * Este texto será a base para a exportação do relatório semanal.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Membros do Projeto */}

@@ -4,7 +4,7 @@ import { useAppData } from '@/hooks/useAppData';
 import { Task, Project, Client, User, TimesheetEntry } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { mapDbTaskToTask, mapDbTimesheetToEntry } from '@/utils/normalizers';
+import { mapDbTaskToTask, mapDbTimesheetToEntry, mapDbProjectToProject, mapDbUserToUser } from '@/utils/normalizers';
 
 interface DataContextType {
     clients: Client[];
@@ -83,15 +83,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             })
             // 2. Projetos
             .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_projetos' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    const newItem: Project = {
-                        id: String(payload.new.ID_Projeto), name: payload.new.NomeProjeto, clientId: String(payload.new.ID_Cliente),
-                        status: payload.new.StatusProjeto, active: payload.new.ativo, budget: payload.new.budget
-                    };
-                    setProjects(prev => [...prev, newItem]);
-                } else if (payload.eventType === 'UPDATE') {
-                    setProjects(prev => prev.map(p => p.id === String(payload.new.ID_Projeto)
-                        ? { ...p, name: payload.new.NomeProjeto, active: payload.new.ativo, status: payload.new.StatusProjeto } : p));
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const project = mapDbProjectToProject(payload.new);
+                    setProjects(prev => {
+                        const exists = prev.find(p => p.id === project.id);
+                        if (exists) return prev.map(p => p.id === project.id ? project : p);
+                        return [...prev, project];
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setProjects(prev => prev.filter(p => p.id !== String(payload.old.ID_Projeto)));
                 }
             })
             // 3. Tarefas (Com Normalização)
@@ -111,16 +111,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 4. Colaboradores
             .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_colaboradores' }, (payload) => {
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const role = payload.new.papel === 'Administrador' ? 'admin' : 'developer';
-                    const user: User = {
-                        id: String(payload.new.ID_Colaborador),
-                        name: payload.new.NomeColaborador,
-                        email: payload.new.email,
-                        role,
-                        cargo: payload.new.Cargo,
-                        active: payload.new.ativo,
-                        avatarUrl: payload.new.avatar_url
-                    };
+                    const user = mapDbUserToUser(payload.new);
                     setUsers(prev => {
                         const exists = prev.find(u => u.id === user.id);
                         if (exists) return prev.map(u => u.id === user.id ? user : u);

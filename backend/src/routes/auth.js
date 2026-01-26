@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
         // 1. Busca colaborador na dim_colaboradores
         const { data: colab, error: colabErr } = await supabaseAdmin
             .from('dim_colaboradores')
-            .select('ID_Colaborador, NomeColaborador, email, "E-mail", papel, ativo, avatar_url, Cargo')
+            .select('ID_Colaborador, NomeColaborador, email, "E-mail", role, ativo, avatar_url, Cargo')
             .or(`email.eq.${normalizedEmail},"E-mail".eq.${normalizedEmail}`)
             .maybeSingle();
 
@@ -39,10 +39,12 @@ router.post('/login', async (req, res) => {
             return res.status(403).json({ error: 'Esta conta está desativada.' });
         }
 
-        // 2. Verifica Papel
-        const papel = String(colab.papel || '').toLowerCase();
-        const isAdmin = papel === 'administrador' || papel === 'admin';
-        const isDeveloper = papel === 'desenvolvedor' || papel === 'dev';
+        // 2. Verifica Papel/Role
+        const role = String(colab.role || '').toLowerCase();
+        // system_admin, executive, financial, pmo, tech_lead são considerados roles administrativos/elevados
+        // resource é o desenvolvedor padrão
+        const isAdmin = ['system_admin', 'executive', 'financial', 'pmo', 'tech_lead'].includes(role) || role.includes('admin');
+        const isDeveloper = role === 'resource' || role === 'developer';
 
         if (!isAdmin && !isDeveloper) {
             return res.status(403).json({ error: 'Usuário sem permissão de acesso (Papel inválido).' });
@@ -89,7 +91,7 @@ router.post('/login', async (req, res) => {
                 id: String(colab.ID_Colaborador),
                 name: colab.NomeColaborador,
                 email: colab.email || colab['E-mail'],
-                role: isAdmin ? 'admin' : 'developer',
+                role: colab.role || 'resource',
                 avatarUrl: colab.avatar_url,
                 cargo: colab.Cargo,
                 active: true

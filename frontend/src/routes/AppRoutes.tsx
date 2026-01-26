@@ -1,8 +1,10 @@
 // routes/AppRoutes.tsx - VERSÃO COMPLETA ADMIN
 import React from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Role } from '@/types';
+import { RoleGuard } from '@/guards/RoleGuard';
+import { USER_ROLES } from '@/constants/roles';
 
 // Componentes adaptados
 import Login from '@/components/Login';
@@ -16,6 +18,7 @@ import DeveloperProjects from '@/components/DeveloperProjects';
 import KanbanBoard from '@/components/KanbanBoard';
 import TaskDetail from '@/components/TaskDetail';
 import MainLayout from '@/components/MainLayout';
+import Unauthorized from '@/pages/Unauthorized';
 
 // Componentes de Equipe
 import TeamList from '@/components/TeamList';
@@ -34,16 +37,26 @@ import TimesheetForm from '@/components/TimesheetForm';
 import LearningCenter from '@/components/LearningCenter';
 import ResetPassword from '@/components/ResetPassword';
 import SystemDocs from '@/components/SystemDocs';
+import AdminMonitoringView from '@/components/AdminMonitoringView';
 
-const ADMIN_ROLES: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+// Definição de grupos de acesso
+const ADMIN_ROLES: Role[] = [
+    'admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'financial', 'tech_lead',
+    'system_admin', 'executive'
+];
 
-interface ProtectedRouteProps {
+interface ProtectedWrapperProps {
     children: React.ReactNode;
     allowedRoles?: Role[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+/**
+ * Wrapper para compatibilidade com lógica de token de monitoramento
+ * e delegação para RoleGuard
+ */
+const ProtectedWrapper: React.FC<ProtectedWrapperProps> = ({ children, allowedRoles }) => {
     const { currentUser, isLoading } = useAuth();
+    const location = useLocation();
 
     // Check for monitoring token
     const urlParams = new URLSearchParams(window.location.search);
@@ -57,19 +70,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
         );
     }
 
-    if (!currentUser && !hasValidToken) {
-        return <Navigate to="/login" replace />;
+    if (hasValidToken) {
+        return <>{children}</>;
     }
 
-    if (allowedRoles && currentUser && !allowedRoles.includes(currentUser.role) && !hasValidToken) {
-        // Redirecionamento de segurança: se não tem permissão, volta pro dashboard seguro dele
-        return <Navigate to="/dashboard" replace />;
+    if (!currentUser) {
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    if (allowedRoles && allowedRoles.length > 0) {
+        return (
+            <RoleGuard allowedRoles={allowedRoles} redirectTo="/unauthorized">
+                {children}
+            </RoleGuard>
+        );
     }
 
     return <>{children}</>;
 };
-
-import AdminMonitoringView from '@/components/AdminMonitoringView';
 
 const AppRoutes: React.FC = () => {
     const navigate = useNavigate();
@@ -79,40 +97,30 @@ const AppRoutes: React.FC = () => {
             {/* Rota Pública Check */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword onComplete={() => navigate('/login', { replace: true })} />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Rota Direta para Monitoramento (TV Mode) - Sem o Menu Lateral */}
             <Route
                 path="/monitoring"
                 element={
-                    (() => {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const hasValidToken = urlParams.get('token') === 'xyz123';
-
-                        if (hasValidToken) {
-                            return <AdminMonitoringView />;
-                        }
-
-                        return (
-                            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
-                                <AdminMonitoringView />
-                            </ProtectedRoute>
-                        );
-                    })()
+                    <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
+                        <AdminMonitoringView />
+                    </ProtectedWrapper>
                 }
             />
 
             {/* Rota Raiz - Redireciona baseado no role */}
             <Route path="/" element={
-                <ProtectedRoute>
-                    <Navigate to="/dashboard" replace />
-                </ProtectedRoute>
+                <ProtectedWrapper>
+                    <RoleBasedRedirect />
+                </ProtectedWrapper>
             } />
 
             {/* Redirecionamento inteligente */}
             <Route path="/dashboard" element={
-                <ProtectedRoute>
+                <ProtectedWrapper>
                     <RoleBasedRedirect />
-                </ProtectedRoute>
+                </ProtectedWrapper>
             } />
 
             {/* === ROTAS ADMIN === */}
@@ -121,18 +129,18 @@ const AppRoutes: React.FC = () => {
             <Route
                 path="/"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedWrapper>
                         <MainLayout />
-                    </ProtectedRoute>
+                    </ProtectedWrapper>
                 }
             >
                 {/* NOVO: Dashboard de Monitoramento */}
                 <Route
                     path="admin/monitoring"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminMonitoringView />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -141,9 +149,9 @@ const AppRoutes: React.FC = () => {
                     index
                     path="admin/clients"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminDashboard />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -151,9 +159,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/clients/:clientId"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ClientDetailsView />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -161,9 +169,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/clients/new"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ClientForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -171,9 +179,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/clients/:clientId/edit"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ClientForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -181,9 +189,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/clients/:clientId/projects/new"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ProjectForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -193,9 +201,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/projects"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AllProjectsView key="all-projects-view" />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -203,9 +211,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/projects/:projectId"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ProjectDetailView />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -213,9 +221,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/projects/new"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ProjectForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -223,9 +231,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/projects/:projectId/edit"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <ProjectForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -235,9 +243,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/team"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <TeamList />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -245,9 +253,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/team/new"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <UserForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -255,9 +263,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/team/:userId"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <TeamMemberDetail />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -265,9 +273,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/team/:userId/edit"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <UserForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -275,9 +283,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="profile"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <UserProfile />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -285,21 +293,19 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/timesheet"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <TimesheetAdminDashboard />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
-
-
 
                 {/* === RELATÓRIOS (ADMIN) === */}
                 <Route
                     path="admin/reports"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminFullReport />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -307,9 +313,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="admin/sync"
                     element={
-                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminSync />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -319,9 +325,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="developer/projects"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <DeveloperProjects />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -329,9 +335,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="developer/projects/:projectId"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <ProjectDetailView />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -339,9 +345,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="developer/tasks"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <KanbanBoard />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -349,9 +355,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="developer/learning"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <LearningCenter />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -359,9 +365,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="tasks"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <KanbanBoard />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -369,9 +375,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="tasks/new"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <TaskDetail />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -379,9 +385,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="tasks/:taskId"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <TaskDetail />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -389,27 +395,27 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="timesheet"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <TimesheetCalendar />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
                 <Route
                     path="timesheet/new"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <TimesheetForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
                 <Route
                     path="timesheet/:entryId"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <TimesheetForm />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -417,9 +423,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="notes"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <Notes />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -427,9 +433,9 @@ const AppRoutes: React.FC = () => {
                 <Route
                     path="docs"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedWrapper>
                             <SystemDocs />
-                        </ProtectedRoute>
+                        </ProtectedWrapper>
                     }
                 />
 
@@ -446,7 +452,7 @@ const RoleBasedRedirect = () => {
     const { currentUser } = useAuth();
     if (!currentUser) return <Navigate to="/login" replace />;
 
-    const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead'];
+    const adminRoles: Role[] = ADMIN_ROLES;
 
     if (adminRoles.includes(currentUser.role)) {
         return <Navigate to="/admin/clients" replace />;

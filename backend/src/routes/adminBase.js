@@ -48,12 +48,12 @@ router.get('/collaborators', requireAdmin, async (req, res) => {
     try {
         const { data, error } = await supabaseAdmin
             .from('dim_colaboradores')
-            .select('ID_Colaborador, NomeColaborador, email, papel')
+            .select('ID_Colaborador, NomeColaborador, email, role')
             .eq('ativo', true)
             .order('NomeColaborador');
 
         if (error) throw error;
-        res.json(data.map(c => ({ id: c.ID_Colaborador, name: c.NomeColaborador, email: c.email, role: c.papel })));
+        res.json(data.map(c => ({ id: c.ID_Colaborador, name: c.NomeColaborador, email: c.email, role: c.role })));
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
