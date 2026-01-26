@@ -20,7 +20,7 @@ const ProjectDetailView: React.FC = () => {
     const pTasks = tasks.filter(t => t.projectId === projectId);
 
     // Filtro para Developer / Standard (USER_REQUEST: só mostrar tarefas vinculadas a mim)
-    if (currentUser && currentUser.role !== 'admin') {
+    if (currentUser && !isAdmin) {
       return pTasks.filter(t =>
         t.developerId === currentUser.id ||
         (t.collaboratorIds && t.collaboratorIds.includes(currentUser.id))
@@ -28,7 +28,7 @@ const ProjectDetailView: React.FC = () => {
     }
 
     return pTasks;
-  }, [tasks, projectId, currentUser]);
+  }, [tasks, projectId, currentUser, isAdmin]);
 
   // Helper para enriquecer tasks com dados do user e collaborators
   const getTaskWithUser = (task: any) => {
@@ -271,7 +271,7 @@ const ProjectDetailView: React.FC = () => {
                 <BarChart2 size={18} />
               </div>
               <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${project.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700' :
-                  project.status === 'Em Pausa' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                project.status === 'Em Pausa' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                 }`}>
                 {project.status || 'Em Aberto'}
               </span>

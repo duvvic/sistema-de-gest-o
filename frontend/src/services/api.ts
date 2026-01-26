@@ -207,7 +207,7 @@ export async function fetchTasks(): Promise<DbTaskRow[]> {
       .from("fato_tarefas")
       .select('id_tarefa_novo, ID_Tarefa, ID_Cliente, ID_Projeto, Afazer, ID_Colaborador, StatusTarefa, entrega_estimada, entrega_real, inicio_previsto, inicio_real, Porcentagem, Prioridade, Impacto, Riscos, "Observações", attachment, description, em_testes, link_ef, dias_atraso')
       .order('id_tarefa_novo', { ascending: false })
-      .limit(500);
+      .limit(10000);
 
     if (error) {
       throw error;
