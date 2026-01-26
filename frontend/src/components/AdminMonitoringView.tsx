@@ -485,20 +485,20 @@ const AdminMonitoringView: React.FC = () => {
         <div className="h-screen w-full bg-[#f5f3ff] flex flex-col overflow-hidden font-sans text-slate-900 selection:bg-purple-100">
 
             {/* --- BARRA INFORMATIVA --- */}
-            <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b border-purple-800 px-8 h-[65px] flex items-center justify-between shrink-0 shadow-lg overflow-hidden">
+            <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b border-purple-800 px-8 h-[85px] flex items-center justify-between shrink-0 shadow-lg overflow-hidden">
                 {/* Clima - Esquerda */}
                 <div className="flex items-center min-w-max h-full">
                     {weather ? (
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 flex items-center justify-center filter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 flex items-center justify-center filter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
                                 <img src={weather.icon} alt="Clima" className="w-full h-full object-contain scale-110" />
                             </div>
                             <div className="flex flex-col">
                                 <div className="flex items-start">
-                                    <span className="text-2xl font-black text-white tabular-nums leading-none drop-shadow-md">{weather.temp}</span>
-                                    <span className="text-sm font-bold text-purple-300 ml-0.5 mt-0.5 leading-none">°C</span>
+                                    <span className="text-3xl font-black text-white tabular-nums leading-none drop-shadow-md">{weather.temp}</span>
+                                    <span className="text-base font-bold text-purple-300 ml-0.5 mt-0.5 leading-none">°C</span>
                                 </div>
-                                <span className="text-[8px] font-black text-white uppercase tracking-[0.2em] mt-0.5 opacity-80 leading-none">{weather.condition}</span>
+                                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] mt-1 opacity-80 leading-none">{weather.condition}</span>
                             </div>
                         </div>
                     ) : (
@@ -518,39 +518,28 @@ const AdminMonitoringView: React.FC = () => {
                                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                                 className="px-12 py-3"
                             >
-                                <span className="text-[18px] font-black text-white tracking-wide drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+                                <span className="text-[22px] font-black text-white tracking-wide drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
                                     {currentNotification.message}
                                 </span>
                             </motion.div>
                         )}
                     </AnimatePresence>
-
-                    {/* Botão Tela Cheia (TV) - Oculto se tiver token */}
-                    {!(new URLSearchParams(window.location.search).get('token') === 'xyz123') && (
-                        <button
-                            onClick={handleFullScreen}
-                            className="ml-4 p-2 rounded-lg bg-purple-800/30 hover:bg-purple-700/50 text-purple-300 transition-colors border border-purple-700/50 group"
-                            title="Tela Cheia"
-                        >
-                            <Maximize className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        </button>
-                    )}
                 </div>
 
                 {/* Hora e Data - Direita */}
-                <div className="flex items-center gap-5 min-w-[280px] justify-end">
+                <div className="flex items-center gap-6 min-w-[320px] justify-end">
                     <div className="flex flex-col items-end">
-                        <span className="text-2xl font-black text-white tabular-nums tracking-tight leading-none">
+                        <span className="text-3xl font-black text-white tabular-nums tracking-tight leading-none">
                             {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </span>
-                        <span className="text-[7px] font-bold text-purple-300 uppercase tracking-wider mt-0.5 leading-none">HORÁRIO</span>
+                        <span className="text-[9px] font-bold text-purple-300 uppercase tracking-widest mt-1.5 leading-none">SISTEMA ATIVO</span>
                     </div>
-                    <div className="w-[1px] h-8 bg-purple-700" />
+                    <div className="w-[1px] h-10 bg-purple-700" />
                     <div className="flex flex-col items-end">
-                        <span className="text-sm font-black text-white tabular-nums leading-none">
+                        <span className="text-lg font-black text-white tabular-nums leading-none uppercase tracking-tight">
                             {weekDay}
                         </span>
-                        <span className="text-[11px] font-bold text-purple-300 tabular-nums leading-none mt-1">
+                        <span className="text-[13px] font-bold text-purple-300 tabular-nums leading-none mt-1.5">
                             {currentTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </span>
                     </div>
