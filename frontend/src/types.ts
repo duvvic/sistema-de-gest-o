@@ -129,3 +129,14 @@ export type View =
   | 'timesheet-form'
   | 'timesheet-admin-dashboard'
   | 'timesheet-admin-detail';
+
+export interface Absence {
+  id: string;
+  userId: string;
+  type: 'férias' | 'atestado' | 'day-off' | 'feriado_local';
+  startDate: string;
+  endDate: string;
+  status: 'programado' | 'em_curso' | 'concluido' | 'cancelado';
+  observations?: string;
+  createdAt?: string;
+}

@@ -7,7 +7,7 @@ import { TimesheetEntry } from '@/types';
 import {
   ChevronLeft, ChevronRight, Plus, Clock, TrendingUp, Trash2,
   Users, AlertTriangle, CheckCircle, Calendar,
-  Search, ChevronDown, Check, Coffee, PartyPopper, Flag, Gift, Sparkles, Heart, Hammer
+  Search, ChevronDown, Check, Coffee, PartyPopper, Flag, Gift, Sparkles, Heart, Hammer, Palmtree
 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -20,7 +20,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, isAdmin } = useAuth();
-  const { timesheetEntries, deleteTimesheet, tasks, users, loading, clients, projects } = useDataController();
+  const { timesheetEntries, deleteTimesheet, tasks, users, loading, clients, projects, absences, createAbsence, createTimesheet } = useDataController();
+
+  const [isCloning, setIsCloning] = useState(false);
 
   // Safety checks
   const allEntries = timesheetEntries || [];
@@ -140,31 +142,48 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const calculateDaysMissing = (uid: string) => {
     if (!uid) return 0;
 
+    // Helper para formatar data local como YYYY-MM-DD
+    const toLocalISO = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
     const userEntries = allEntries.filter(e => {
       if (!e.date) return false;
-      const d = new Date(e.date);
+      const d = new Date(e.date + 'T12:00:00');
       return e.userId === uid && d.getMonth() === month && d.getFullYear() === year;
     });
 
+    const userAbsences = (absences || []).filter(a => a.userId === uid);
     const workedDays = new Set(userEntries.map(e => e.date));
-    let missing = 0;
-    const todayStr = today.toISOString().split('T')[0];
 
-    const checkDate = new Date(year, month, 1);
+    let missing = 0;
+    const todayStr = toLocalISO(new Date());
+
+    // Começar do dia 1 do mês selecionado
+    const checkDate = new Date(year, month, 1, 12, 0, 0);
     let limit = 0;
 
-    while (checkDate.getMonth() === month && limit < 32) {
+    while (checkDate.getMonth() === month && limit < 31) {
       limit++;
-      const dStr = checkDate.toISOString().split('T')[0];
-      if (dStr > todayStr) break;
+      const dStr = toLocalISO(checkDate);
+
+      // NÃO conta hoje nem dias futuros como falta
+      if (dStr >= todayStr) break;
 
       const dayOfWeek = checkDate.getDay();
       const isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 5;
       const holiday = getHoliday(checkDate.getDate(), checkDate.getMonth(), checkDate.getFullYear());
 
-      if (isWorkDay && !workedDays.has(dStr) && !holiday) {
+      // Verificar se há ausência registrada para este dia
+      const hasAbsence = userAbsences.some(a => dStr >= a.startDate && dStr <= a.endDate);
+
+      if (isWorkDay && !workedDays.has(dStr) && !holiday && !hasAbsence) {
         missing++;
       }
+
       checkDate.setDate(checkDate.getDate() + 1);
     }
     return missing;
@@ -183,7 +202,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
         return { ...u, missing, status };
       })
       .sort((a, b) => b.missing - a.missing);
-  }, [safeUsers, allEntries, year, month, isAdmin]);
+  }, [safeUsers, allEntries, year, month, isAdmin, absences]);
 
   // Search Filter
   const searchedUsers = useMemo(() => {
@@ -244,7 +263,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     const totalHours = monthEntries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
 
     return { totalHours, balanceHours, missing };
-  }, [currentEntries, year, month, targetUserId, processedUsers, isAdmin, currentUser, today]);
+  }, [currentEntries, year, month, targetUserId, processedUsers, isAdmin, currentUser, today, absences]);
 
   const handleDelete = async () => {
     if (entryToDelete) {
@@ -255,6 +274,61 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       } finally {
         setDeleteModalOpen(false);
         setEntryToDelete(null);
+      }
+    }
+  };
+
+  const handleQuickDayOff = async (e: React.MouseEvent, date: string) => {
+    e.stopPropagation();
+    if (!targetUserId) return;
+    if (window.confirm(`Deseja registrar um Day-off em ${new Date(date + 'T12:00:00').toLocaleDateString()}?`)) {
+      try {
+        await createAbsence({
+          userId: targetUserId,
+          type: 'day-off',
+          startDate: date,
+          endDate: date,
+          status: 'programado',
+          observations: 'Registrado via preenchimento rápido'
+        });
+        alert('Day-off registrado!');
+      } catch (err) {
+        alert('Erro ao registrar.');
+      }
+    }
+  };
+
+  const handleCloneDay = async (e: React.MouseEvent, date: string) => {
+    e.stopPropagation();
+    if (!targetUserId) return;
+
+    const entries = currentEntries.filter(ent => ent.date === date);
+    if (entries.length === 0) return;
+
+    // Find next workday
+    const d = new Date(date + 'T12:00:00');
+    let next = new Date(d);
+    next.setDate(next.getDate() + 1);
+    while (next.getDay() === 0 || next.getDay() === 6 || getHoliday(next.getDate(), next.getMonth(), next.getFullYear())) {
+      next.setDate(next.getDate() + 1);
+    }
+    const nextStr = next.toISOString().split('T')[0];
+
+    if (window.confirm(`Clonar ${entries.length} lançamentos para ${next.toLocaleDateString()}?`)) {
+      try {
+        setIsCloning(true);
+        for (const entry of entries) {
+          await createTimesheet({
+            ...entry,
+            id: crypto.randomUUID(),
+            date: nextStr
+          });
+        }
+        alert('Lançamentos clonados com sucesso!');
+      } catch (err) {
+        alert('Erro ao clonar.');
+      } finally {
+        setIsCloning(false);
       }
     }
   };
@@ -313,15 +387,15 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                   </h2>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-black uppercase tracking-widest text-white/60">
                     <span className="flex items-center gap-1 text-white/90">
-                      <Clock className="w-3 h-3 text-white/50" /> {selectedUserStats.totalHours.toFixed(1)}h no Mês
+                      <Clock className="w-3 h-3 text-white/40" /> {selectedUserStats.totalHours.toFixed(1)}h no Mês
                     </span>
-                    <span className={`flex items-center gap-1 ${selectedUserStats.balanceHours >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    <span className="flex items-center gap-1 text-white/90">
                       {selectedUserStats.balanceHours >= 0 ? '+' : ''}{selectedUserStats.balanceHours.toFixed(1)}h
-                      {selectedUserStats.balanceHours >= 0 ? ' Extra' : ' de Débito'}
+                      {selectedUserStats.balanceHours >= 0 ? ' Extra' : ' Débito'}
                     </span>
                     {selectedUserStats.missing > 0 && (
-                      <span className="flex items-center gap-1 text-amber-300">
-                        <AlertTriangle className="w-3 h-3" /> {selectedUserStats.missing} Falta(s)
+                      <span className="flex items-center gap-1 text-white/90">
+                        <AlertTriangle className="w-3 h-3 text-white/50" /> {selectedUserStats.missing} Falta(s)
                       </span>
                     )}
                   </div>
@@ -417,7 +491,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
               }}>
               {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((day, idx) => (
                 <div key={day} className={`py-3 text-center text-[11px] font-black tracking-widest`}
-                  style={{ color: (idx === 0 || idx === 6) ? 'var(--danger)' : 'var(--text-2)' }}>
+                  style={{ color: 'var(--text-2)' }}>
                   {day}
                 </div>
               ))}
@@ -453,7 +527,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                 const holiday = getHoliday(d, month, year);
                 const HolidayIcon = holiday?.icon || Coffee;
 
-                const isMissing = !hasEntries && !isWeekend && !holiday && isPast;
+                const dayAbsence = (absences || []).find(a => a.userId === targetUserId && dateStr >= a.startDate && dateStr <= a.endDate);
+                const isMissing = !hasEntries && !isWeekend && !holiday && !dayAbsence && isPast;
 
                 return (
                   <div
@@ -463,8 +538,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                                         p-1.5 relative cursor-pointer min-h-[60px] transition-all group hover:z-10 hover:shadow-xl border-r border-b flex flex-col
                                     `}
                     style={{
-                      backgroundColor: isToday ? 'var(--primary-soft)' : (holiday || isWeekend) ? 'var(--surface-2)' : isMissing ? '#FFFBEB' : 'var(--surface)',
-                      borderTop: holiday ? `3px solid ${holiday.color}` : isMissing ? `3px solid #FBBF24` : 'none',
+                      backgroundColor: isToday ? 'var(--primary-soft)' : 'var(--surface)',
                       borderColor: 'var(--border)'
                     }}
                   >
@@ -472,8 +546,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                     <div className="flex justify-between items-start mb-1 h-6">
                       <span className={`text-[10px] font-black w-5 h-5 flex items-center justify-center rounded transition-colors`}
                         style={{
-                          backgroundColor: isToday ? 'var(--primary)' : holiday ? holiday.color : 'transparent',
-                          color: isToday || holiday ? 'white' : 'var(--text)',
+                          backgroundColor: isToday ? 'var(--primary)' : 'transparent',
+                          color: isToday ? 'white' : 'var(--text)',
                         }}>
                         {d}
                       </span>
@@ -486,10 +560,20 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
 
                     {/* Holiday Indicator */}
                     {holiday && (
-                      <div className="flex-1 flex flex-col items-center justify-center py-2 text-center pointer-events-none">
-                        <HolidayIcon className="w-5 h-5 mb-1" style={{ color: holiday.color }} />
-                        <span className="text-[7px] font-black uppercase whitespace-normal leading-tight px-1" style={{ color: holiday.color }}>
+                      <div className="flex-1 flex flex-col items-center justify-center py-2 text-center pointer-events-none opacity-50">
+                        <HolidayIcon className="w-4 h-4 mb-1" style={{ color: 'var(--text)' }} />
+                        <span className="text-[7px] font-black uppercase whitespace-normal leading-tight px-1" style={{ color: 'var(--text)' }}>
                           {holiday.name}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Absence Indicator */}
+                    {dayAbsence && (
+                      <div className="flex-1 flex flex-col items-center justify-center py-2 text-center pointer-events-none">
+                        {dayAbsence.type === 'férias' ? <Palmtree className="w-4 h-4 mb-1 text-emerald-500" /> : <Clock className="w-4 h-4 mb-1 text-blue-500" />}
+                        <span className={`text-[7px] font-black uppercase whitespace-normal leading-tight px-1 ${dayAbsence.type === 'férias' ? 'text-emerald-500' : 'text-blue-500'}`}>
+                          {dayAbsence.type}
                         </span>
                       </div>
                     )}
@@ -563,14 +647,6 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                         );
                       })}
                     </div>
-
-                    {!hasEntries && !isWeekend && (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                        <div className="bg-primary-soft p-2 rounded-full shadow-sm" style={{ backgroundColor: 'var(--primary-soft)' }}>
-                          <Plus className="w-5 h-5 text-primary" style={{ color: 'var(--primary)' }} />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -586,7 +662,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
         onConfirm={handleDelete}
         onCancel={() => setDeleteModalOpen(false)}
       />
-    </div >
+    </div>
   );
 };
 

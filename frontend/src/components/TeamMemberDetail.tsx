@@ -3,13 +3,14 @@ import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { Task } from '@/types';
-import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer, Edit, Trash2, Palmtree } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { getRoleDisplayName } from '@/utils/normalizers';
 
 import TimesheetCalendar from './TimesheetCalendar';
+import AbsenceManager from './AbsenceManager';
 
-type ViewTab = 'projects' | 'tasks' | 'delayed' | 'ponto';
+type ViewTab = 'projects' | 'tasks' | 'delayed' | 'ponto' | 'absences';
 
 const TeamMemberDetail: React.FC = () => {
    const { userId } = useParams<{ userId: string }>();
@@ -204,6 +205,8 @@ const TeamMemberDetail: React.FC = () => {
             );
          case 'ponto':
             return <TimesheetCalendar userId={user.id} embedded={true} />;
+         case 'absences':
+            return <AbsenceManager targetUserId={user.id} targetUserName={user.name} />;
       }
    };
 
@@ -304,6 +307,17 @@ const TeamMemberDetail: React.FC = () => {
                               <span className="text-sm font-bold">Ponto</span>
                            </div>
                            <span className="font-black text-xl">{missingPontoDays}</span>
+                        </button>
+
+                        <button
+                           onClick={() => setActiveTab('absences')}
+                           className={`w-full flex justify-between items-center p-4 rounded-2xl border transition-all duration-300 ${activeTab === 'absences' ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg scale-[1.02]' : 'hover:border-emerald-300'}`}
+                           style={{ backgroundColor: activeTab === 'absences' ? undefined : 'var(--bgApp)', borderColor: activeTab === 'absences' ? undefined : 'var(--border)', color: activeTab === 'absences' ? 'white' : 'var(--textMuted)' }}
+                        >
+                           <div className="flex items-center gap-3">
+                              <Palmtree className={`w-5 h-5 ${activeTab === 'absences' ? 'text-white' : 'text-emerald-500'}`} />
+                              <span className="text-sm font-bold">Ausências</span>
+                           </div>
                         </button>
                      </div>
 

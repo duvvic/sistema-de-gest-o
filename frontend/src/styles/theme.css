@@ -5,40 +5,39 @@
 :root {
   /* LIGHT MODE - Ultra Visibility & Premium Feel */
 
-  /* Backgrounds */
-  --bg: #F8FAFC;
-  /* Lighter, cleaner slate-50 */
+  /* Backgrounds - High Contrast Cleanliness */
+  --bg: #F1F5F9;
+  /* Slightly more depth */
   --surface: #FFFFFF;
-  /* Pure white cards */
-  --surface-2: #F1F5F9;
-  /* Slate-100 for nested or secondary areas */
-  --surface-hover: #E2E8F0;
+  /* Pure white for cards */
+  --surface-2: #E2E8F0;
+  /* Slate-200 for nested areas */
+  --surface-hover: #CBD5E1;
+  /* Slate-300 for clearer hover */
 
-  /* Sidebar & Header */
+  /* Sidebar & Header - Original Purple */
   --sidebar-bg: #4C1D95;
   --sidebar-bg-2: #5B21B6;
 
-  /* Primary Colors */
+  /* Primary Colors - Original Violet */
   --primary: #7C3AED;
-  /* Vibrant violet-600 */
   --primary-hover: #6D28D9;
   --primary-soft: #F5F3FF;
-  /* violet-50 */
 
-  /* Text Colors - Max Legibility */
-  --text: #0F172A;
-  /* Slate-900 */
-  --text-2: #334155;
-  /* Slate-700 */
-  --muted: #64748B;
-  /* Slate-500 - Stronger visibility */
+  /* Text Colors - Ultra Visibility */
+  --text: #020617;
+  /* Slate-950 */
+  --text-2: #1E293B;
+  /* Slate-800 */
+  --muted: #475569;
+  /* Slate-600 - Strong contrast */
 
-  /* Borders & Effects */
-  --border: #E2E8F0;
-  /* Slate-200 for subtle borders */
-  --border-strong: #CBD5E1;
-  /* Slate-300 for clearer division */
-  --ring: rgba(124, 58, 237, 0.4);
+  /* Borders & Spacing */
+  --border: #CBD5E1;
+  /* Slate-300 */
+  --border-strong: #94A3B8;
+  /* Slate-400 */
+  --ring: rgba(79, 70, 229, 0.4);
 
   /* Status Colors (Optimized for Light Backgrounds) */
   --success: #10B981;
@@ -209,65 +208,57 @@ body {
    Fix hardcoded Tailwind colors for better visibility
    ================================================ */
 
-/* Override slate-400 text (too light in light mode) */
-:root .text-slate-400 {
+/* Override tailwind colors for better visibility in light mode */
+:root:not(.dark) .text-slate-400,
+:root:not(.dark) .text-gray-400 {
+  color: #64748B !important;
+  /* slate-500 */
+}
+
+:root:not(.dark) .text-slate-500,
+:root:not(.dark) .text-gray-500 {
   color: #475569 !important;
-  /* slate-600 - much more visible */
+  /* slate-600 */
 }
 
-:root .text-slate-500 {
+:root:not(.dark) .text-slate-600,
+:root:not(.dark) .text-gray-600 {
   color: #334155 !important;
-  /* slate-700 - darker */
+  /* slate-700 */
 }
 
-:root .text-gray-400 {
-  color: #4B5563 !important;
-  /* gray-600 */
+:root:not(.dark) .text-slate-700,
+:root:not(.dark) .text-gray-700 {
+  color: #1E293B !important;
+  /* slate-800 */
 }
 
-:root .text-gray-500 {
-  color: #374151 !important;
-  /* gray-700 */
+:root:not(.dark) .text-slate-100 {
+  color: #F1F5F9 !important;
 }
 
-/* Keep dark mode as is */
-html.dark .text-slate-400,
-html.dark .text-gray-400 {
-  color: #94a3b8 !important;
-  /* Original slate-400 */
-}
-
-html.dark .text-slate-500,
-html.dark .text-gray-500 {
-  color: #64748b !important;
-  /* Original slate-500 */
+:root:not(.dark) .bg-slate-50\/50:hover {
+  background-color: #F8FAFC !important;
 }
 
 /* Fix placeholder colors in light mode */
-:root .placeholder\:text-slate-400::placeholder {
-  color: #64748B !important;
-  /* slate-500 - more visible */
+:root:not(.dark) input::placeholder,
+:root:not(.dark) textarea::placeholder {
+  color: #94A3B8 !important;
+  opacity: 1;
 }
 
-:root input::placeholder,
-:root textarea::placeholder {
-  color: #64748B !important;
-  /* slate-500 */
-  opacity: 0.8;
+/* Force better contrast for opacity classes */
+:root:not(.dark) .opacity-40 {
+  opacity: 0.6 !important;
 }
 
-/* Ensure proper contrast for muted text in light mode */
-:root .opacity-50 {
-  opacity: 0.65 !important;
-  /* Slightly more visible */
+:root:not(.dark) .opacity-50 {
+  opacity: 0.7 !important;
 }
 
-:root .opacity-60 {
-  opacity: 0.75 !important;
-}
-
-:root .opacity-70 {
-  opacity: 0.80 !important;
+:root:not(.dark) .opacity-60 {
+  opacity: 0.8 !important;
 }
 
 /* Keep dark mode opacity as is */

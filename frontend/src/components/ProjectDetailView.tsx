@@ -160,7 +160,7 @@ const ProjectDetailView: React.FC = () => {
   }
 
   return (
-    <div className="p-8 bg-[var(--bgApp)]">
+    <div className="p-10 pt-12 bg-[var(--bg)] min-h-full">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         {/* ... (manter igual) ... */}

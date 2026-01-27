@@ -38,6 +38,7 @@ import LearningCenter from '@/components/LearningCenter';
 import ResetPassword from '@/components/ResetPassword';
 import SystemDocs from '@/components/SystemDocs';
 import AdminMonitoringView from '@/components/AdminMonitoringView';
+import AbsenceManager from '@/components/AbsenceManager';
 
 // Definição de grupos de acesso
 const ADMIN_ROLES: Role[] = [
@@ -285,6 +286,15 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedWrapper>
                             <UserProfile />
+                        </ProtectedWrapper>
+                    }
+                />
+
+                <Route
+                    path="absences"
+                    element={
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
+                            <AbsenceManager />
                         </ProtectedWrapper>
                     }
                 />

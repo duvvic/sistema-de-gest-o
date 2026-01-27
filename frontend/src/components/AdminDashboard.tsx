@@ -203,9 +203,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col p-8" style={{ backgroundColor: 'var(--bg)' }}>
+    <div className="h-full flex flex-col p-10 pt-12 overflow-y-auto no-scrollbar" style={{ backgroundColor: 'var(--bg)' }}>
       {/* ABAS DE NAVEGAÇÃO SUPERIOR */}
-      <div className="flex gap-2 mb-8 p-1 rounded-2xl w-fit border shadow-sm transition-colors" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+      <div className="flex gap-2 mb-10 p-1.5 rounded-2xl w-fit border shadow-sm transition-colors" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
         <button
           onClick={() => setActiveTab('operacional')}
           className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'operacional' ? 'bg-[var(--surface)] shadow-md text-[var(--primary)]' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
@@ -236,53 +236,51 @@ const AdminDashboard: React.FC = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 mb-10">
           {/* KPI ROW */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="flex justify-between mb-4">
-                  <div className="p-3 bg-purple-500/10 rounded-2xl text-[var(--primary)]"><TrendingUp size={24} /></div>
-                  <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-md h-fit">ATUALIZADO</span>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Avanço do Portfólio</p>
-                <div className="flex items-end gap-2">
-                  <p className="text-3xl font-black" style={{ color: 'var(--text)' }}>{Math.round(executiveMetrics.globalProgress)}%</p>
-                  <span className="text-xs font-bold text-emerald-500 mb-1.5 flex items-center"><ArrowUp size={12} /> Real</span>
-                </div>
-                <div className="w-full h-1.5 rounded-full mt-4 overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
-                  <div className="h-full bg-[var(--primary)]" style={{ width: `${executiveMetrics.globalProgress}%` }} />
-                </div>
+            <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <div className="flex justify-between mb-4">
+                <div className="p-3 bg-purple-500/10 rounded-2xl text-[var(--primary)]"><TrendingUp size={24} /></div>
+                <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-md h-fit">ATUALIZADO</span>
               </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Avanço do Portfólio</p>
+              <div className="flex items-end gap-2">
+                <p className="text-3xl font-black" style={{ color: 'var(--text)' }}>{Math.round(executiveMetrics.globalProgress)}%</p>
+                <span className="text-xs font-bold text-emerald-500 mb-1.5 flex items-center"><ArrowUp size={12} /> Real</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full mt-4 overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
+                <div className="h-full bg-[var(--primary)]" style={{ width: `${executiveMetrics.globalProgress}%` }} />
+              </div>
+            </div>
 
-              <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="flex justify-between mb-4">
-                  <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600"><DollarSign size={24} /></div>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Custo Empenhado</p>
-                <p className="text-3xl font-black" style={{ color: 'var(--text)' }}>
-                  {executiveMetrics.totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-                <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--muted)' }}>Valor acumulado em todos os projetos</p>
+            <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <div className="flex justify-between mb-4">
+                <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600"><DollarSign size={24} /></div>
               </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Custo Empenhado</p>
+              <p className="text-3xl font-black" style={{ color: 'var(--text)' }}>
+                {executiveMetrics.totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
+              <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--muted)' }}>Valor acumulado em todos os projetos</p>
+            </div>
 
-              <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="flex justify-between mb-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600"><PieChart size={24} /></div>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Previsão de Resultado</p>
-                <p className={`text-3xl font-black ${executiveMetrics.totalEstimatedROI < 0 ? 'text-red-500' : 'text-[var(--text)]'}`}>
-                  {executiveMetrics.totalEstimatedROI.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-                <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--muted)' }}>Margem Orçado x Real (Forecast)</p>
+            <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <div className="flex justify-between mb-4">
+                <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600"><PieChart size={24} /></div>
               </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Previsão de Resultado</p>
+              <p className={`text-3xl font-black ${executiveMetrics.totalEstimatedROI < 0 ? 'text-red-500' : 'text-[var(--text)]'}`}>
+                {executiveMetrics.totalEstimatedROI.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
+              <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--muted)' }}>Margem Orçado x Real (Forecast)</p>
+            </div>
 
-              <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="flex justify-between mb-4">
-                  <div className="p-3 bg-red-500/10 rounded-2xl text-red-600"><AlertCircle size={24} /></div>
-                  <span className="text-[10px] font-black bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 px-2 py-1 rounded-md h-fit">CRÍTICO</span>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Alertas de Saúde</p>
-                <p className="text-3xl font-black" style={{ color: 'var(--text)' }}>{executiveMetrics.delayedTasksCount}</p>
-                <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--muted)' }}>Tarefas com atraso no portfólio</p>
+            <div className="p-6 rounded-3xl border shadow-sm transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <div className="flex justify-between mb-4">
+                <div className="p-3 bg-red-500/10 rounded-2xl text-red-600"><AlertCircle size={24} /></div>
+                <span className="text-[10px] font-black bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 px-2 py-1 rounded-md h-fit">CRÍTICO</span>
               </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--muted)' }}>Alertas de Saúde</p>
+              <p className="text-3xl font-black" style={{ color: 'var(--text)' }}>{executiveMetrics.delayedTasksCount}</p>
+              <p className="text-[10px] font-bold mt-2" style={{ color: 'var(--muted)' }}>Tarefas com atraso no portfólio</p>
             </div>
           </div>
 
@@ -313,8 +311,8 @@ const AdminDashboard: React.FC = () => {
                     const variance = budget - cost;
 
                     return (
-                      <tr key={p.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800 transition-colors">
-                        <td className="py-4 font-bold text-sm text-slate-700 dark:text-slate-200">{p.name}</td>
+                      <tr key={p.id} className="group hover:bg-[var(--surface-hover)] transition-colors">
+                        <td className="py-4 font-bold text-sm" style={{ color: 'var(--text)' }}>{p.name}</td>
                         <td className="py-4">
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${p.status === 'Concluído' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                             {p.status || 'Ativo'}
@@ -322,14 +320,14 @@ const AdminDashboard: React.FC = () => {
                         </td>
                         <td className="py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-12 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                              <div className="h-full bg-purple-500" style={{ width: `${prog}%` }} />
+                            <div className="w-12 h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
+                              <div className="h-full bg-[var(--primary)]" style={{ width: `${prog}%` }} />
                             </div>
-                            <span className="text-[10px] font-bold text-slate-500">{Math.round(prog)}%</span>
+                            <span className="text-[10px] font-bold" style={{ color: 'var(--muted)' }}>{Math.round(prog)}%</span>
                           </div>
                         </td>
-                        <td className="py-4 text-xs font-bold text-slate-600 dark:text-slate-400">{budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        <td className="py-4 text-xs font-black text-slate-800 dark:text-slate-100">{cost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="py-4 text-xs font-bold" style={{ color: 'var(--text-2)' }}>{budget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="py-4 text-xs font-black" style={{ color: 'var(--text)' }}>{cost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                         <td className={`py-4 text-xs font-black ${variance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                           {variance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </td>

@@ -1,8 +1,5 @@
-// controllers/useDataController.ts
-// Controller hook para gerenciar dados da aplicação usando o Contexto Centralizado
-
 import { useData } from '@/contexts/DataContext';
-import { Task, Project, Client, User, TimesheetEntry } from '@/types';
+import { Task, Project, Client, User, TimesheetEntry, Absence } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import * as clientService from '@/services/clientService';
 import * as projectService from '@/services/projectService';
@@ -16,6 +13,7 @@ export const useDataController = () => {
         users, setUsers,
         timesheetEntries, setTimesheetEntries,
         projectMembers, setProjectMembers,
+        absences, setAbsences,
         loading,
         error
     } = useData();
@@ -298,13 +296,58 @@ export const useDataController = () => {
         setProjectMembers(prev => prev.filter(pm => !(pm.projectId === projectId && pm.userId === userId)));
     };
 
+    // === ABSENCE CONTROLLERS ===
+
+    const createAbsence = async (data: Partial<Absence>): Promise<string> => {
+        const { data: row, error } = await supabase
+            .from('colaborador_ausencias')
+            .insert({
+                colaborador_id: Number(data.userId),
+                tipo: data.type,
+                data_inicio: data.startDate,
+                data_fim: data.endDate,
+                status: data.status,
+                observacoes: data.observations
+            })
+            .select('id')
+            .single();
+
+        if (error) throw error;
+        return String(row.id);
+    };
+
+    const updateAbsence = async (id: string, updates: Partial<Absence>): Promise<void> => {
+        const { error } = await supabase
+            .from('colaborador_ausencias')
+            .update({
+                tipo: updates.type,
+                data_inicio: updates.startDate,
+                data_fim: updates.endDate,
+                status: updates.status,
+                observacoes: updates.observations
+            })
+            .eq('id', Number(id));
+
+        if (error) throw error;
+    };
+
+    const deleteAbsence = async (id: string): Promise<void> => {
+        const { error } = await supabase
+            .from('colaborador_ausencias')
+            .delete()
+            .eq('id', Number(id));
+
+        if (error) throw error;
+    };
+
     return {
-        clients, projects, tasks, users, timesheetEntries, projectMembers, loading, error,
+        clients, projects, tasks, users, timesheetEntries, projectMembers, absences, loading, error,
         getClientById, getActiveClients, createClient, updateClient, deactivateClient, deleteClient,
         getProjectById, getProjectsByClient, createProject, updateProject, deleteProject,
         getTaskById, getTasksByProject, getTasksByUser, createTask, updateTask, deleteTask,
         getTimesheetsByUser, createTimesheet, updateTimesheet, deleteTimesheet,
         getUserById, getActiveUsers, createUser, updateUser, deleteUser,
-        getProjectMembers, addProjectMember, removeProjectMember
+        getProjectMembers, addProjectMember, removeProjectMember,
+        createAbsence, updateAbsence, deleteAbsence
     };
 };

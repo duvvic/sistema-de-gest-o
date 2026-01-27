@@ -326,10 +326,10 @@ const MainLayout: React.FC = () => {
 
             </div>
 
-            {/* Main Content - iOS Navigation Wrapper with Frame Padding */}
-            <div className="flex-1 overflow-hidden relative lg:p-4 md:p-3 p-0" style={{ background: 'var(--bg)' }}>
-                <div className="h-full w-full relative overflow-hidden rounded-t-[24px] lg:rounded-[32px] shadow-2xl border border-white/10 perspective-1000"
-                    style={{ backgroundColor: 'var(--bg)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            {/* Main Content - iOS Navigation Wrapper */}
+            <div className="flex-1 overflow-hidden relative" style={{ background: 'var(--bg)' }}>
+                <div className="h-full w-full relative overflow-hidden"
+                    style={{ backgroundColor: 'var(--bg)' }}>
                     <AnimatePresence custom={direction} mode="popLayout">
                         <motion.div
                             key={location.pathname}
@@ -338,7 +338,7 @@ const MainLayout: React.FC = () => {
                             initial="initial"
                             animate="animate"
                             exit="exit"
-                            className="h-full w-full overflow-auto absolute top-0 left-0"
+                            className="h-full w-full overflow-auto absolute inset-0 forced-solid-bg"
                             style={{ backgroundColor: 'var(--bg)' }}
                         >
                             <Outlet />

@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
-import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft, Zap } from 'lucide-react';
+import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft, Zap, Calendar } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { getRoleDisplayName } from '@/utils/normalizers';
+import AbsenceManager from './AbsenceManager';
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -185,6 +186,23 @@ const UserProfile: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Absence Management Section - Admin Only */}
+          {isAdmin && (
+            <div className="p-8 rounded-2xl border shadow-sm space-y-6" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--textTitle)' }}>
+                <Calendar className="w-5 h-5" style={{ color: 'var(--brand)' }} />
+                Gestão de Ausências
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--textMuted)' }}>
+                Registre e acompanhe seus períodos de férias, afastamentos ou folgas. Isso evita alertas de pendência no timesheet e ajuda na gestão de tarefas.
+              </p>
+
+              <div className="pt-4 border-t border-[var(--border)]">
+                <AbsenceManager />
+              </div>
+            </div>
+          )}
 
           {/* Infra / Sincronização Section (Admin Only & Disabled) */}
           {isAdmin && (

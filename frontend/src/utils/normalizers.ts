@@ -205,3 +205,16 @@ export function mapDbUserToUser(row: any): User {
         monthlyAvailableHours: row.horas_disponiveis_mes ? Number(row.horas_disponiveis_mes) : undefined,
     };
 }
+
+export function mapDbAbsenceToAbsence(row: any): any {
+    return {
+        id: String(row.id),
+        userId: String(row.colaborador_id),
+        type: row.tipo,
+        startDate: row.data_inicio,
+        endDate: row.data_fim,
+        status: row.status,
+        observations: row.observacoes || undefined,
+        createdAt: row.created_at
+    };
+}

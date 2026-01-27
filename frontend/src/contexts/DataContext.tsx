@@ -1,10 +1,10 @@
 // contexts/DataContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/useAppData';
-import { Task, Project, Client, User, TimesheetEntry } from '@/types';
+import { Task, Project, Client, User, TimesheetEntry, Absence } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { mapDbTaskToTask, mapDbTimesheetToEntry, mapDbProjectToProject, mapDbUserToUser } from '@/utils/normalizers';
+import { mapDbTaskToTask, mapDbTimesheetToEntry, mapDbProjectToProject, mapDbUserToUser, mapDbAbsenceToAbsence } from '@/utils/normalizers';
 
 interface DataContextType {
     clients: Client[];
@@ -13,6 +13,7 @@ interface DataContextType {
     users: User[];
     timesheetEntries: TimesheetEntry[];
     projectMembers: { projectId: string, userId: string }[];
+    absences: Absence[];
     loading: boolean;
     error: string | null;
 
@@ -23,6 +24,7 @@ interface DataContextType {
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     setTimesheetEntries: React.Dispatch<React.SetStateAction<TimesheetEntry[]>>;
     setProjectMembers: React.Dispatch<React.SetStateAction<{ projectId: string, userId: string }[]>>;
+    setAbsences: React.Dispatch<React.SetStateAction<Absence[]>>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -38,6 +40,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         tasks: loadedTasks,
         timesheetEntries: loadedTimesheets,
         projectMembers: loadedProjectMembers,
+        absences: loadedAbsences,
         loading: dataLoading,
         error: dataError
     } = useAppData();
@@ -48,6 +51,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [users, setUsers] = useState<User[]>([]);
     const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>([]);
     const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
+    const [absences, setAbsences] = useState<Absence[]>([]);
 
     // Ref para evitar ciclos de re-subscrição e garantir acesso a dados frescos nos callbacks
     const usersRef = React.useRef<User[]>([]);
@@ -63,7 +67,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimesheetEntries(loadedTimesheets);
         setProjectMembers(loadedProjectMembers || []);
         setUsers(loadedUsers);
-    }, [dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers]);
+        setAbsences(loadedAbsences || []);
+    }, [dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers, loadedAbsences]);
 
     // === REALTIME SUBSCRIPTIONS ===
     useEffect(() => {
@@ -140,6 +145,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setProjectMembers(prev => prev.filter(pm => !(pm.projectId === String(payload.old.id_projeto) && pm.userId === String(payload.old.id_colaborador))));
                 }
             })
+            // 7. Ausências
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'colaborador_ausencias' }, (payload) => {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const absence = mapDbAbsenceToAbsence(payload.new);
+                    setAbsences(prev => {
+                        const exists = prev.find(a => a.id === absence.id);
+                        if (exists) return prev.map(a => a.id === absence.id ? absence : a);
+                        return [...prev, absence];
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setAbsences(prev => prev.filter(a => a.id !== String(payload.old.id)));
+                }
+            })
             .subscribe();
 
         return () => {
@@ -154,6 +172,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         users,
         timesheetEntries,
         projectMembers,
+        absences,
         loading: dataLoading && (clients.length === 0),
         error: dataError,
         setClients,
@@ -161,8 +180,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTasks,
         setUsers,
         setTimesheetEntries,
-        setProjectMembers
-    }), [clients, projects, tasks, users, timesheetEntries, projectMembers, dataLoading, dataError]);
+        setProjectMembers,
+        setAbsences
+    }), [clients, projects, tasks, users, timesheetEntries, projectMembers, absences, dataLoading, dataError]);
 
     return (
         <DataContext.Provider value={value}>

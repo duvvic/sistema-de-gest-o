@@ -11,6 +11,7 @@ import {
   Status,
   Priority,
   Impact,
+  Absence,
 } from "@/types";
 
 import {
@@ -35,6 +36,7 @@ interface AppData {
   tasks: Task[];
   timesheetEntries: TimesheetEntry[];
   projectMembers: { projectId: string; userId: string }[];
+  absences: Absence[];
   loading: boolean;
   error: string | null;
 }
@@ -52,7 +54,8 @@ import {
   normalizeImpact,
   formatDate,
   mapDbTaskToTask,
-  mapDbTimesheetToEntry
+  mapDbTimesheetToEntry,
+  mapDbAbsenceToAbsence
 } from "@/utils/normalizers";
 
 // =====================================================
@@ -66,6 +69,7 @@ export function useAppData(): AppData {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>(MOCK_TIMESHEETS);
   const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
+  const [absences, setAbsences] = useState<Absence[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +92,7 @@ export function useAppData(): AppData {
           setTasks(parsed.tasks || []);
           setTimesheetEntries(parsed.timesheetEntries || []);
           setProjectMembers(parsed.projectMembers || []);
+          setAbsences(parsed.absences || []);
           // Se temos cache, já podemos sinalizar que não estamos mais "travados"
           setLoading(false);
         }
@@ -121,14 +126,15 @@ export function useAppData(): AppData {
 
         console.log('[useAppData] Carregando dados do banco...');
 
-        const [usersData, clientsData, projectsData, tasksData, tasksCollaboratorsData, membersRes, rawTimesheets] = await Promise.all([
+        const [usersData, clientsData, projectsData, tasksData, tasksCollaboratorsData, membersRes, rawTimesheets, absencesRes] = await Promise.all([
           fetchUsers(),
           fetchClients(),
           fetchProjects(),
           fetchTasks(),
           fetchTaskCollaborators(),
           supabase.from('project_members').select('id_projeto, id_colaborador'),
-          fetchTimesheets()
+          fetchTimesheets(),
+          supabase.from('colaborador_ausencias').select('*')
         ]);
 
         if (!isMounted) return;
@@ -190,12 +196,15 @@ export function useAppData(): AppData {
           };
         });
 
+        const absencesMapped = (absencesRes.data || []).map(mapDbAbsenceToAbsence);
+
         // Atualiza os states (retorna todos, filtragem no componente)
         setUsers(usersData);
         setClients(clientsData);
         setProjects(projectsData);
         setTasks(tasksMapped);
         setTimesheetEntries(timesheetMapped);
+        setAbsences(absencesMapped);
 
         if (membersRes.data) {
           const membersMapped = membersRes.data.map((row: any) => ({
@@ -213,7 +222,8 @@ export function useAppData(): AppData {
             projects: projectsData,
             tasks: tasksMapped,
             timesheetEntries: timesheetMapped,
-            projectMembers: membersMapped
+            projectMembers: membersMapped,
+            absences: absencesMapped
           };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
         }
@@ -247,6 +257,7 @@ export function useAppData(): AppData {
     tasks,
     timesheetEntries,
     projectMembers,
+    absences,
     loading,
     error,
   };
