@@ -965,8 +965,14 @@ export const KanbanBoard = () => {
             {STATUS_COLUMNS
               .filter(col => !showOnlyDelayed || col.id !== 'Done')
               .map((col) => {
-                const columnTasks = filteredTasks.filter(t => t.status === col.id);
+                let columnTasks = filteredTasks.filter(t => t.status === col.id);
                 const isDone = col.id === 'Done';
+
+                // Aplicar filtro de cliente para tarefas concluídas
+                if (isDone && selectedClientFilter) {
+                  columnTasks = columnTasks.filter(t => t.clientId === selectedClientFilter);
+                }
+
                 const displayedTasks = isDone
                   ? columnTasks
                     .sort((a, b) => {

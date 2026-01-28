@@ -382,6 +382,16 @@ const AppRoutes: React.FC = () => {
                     }
                 />
 
+                {/* Kanban Board (Tarefas) - Rota geral */}
+                <Route
+                    path="tasks"
+                    element={
+                        <ProtectedWrapper>
+                            <KanbanBoard />
+                        </ProtectedWrapper>
+                    }
+                />
+
                 {/* Nova Tarefa */}
                 <Route
                     path="tasks/new"
