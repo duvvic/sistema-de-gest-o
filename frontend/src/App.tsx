@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import AppRoutes from './routes/AppRoutes';
+import * as serviceWorkerRegistration from './utils/serviceWorkerRegistration';
 
 // Theme Helpers
 const getThemeKey = (userId: string) => `nic_theme_${userId}`;
@@ -62,6 +63,14 @@ function AppContent() {
 }
 
 function App() {
+    // Register Service Worker for auto-updates
+    useEffect(() => {
+        // Only register in production
+        if (import.meta.env.PROD) {
+            serviceWorkerRegistration.register();
+        }
+    }, []);
+
     return (
         <BrowserRouter>
             <AuthProvider>
