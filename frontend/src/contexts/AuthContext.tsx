@@ -55,7 +55,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
                 avatarUrl: userData.avatar_url,
                 cargo: userData.Cargo || userData.cargo,
                 active: userData.ativo ?? true,
-                tower: userData.tower // Capture tower field
+                torre: userData.torre || userData.tower // Capture torre field
             } as User;
         }
 
@@ -69,6 +69,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
             role = 'pmo';
         } else if (papel.includes('diretoria') || papel.includes('diretor')) {
             role = 'executive'; // Map to new role
+        } else if (papel.includes('ceo') || papel.includes('presidente')) {
+            role = 'ceo';
         } else if (papel.includes('pmo')) {
             role = 'pmo';
         } else if (papel.includes('financeiro')) {
@@ -127,7 +129,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             const response = await Promise.race([
                 supabase
                     .from('dim_colaboradores')
-                    .select('ID_Colaborador, NomeColaborador, email, "E-mail", role, avatar_url, Cargo, ativo, tower')
+                    .select('ID_Colaborador, NomeColaborador, email, "E-mail", role, avatar_url, Cargo, ativo, torre')
                     .or(`email.eq.${emailToFind},"E-mail".eq.${emailToFind}`)
                     .maybeSingle(),
                 timeoutPromise as any
@@ -313,7 +315,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             currentUser,
             isLoading: !authReady || isLoading,
             authReady,
-            isAdmin: !!currentUser && ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive'].includes(currentUser.role),
+            isAdmin: !!currentUser && ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive', 'ceo'].includes(currentUser.role),
             login,
             loginWithSession,
             logout,

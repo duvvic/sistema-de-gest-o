@@ -25,7 +25,7 @@ const UserForm: React.FC = () => {
     role: 'developer' as Role,
     active: true,
     avatarUrl: '',
-    tower: '',
+    torre: '',
     hourlyCost: 0,
     dailyAvailableHours: 8,
     monthlyAvailableHours: 160
@@ -41,7 +41,7 @@ const UserForm: React.FC = () => {
         role: initialUser.role,
         active: initialUser.active !== false,
         avatarUrl: initialUser.avatarUrl || '',
-        tower: initialUser.tower || '',
+        torre: initialUser.torre || '',
         hourlyCost: initialUser.hourlyCost || 0,
         dailyAvailableHours: initialUser.dailyAvailableHours || 8,
         monthlyAvailableHours: initialUser.monthlyAvailableHours || 160
@@ -75,7 +75,7 @@ const UserForm: React.FC = () => {
         role: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
         ativo: formData.active,
         avatar_url: formData.avatarUrl,
-        torre: formData.tower,
+        torre: formData.torre,
         custo_hora: formData.hourlyCost,
         horas_disponiveis_dia: formData.dailyAvailableHours,
         horas_disponiveis_mes: formData.monthlyAvailableHours
@@ -339,8 +339,8 @@ const UserForm: React.FC = () => {
                 Torre de Atuação / Especialidade
               </label>
               <select
-                value={formData.tower}
-                onChange={(e) => setFormData({ ...formData, tower: e.target.value })}
+                value={formData.torre}
+                onChange={(e) => setFormData({ ...formData, torre: e.target.value })}
                 className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text)]"
               >
                 <option value="">Selecione a torre...</option>

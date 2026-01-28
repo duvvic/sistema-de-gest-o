@@ -110,10 +110,10 @@ const ProjectColumn: React.FC<{
 
               {/* Informações */}
               <div className="space-y-2 mb-3">
-                {project.manager && (
+                {project.managerClient && (
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <UserIcon className="w-3.5 h-3.5" />
-                    <span>Gestor: {project.manager}</span>
+                    <span>Gestor: {project.managerClient}</span>
                   </div>
                 )}
                 {project.budget && (
@@ -203,7 +203,7 @@ const KanbanProjects: React.FC<KanbanProjectsProps> = ({
 
   const safeProjects = projects || [];
   const safeClients = clients || [];
-  const isAdmin = user?.role === 'admin' || user?.role === 'system_admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'system_admin' || user?.role === 'ceo';
 
   // Filtrar por cliente específico (se fornecido)
   const clientFilteredProjects = filteredClientId

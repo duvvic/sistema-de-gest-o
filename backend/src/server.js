@@ -8,6 +8,8 @@ import reportRoutes from "./routes/report.js";
 import authRoutes from "./routes/auth.js";
 import notesRoutes from "./routes/notes.js";
 import syncRoutes from "./routes/sync.js";
+import auditRoutes from "./routes/audit.js";
+
 
 
 dotenv.config();
@@ -31,6 +33,8 @@ app.use("/api/admin/report", reportRoutes);
 app.use("/api/admin/users", adminUsersRouter);
 app.use("/api/notes", notesRoutes);
 app.use("/api/admin/sync", syncRoutes);
+app.use("/api/audit", auditRoutes);
+
 
 
 const port = process.env.PORT || 3000;

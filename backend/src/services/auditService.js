@@ -6,7 +6,22 @@ import { supabaseAdmin } from '../config/supabaseAdmin.js';
 /**
  * Criar registro de auditoria
  */
-export async function createAuditLog({ userId, userRole, action, resource, resourceId, changes, ipAddress, userAgent }) {
+export async function createAuditLog({
+    userId,
+    userRole,
+    action,
+    resource,
+    resourceId,
+    changes,
+    ipAddress,
+    userAgent,
+    clientId,
+    projectId,
+    taskId,
+    clientName,
+    projectName,
+    taskName
+}) {
     try {
         const { data, error } = await supabaseAdmin
             .from('audit_log')
@@ -19,6 +34,12 @@ export async function createAuditLog({ userId, userRole, action, resource, resou
                 changes: changes ? JSON.stringify(changes) : null,
                 ip_address: ipAddress,
                 user_agent: userAgent,
+                client_id: clientId,
+                project_id: projectId,
+                task_id: taskId,
+                client_name: clientName,
+                project_name: projectName,
+                task_name: taskName,
                 timestamp: new Date().toISOString()
             }]);
 

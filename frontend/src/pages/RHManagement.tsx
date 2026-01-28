@@ -30,7 +30,7 @@ const RHManagement: React.FC = () => {
             const matchesSearch = user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 a.observations?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
-            const matchesTower = towerFilter === 'all' || user?.tower === towerFilter;
+            const matchesTower = towerFilter === 'all' || user?.torre === towerFilter;
             return matchesSearch && matchesStatus && matchesTower;
         }).sort((a, b) => b.startDate.localeCompare(a.startDate));
     }, [absences, users, searchTerm, statusFilter, towerFilter]);

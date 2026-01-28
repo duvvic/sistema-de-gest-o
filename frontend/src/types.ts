@@ -3,7 +3,7 @@
 
 export type Status = 'Todo' | 'In Progress' | 'Review' | 'Done';
 
-export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'rh' | 'financeiro' | 'financial' | 'tech_lead' | 'consultor' | 'system_admin' | 'executive' | 'resource';
+export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'rh' | 'financeiro' | 'financial' | 'tech_lead' | 'consultor' | 'system_admin' | 'executive' | 'resource' | 'ceo';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Impact = 'Low' | 'Medium' | 'High';
@@ -16,7 +16,7 @@ export interface User {
   avatarUrl?: string;
   cargo?: string; // Campo adicional do banco
   active?: boolean;
-  tower?: string; // Torre de atuação
+  torre?: string; // Torre de atuação
   hourlyCost?: number; // Custo hora
   nivel?: string; // Nível de experiência
   dailyAvailableHours?: number; // Horas liberadas dia
@@ -139,4 +139,24 @@ export interface Absence {
   status: 'sugestao' | 'aprovada_gestao' | 'aprovada_rh' | 'finalizada_dp' | 'cancelado' | 'rejeitado';
   observations?: string;
   createdAt?: string;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  timestamp: string;
+  user_id: string; // Pode ser number no banco, mas string no front facilita join com users auth
+  user_role: string;
+  action: string;
+  resource: string;
+  resource_id: string; // ou number
+  changes: any; // JSONB
+  ip_address?: string;
+  user_agent?: string;
+  user_name?: string; // Campo calculado no front (join)
+  client_id?: string | number;
+  project_id?: string | number;
+  task_id?: string | number;
+  client_name?: string;
+  project_name?: string;
+  task_name?: string;
 }

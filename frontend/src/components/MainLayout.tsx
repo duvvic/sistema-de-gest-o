@@ -21,7 +21,8 @@ import {
     Zap,
     Activity,
     RefreshCw,
-    Palmtree
+    Palmtree,
+    ShieldAlert
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import logoImg from '@/assets/logo.png';
@@ -43,6 +44,7 @@ const MainLayout: React.FC = () => {
         { path: '/admin/team', icon: Users, label: 'Colaboradores' },
         { path: '/admin/rh', icon: Palmtree, label: 'Gestão RH' },
         { path: '/admin/reports', icon: LayoutDashboard, label: 'Relatórios' },
+        { path: '/admin/audit', icon: ShieldAlert, label: 'Auditoria' },
         { path: '/admin/sync', icon: RefreshCw, label: 'Sincronização' },
 
         { path: '/timesheet', icon: Clock, label: 'Timesheet' },
@@ -59,7 +61,7 @@ const MainLayout: React.FC = () => {
         { path: '/docs', icon: Book, label: 'Documentação' },
     ];
 
-    const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive'];
+    const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive', 'ceo'];
 
     const menuItems = adminRoles.includes(currentUser?.role as Role)
         ? adminMenuItems.filter(item =>

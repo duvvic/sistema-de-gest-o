@@ -77,7 +77,7 @@ export const ShowProjectEditControls: React.FC<{
     const userRole = currentUser.role || 'resource';
 
     // System Admin sempre pode editar
-    if (userRole === 'system_admin') {
+    if (userRole === 'system_admin' || userRole === 'ceo') {
         return <>{children}</>;
     }
 
@@ -116,7 +116,7 @@ export const ShowForAdmin: React.FC<{
     children: React.ReactNode
 }> = ({ children }) => {
     return (
-        <ShowForRoles roles={['system_admin']}>
+        <ShowForRoles roles={['system_admin', 'ceo']}>
             {children}
         </ShowForRoles>
     );
@@ -129,7 +129,7 @@ export const ShowForExecutive: React.FC<{
     children: React.ReactNode
 }> = ({ children }) => {
     return (
-        <ShowForRoles roles={['system_admin', 'executive']}>
+        <ShowForRoles roles={['system_admin', 'executive', 'ceo']}>
             {children}
         </ShowForRoles>
     );
@@ -142,7 +142,7 @@ export const ShowForPMO: React.FC<{
     children: React.ReactNode
 }> = ({ children }) => {
     return (
-        <ShowForRoles roles={['system_admin', 'executive', 'pmo']}>
+        <ShowForRoles roles={['system_admin', 'executive', 'pmo', 'ceo']}>
             {children}
         </ShowForRoles>
     );
@@ -157,7 +157,7 @@ export const usePermissions = () => {
     const userRole = currentUser?.role || 'resource';
 
     return {
-        isAdmin: userRole === 'system_admin',
+        isAdmin: userRole === 'system_admin' || userRole === 'ceo',
         isExecutive: userRole === 'executive',
         isPMO: userRole === 'pmo',
         isFinancial: userRole === 'financial',

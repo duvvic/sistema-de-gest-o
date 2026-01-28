@@ -88,7 +88,7 @@ const TeamList: React.FC = () => {
       });
 
       let userStatus: 'Livre' | 'Ocupado' | 'Estudando' | 'Atrasado' | 'Indisponível' = 'Livre';
-      const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+      const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
       const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
 
       if (!isSystemCollaborator) {
@@ -370,7 +370,7 @@ const TeamList: React.FC = () => {
                     });
                     const hasInProgress = userActiveTasks.some(t => t.status === 'In Progress');
 
-                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
                     const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
 
                     if (!isSystemCollaborator) return 'indisponível';
@@ -412,7 +412,7 @@ const TeamList: React.FC = () => {
                     let accentBg = 'rgba(16, 185, 129, 0.1)';
                     let textColor = '#047857'; // Verde Escuro para texto
 
-                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
                     const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
 
                     if (!isSystemCollaborator) {

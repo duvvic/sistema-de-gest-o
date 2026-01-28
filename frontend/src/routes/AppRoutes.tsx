@@ -40,6 +40,7 @@ import ResetPassword from '@/components/ResetPassword';
 import SystemDocs from '@/components/SystemDocs';
 import AdminMonitoringView from '@/components/AdminMonitoringView';
 import AbsenceManager from '@/components/AbsenceManager';
+import AuditLogsView from '@/components/AuditLogsView';
 
 // Definição de grupos de acesso
 const ADMIN_ROLES: Role[] = [
@@ -316,6 +317,16 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminFullReport />
+                        </ProtectedWrapper>
+                    }
+                />
+
+                {/* Auditoria */}
+                <Route
+                    path="admin/audit"
+                    element={
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
+                            <AuditLogsView />
                         </ProtectedWrapper>
                     }
                 />

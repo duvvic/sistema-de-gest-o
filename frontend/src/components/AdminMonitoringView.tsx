@@ -409,7 +409,7 @@ const AdminMonitoringView: React.FC = () => {
         return () => clearInterval(interval);
     }, [tasksInProgress.length, taskPage]);
 
-    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
     const filteredUsers = useMemo(() =>
         allUsers.filter(u => u.active !== false && activeCargos.includes(u.cargo?.toLowerCase() || '')),
         [allUsers]);

@@ -18,6 +18,8 @@ export interface DbUserRow {
   avatar_url: string | null;
   role: string | null;
   ativo?: boolean | null;
+  torre?: string | null;
+  nivel?: string | null;
 }
 
 // dim_clientes
@@ -94,7 +96,7 @@ export async function fetchUsers(): Promise<User[]> {
     console.log("[API] Buscando users (v2-fix-role)...");
     const { data, error } = await supabase
       .from("dim_colaboradores")
-      .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, role, ativo, tower, nivel");
+      .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, role, ativo, torre, nivel");
 
     if (error) {
       console.error("[API] Erro Supabase:", error);

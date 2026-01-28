@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { Client, Project, Task } from '@/types';
-import { ArrowLeft, FolderKanban, CheckSquare, Info } from 'lucide-react';
+import { ArrowLeft, FolderKanban, CheckSquare, Info, Save, Edit, Briefcase, Globe, Phone, FileText, User } from 'lucide-react';
+import { supabase } from '@/services/supabaseClient';
 
 interface ClientDetailViewProps {
   client: Client;
@@ -24,9 +25,37 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
 }) => {
   const [projects, setProjects] = useState(initialProjects);
   const [tasks, setTasks] = useState(initialTasks);
-  const [activeTab, setActiveTab] = useState<'projects' | 'tasks'>('projects');
+  const [activeTab, setActiveTab] = useState<'details' | 'projects' | 'tasks'>('details'); // Default to details as requested
   const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'inprogress' | 'review' | 'done'>('all');
-  const [showClientInfo, setShowClientInfo] = useState(false);
+
+  // Form State
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    logoUrl: '',
+    contato_principal: '',
+    cnpj: '',
+    telefone: '',
+    pais: '',
+    tipo_cliente: 'cliente_final',
+    active: true
+  });
+
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        name: client.name || '',
+        logoUrl: client.logoUrl || '',
+        contato_principal: client.contato_principal || '',
+        cnpj: client.cnpj || '',
+        telefone: client.telefone || '',
+        pais: client.pais || '',
+        tipo_cliente: client.tipo_cliente || 'cliente_final',
+        active: client.active !== false
+      });
+    }
+  }, [client]);
 
   // Realtime subscriptions
   useSupabaseRealtime('dim_projetos', (payload) => {
@@ -39,8 +68,6 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
     else if (payload.eventType === 'UPDATE') setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
     else if (payload.eventType === 'DELETE') setTasks(prev => prev.filter(t => t.id !== payload.old.id));
   });
-
-  // Removido: cálculo e exibição de contrato fora de "Informações"
 
   // Filtra projetos do cliente
   const clientProjects = useMemo(
@@ -96,6 +123,35 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
     }
   };
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('dim_clientes')
+        .update({
+          NomeCliente: formData.name,
+          logo_url: formData.logoUrl,
+          contato_principal: formData.contato_principal,
+          cnpj: formData.cnpj,
+          telefone: formData.telefone,
+          pais: formData.pais,
+          tipo_cliente: formData.tipo_cliente,
+          ativo: formData.active
+        })
+        .eq('ID_Cliente', client.id);
+
+      if (error) throw error;
+      alert('Cliente atualizado com sucesso!');
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error(error);
+      alert('Erro ao salvar: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-[var(--surface)] rounded-2xl shadow-sm border border-[var(--border)] overflow-hidden">
       {/* Header */}
@@ -119,23 +175,16 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
               )}
               {client.name}
             </h1>
-            <p className="text-sm text-[var(--textMuted)] mt-1">Projetos e Tarefas</p>
+            <p className="text-sm text-[var(--textMuted)] mt-1">Gestão de Cliente</p>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => onOpenClientDetails?.(client.id)}
-            className="px-3 py-2 rounded-lg border border-[var(--border)] text-[var(--text)] hover:border-[var(--brand)] hover:text-[var(--brand)] transition-colors flex items-center gap-2"
-            title="Informações e Edição do Cliente"
-          >
-            <Info className="w-4 h-4" />
-            <span className="text-sm font-medium">Informações</span>
-          </button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 px-8 py-4 border-b border-[var(--border)] bg-[var(--bgApp)]">
+        <button onClick={() => setActiveTab('details')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'details' ? 'bg-[var(--brand)] text-white' : 'text-[var(--textMuted)] hover:bg-[var(--surfaceHover)]'}`}>
+          <Info className="w-4 h-4" /> Visão Geral
+        </button>
         <button
           onClick={() => setActiveTab('projects')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'projects'
@@ -161,7 +210,79 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div className="max-w-7xl mx-auto">
-          {/* Removido: cards de resumo de contrato/tempo fora de "Informações" */}
+          {activeTab === 'details' && (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-bold flex items-center gap-3 text-slate-800">
+                    <Briefcase className="w-6 h-6 text-purple-600" />
+                    Dados do Cliente
+                  </h3>
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    className={`px-5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${isEditing ? 'bg-slate-100 text-slate-600' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-200'}`}
+                  >
+                    {isEditing ? 'Cancelar Edição' : <> <Edit className="w-4 h-4" /> Editar Informações </>}
+                  </button>
+                </div>
+
+                <form onSubmit={handleSave} className="space-y-8">
+                  <fieldset disabled={!isEditing} className="group-disabled:opacity-100 disabled:opacity-100 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Nome do Cliente / Empresa</label>
+                        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">URL do Logo</label>
+                        <input type="text" value={formData.logoUrl} onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg" placeholder="https://..." />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Contato Principal</label>
+                        <input type="text" value={formData.contato_principal} onChange={(e) => setFormData({ ...formData, contato_principal: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">CNPJ</label>
+                        <input type="text" value={formData.cnpj} onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Telefone</label>
+                        <input type="text" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">País</label>
+                        <input type="text" value={formData.pais} onChange={(e) => setFormData({ ...formData, pais: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Cliente</label>
+                        <select value={formData.tipo_cliente} onChange={(e) => setFormData({ ...formData, tipo_cliente: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-xl outline-none text-slate-800 font-bold disabled:bg-transparent disabled:px-0 disabled:border-b-slate-200 disabled:rounded-none disabled:text-lg disabled:appearance-none">
+                          <option value="cliente_final">Cliente Final</option>
+                          <option value="parceiro">Parceiro</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-6 flex items-center justify-between">
+                      <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors">
+                        <input type="checkbox" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-5 h-5 rounded text-purple-600 focus:ring-purple-600 border-slate-300" disabled={!isEditing} />
+                        <span className={`text-sm font-bold ${formData.active ? 'text-emerald-600' : 'text-slate-400'}`}>Cliente Ativo</span>
+                      </label>
+
+                      {isEditing && (
+                        <button type="submit" className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all flex items-center gap-2">
+                          <Save className="w-4 h-4" /> Salvar Alterações
+                        </button>
+                      )}
+                    </div>
+                  </fieldset>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* PROJECTS TAB */}
           {activeTab === 'projects' && (
             <div>

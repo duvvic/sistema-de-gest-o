@@ -99,7 +99,11 @@ const AllProjectsView: React.FC = () => {
                 return (
                   <div key={client.id} className="space-y-4">
                     {/* Linha do Cliente */}
-                    <div className="flex items-center gap-4 py-3 px-4 border-l-4 rounded-r-xl bg-white/5" style={{ borderColor: 'var(--brand)' }}>
+                    <div
+                      onClick={() => navigate(`/admin/clients/${client.id}`)}
+                      className="flex items-center gap-4 py-3 px-4 border-l-4 rounded-r-xl bg-white/5 cursor-pointer hover:bg-slate-50 transition-colors"
+                      style={{ borderColor: 'var(--brand)' }}
+                    >
                       <div className="w-10 h-10 rounded-lg border p-1.5 flex items-center justify-center bg-white" style={{ borderColor: 'var(--border)' }}>
                         {client.logoUrl ? (
                           <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />

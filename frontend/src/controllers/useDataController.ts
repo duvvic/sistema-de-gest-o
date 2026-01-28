@@ -4,6 +4,9 @@ import { supabase } from '@/services/supabaseClient';
 import * as clientService from '@/services/clientService';
 import * as projectService from '@/services/projectService';
 import * as taskService from '@/services/taskService';
+import { useAuth } from '@/contexts/AuthContext';
+import { logAction, logTaskAction } from '@/services/auditLogger';
+
 
 export const useDataController = () => {
     const {
@@ -17,6 +20,9 @@ export const useDataController = () => {
         loading,
         error
     } = useData();
+
+    const { currentUser } = useAuth();
+
 
     // === CLIENT CONTROLLERS ===
 
@@ -141,17 +147,86 @@ export const useDataController = () => {
         const newId = await taskService.createTask(taskData);
         const newTask = { ...taskData, id: String(newId) } as Task;
         setTasks(prev => [newTask, ...prev]);
+
+        // Audit Logging
+        if (currentUser) {
+            const project = projects.find(p => p.id === taskData.projectId);
+            const client = clients.find(c => c.id === taskData.clientId);
+
+            logTaskAction(
+                { id: currentUser.id, role: currentUser.role },
+                'CREATE',
+                {
+                    id: newId,
+                    name: taskData.title || 'Sem título',
+                    projectId: taskData.projectId || '',
+                    projectName: project?.name,
+                    clientId: taskData.clientId || '',
+                    clientName: client?.name
+                },
+                { taskData }
+            );
+        }
+
         return String(newId);
     };
 
     const updateTask = async (taskId: string, updates: Partial<Task>): Promise<void> => {
+        const oldTask = tasks.find(t => t.id === taskId);
         await taskService.updateTask(taskId, updates);
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+
+        // Audit Logging
+        if (currentUser && oldTask) {
+            const project = projects.find(p => p.id === oldTask.projectId);
+            const client = clients.find(c => c.id === oldTask.clientId);
+
+            let action: any = 'UPDATE_TASK';
+            if (updates.progress !== undefined && updates.progress !== oldTask.progress) action = 'PERCENTAGE_CHANGE';
+            if (updates.status !== undefined && updates.status !== oldTask.status) {
+                action = updates.status === 'Done' ? 'COMPLETED' : 'STATUS_CHANGE';
+            }
+
+            logTaskAction(
+                { id: currentUser.id, role: currentUser.role },
+                action,
+                {
+                    id: taskId,
+                    name: oldTask.title || 'Sem título',
+                    projectId: oldTask.projectId,
+                    projectName: project?.name,
+                    clientId: oldTask.clientId,
+                    clientName: client?.name
+                },
+                { old: oldTask, updates }
+            );
+        }
     };
 
     const deleteTask = async (taskId: string): Promise<void> => {
+        const taskToDelete = tasks.find(t => t.id === taskId);
         await taskService.deleteTask(taskId);
         setTasks(prev => prev.filter(t => t.id !== taskId));
+
+        // Audit Logging
+        if (currentUser && taskToDelete) {
+            const project = projects.find(p => p.id === taskToDelete.projectId);
+            const client = clients.find(c => c.id === taskToDelete.clientId);
+
+            logTaskAction(
+                { id: currentUser.id, role: currentUser.role },
+                'DELETE',
+                {
+                    id: taskId,
+                    name: taskToDelete.title || 'Sem título',
+                    projectId: taskToDelete.projectId,
+                    projectName: project?.name,
+                    clientId: taskToDelete.clientId,
+                    clientName: client?.name
+                },
+                { taskToDelete }
+            );
+        }
     };
 
     // === TIMESHEET CONTROLLERS ===
@@ -186,6 +261,28 @@ export const useDataController = () => {
         if (error) throw error;
         if (data) entry.id = String(data.ID_Horas_Trabalhadas);
         setTimesheetEntries(prev => [entry, ...prev]);
+
+        // Audit Logging
+        if (currentUser) {
+            const task = tasks.find(t => t.id === entry.taskId);
+            const project = projects.find(p => p.id === entry.projectId);
+            const client = clients.find(c => c.id === entry.clientId);
+
+            logAction({
+                userId: currentUser.id,
+                userRole: currentUser.role,
+                action: 'HOURS_LOGGED',
+                resource: 'TIMESHEET',
+                resourceId: entry.id,
+                taskId: entry.taskId,
+                taskName: task?.title,
+                projectId: entry.projectId,
+                projectName: project?.name,
+                clientId: entry.clientId,
+                clientName: client?.name,
+                changes: { hours: entry.totalHours, date: entry.date, description: entry.description }
+            });
+        }
     };
 
     const updateTimesheet = async (entry: TimesheetEntry): Promise<void> => {

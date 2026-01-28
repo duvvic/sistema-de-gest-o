@@ -177,7 +177,7 @@ const AdminDashboard: React.FC = () => {
       return {
         id: u.id,
         name: u.name,
-        tower: u.tower,
+        torre: u.torre,
         capacity: u.monthlyAvailableHours || 160,
         assigned: assignedHours,
         load: (assignedHours / (u.monthlyAvailableHours || 160)) * 100
@@ -195,7 +195,7 @@ const AdminDashboard: React.FC = () => {
     };
   }, [safeProjects, safeTasks, portfolioTimesheets, users]);
 
-  const activeTab = (searchParams.get('tab') as 'operacional' | 'executivo' | 'capacidade' | 'parceiros') || 'operacional';
+  const activeTab = (searchParams.get('tab') as 'operacional' | 'executivo' | 'capacidade') || 'operacional';
 
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
@@ -223,12 +223,7 @@ const AdminDashboard: React.FC = () => {
         >
           Quadro de Capacidade
         </button>
-        <button
-          onClick={() => setActiveTab('parceiros')}
-          className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'parceiros' ? 'bg-[var(--surface)] shadow-md text-[var(--primary)]' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
-        >
-          Parceiros
-        </button>
+
       </div>
 
       {activeTab === 'executivo' && executiveMetrics && (
@@ -369,7 +364,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h4 className="font-bold text-sm truncate" style={{ color: 'var(--text)' }}>{res.name}</h4>
-                      <span className="text-[9px] font-black text-[var(--primary)] uppercase tracking-tighter">{res.tower || 'Sem Torre'}</span>
+                      <span className="text-[9px] font-black text-[var(--primary)] uppercase tracking-tighter">{res.torre || 'Sem Torre'}</span>
                     </div>
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${res.load > 100 ? 'bg-red-500/10 text-red-500' : res.load > 80 ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                       {Math.round(res.load)}%
@@ -392,86 +387,7 @@ const AdminDashboard: React.FC = () => {
         </motion.div>
       )}
 
-      {activeTab === 'parceiros' && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[var(--surface)] p-6 rounded-3xl border border-[var(--border)] shadow-sm">
-            <div>
-              <h2 className="text-xl font-black text-[var(--text)]">Gestão de Parceiros</h2>
-              <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">Visualize parceiros e empresas vinculadas</p>
-            </div>
-            <button
-              onClick={() => navigate('/admin/clients/new?tipo=parceiro')}
-              className="bg-[var(--primary)] text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity whitespace-nowrap shadow-lg shadow-purple-500/20"
-            >
-              <Plus size={16} /> Novo Parceiro
-            </button>
-          </div>
 
-          <div className="grid grid-cols-1 gap-6">
-            {safeClients.filter(c => c.tipo_cliente === 'parceiro').length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-[var(--surface)] rounded-[32px] border-2 border-dashed border-[var(--border)]">
-                <Briefcase size={40} className="text-[var(--muted)] mb-4 opacity-20" />
-                <p className="text-[var(--muted)] font-black uppercase text-[10px] tracking-widest">Nenhum parceiro cadastrado ainda</p>
-              </div>
-            ) : (
-              safeClients.filter(c => c.tipo_cliente === 'parceiro').map(partner => (
-                <div key={partner.id} className="bg-[var(--surface)] rounded-[32px] border border-[var(--border)] shadow-sm overflow-hidden transition-all hover:shadow-md">
-                  <div className="p-6 flex flex-col md:flex-row items-center justify-between bg-[var(--surface-2)]/50 border-b border-[var(--border)] gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-2 shadow-sm border border-[var(--border)]">
-                        <img src={partner.logoUrl || '/placeholder-logo.png'} alt={partner.name} className="max-w-full max-h-full object-contain" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-black text-[var(--text)]">{partner.name}</h3>
-                        <span className="text-[9px] font-black uppercase text-[var(--primary)] bg-[var(--primary-soft)] px-2 py-0.5 rounded-md">PARCEIRO NIC-LABS</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-[var(--muted)] uppercase tracking-tighter">
-                        {safeClients.filter(c => c.partner_id === partner.id).length} Empresas Vinculadas
-                      </span>
-                      <button
-                        onClick={() => navigate(`/admin/clients/${partner.id}`)}
-                        className="p-2 hover:bg-[var(--surface)] rounded-xl transition-colors border border-transparent hover:border-[var(--border)] text-[var(--text)]"
-                      >
-                        <TrendingUp size={18} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {safeClients.filter(c => c.partner_id === partner.id).map(linkedCompany => (
-                        <div
-                          key={linkedCompany.id}
-                          onClick={() => navigate(`/admin/clients/${linkedCompany.id}`)}
-                          className="p-4 rounded-2xl border border-[var(--border)] hover:border-[var(--primary)] transition-all cursor-pointer group flex items-center gap-4 bg-[var(--surface)]"
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-[var(--surface-2)] flex items-center justify-center p-2 border border-[var(--border)] group-hover:scale-105 transition-transform">
-                            <img src={linkedCompany.logoUrl || '/placeholder-logo.png'} alt={linkedCompany.name} className="max-w-full max-h-full object-contain opacity-80" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-black text-sm text-[var(--text)] truncate">{linkedCompany.name}</p>
-                            <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-tighter">Empresa Vinculada</p>
-                          </div>
-                          <ArrowRight size={14} className="text-[var(--muted)] opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => navigate(`/admin/clients/new?tipo=cliente_final&partnerId=${partner.id}`)}
-                        className="p-4 rounded-2xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] transition-all flex items-center justify-center gap-3 group"
-                      >
-                        <Plus size={18} className="text-[var(--muted)] group-hover:text-[var(--primary)]" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)] group-hover:text-[var(--primary)]">Adicionar Empresa</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </motion.div>
-      )}
 
       {activeTab === 'operacional' && (
         <>
@@ -679,7 +595,7 @@ const AdminDashboard: React.FC = () => {
                       onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
                       onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
-                      <div className="flex items-center gap-5">
+                      <div className="flex items-center gap-5 cursor-pointer" onClick={() => navigate(`/admin/clients/${client.id}`)}>
                         <div className="w-16 h-16 rounded-xl border bg-white p-2 flex items-center justify-center shadow-lg" style={{ borderColor: 'var(--border)' }}>
                           <img
                             src={client.logoUrl}
@@ -700,7 +616,7 @@ const AdminDashboard: React.FC = () => {
 
                       <div className="flex items-center gap-3 mt-4 md:mt-0">
                         <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/admin/clients/${client.id}/edit`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/admin/clients/${client.id}`); }}
                           className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-bold text-xs border"
                           style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)', borderColor: 'var(--border)' }}
                         >
