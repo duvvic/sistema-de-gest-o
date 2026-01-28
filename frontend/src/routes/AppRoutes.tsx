@@ -27,6 +27,7 @@ import UserForm from '@/components/UserForm';
 import UserProfile from '@/components/UserProfile';
 import AdminFullReport from '@/pages/admin/AdminFullReport';
 import AdminSync from '@/pages/admin/AdminSync';
+import RHManagement from '@/pages/RHManagement';
 
 import Notes from '@/pages/Notes';
 
@@ -325,6 +326,16 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminSync />
+                        </ProtectedWrapper>
+                    }
+                />
+
+                {/* Gestão RH */}
+                <Route
+                    path="admin/rh"
+                    element={
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
+                            <RHManagement />
                         </ProtectedWrapper>
                     }
                 />

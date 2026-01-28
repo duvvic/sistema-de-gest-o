@@ -3,7 +3,7 @@
 
 export type Status = 'Todo' | 'In Progress' | 'Review' | 'Done';
 
-export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'financeiro' | 'financial' | 'tech_lead' | 'consultor' | 'system_admin' | 'executive' | 'resource';
+export type Role = 'admin' | 'developer' | 'gestor' | 'diretoria' | 'pmo' | 'rh' | 'financeiro' | 'financial' | 'tech_lead' | 'consultor' | 'system_admin' | 'executive' | 'resource';
 
 export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Impact = 'Low' | 'Medium' | 'High';
@@ -136,7 +136,7 @@ export interface Absence {
   type: 'férias' | 'atestado' | 'day-off' | 'feriado_local';
   startDate: string;
   endDate: string;
-  status: 'programado' | 'em_curso' | 'concluido' | 'cancelado';
+  status: 'sugestao' | 'aprovada_gestao' | 'aprovada_rh' | 'finalizada_dp' | 'cancelado' | 'rejeitado';
   observations?: string;
   createdAt?: string;
 }

@@ -20,7 +20,8 @@ import {
     StickyNote,
     Zap,
     Activity,
-    RefreshCw
+    RefreshCw,
+    Palmtree
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import logoImg from '@/assets/logo.png';
@@ -40,6 +41,7 @@ const MainLayout: React.FC = () => {
         { path: '/admin/clients', icon: Briefcase, label: 'Portfólio' },
         { path: '/tasks', icon: CheckSquare, label: 'Tarefas' },
         { path: '/admin/team', icon: Users, label: 'Colaboradores' },
+        { path: '/admin/rh', icon: Palmtree, label: 'Gestão RH' },
         { path: '/admin/reports', icon: LayoutDashboard, label: 'Relatórios' },
         { path: '/admin/sync', icon: RefreshCw, label: 'Sincronização' },
 

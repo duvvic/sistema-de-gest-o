@@ -7,6 +7,7 @@ export const USER_ROLES = {
     PMO: 'pmo',
     FINANCIAL: 'financial',
     TECH_LEAD: 'tech_lead',
+    RH: 'rh',
     RESOURCE: 'resource'
 } as const;
 
@@ -18,6 +19,7 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
     pmo: 'Gerente de Projetos / PMO',
     financial: 'Financeiro / Controladoria',
     tech_lead: 'Líder Técnico / Torre',
+    rh: 'Recursos Humanos / RH',
     resource: 'Recurso / Consultor'
 };
 
@@ -27,6 +29,7 @@ export const ROLE_HIERARCHY: Record<string, number> = {
     pmo: 4,
     financial: 4,
     tech_lead: 3,
+    rh: 4,
     resource: 1
 };
 
@@ -45,5 +48,6 @@ export const PROJECT_EDIT_ROLES = [
 
 // Roles que podem gerenciar usuários
 export const USER_MANAGEMENT_ROLES = [
-    USER_ROLES.SYSTEM_ADMIN
+    USER_ROLES.SYSTEM_ADMIN,
+    USER_ROLES.RH
 ];

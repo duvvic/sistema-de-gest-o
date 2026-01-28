@@ -60,9 +60,8 @@ const AdminDashboard: React.FC = () => {
   // Realtime handling should be done in useDataController or hooks/useAppData to maintain normalization.
   // Removing local broken realtime logic.
 
-  // Separar clientes ativos (Apenas Diretos: Nem parceiro, nem vinculado)
   const activeClients = useMemo(() =>
-    safeClients.filter(c => c.active !== false && c.tipo_cliente !== 'parceiro' && !c.partner_id),
+    safeClients.filter(c => c.active !== false && c.tipo_cliente !== 'parceiro'),
     [safeClients]
   );
 

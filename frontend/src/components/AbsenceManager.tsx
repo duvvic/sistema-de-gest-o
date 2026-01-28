@@ -60,7 +60,7 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                 type,
                 startDate,
                 endDate,
-                status: 'programado',
+                status: isAdmin ? 'aprovada_gestao' : 'sugestao',
                 observations
             });
             setIsAdding(false);
@@ -317,18 +317,22 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                                         )}
 
                                         <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
-                                            <span className={`text-[9px] font-black uppercase flex items-center gap-1.5 ${absence.status === 'programado' ? 'text-blue-500' :
-                                                absence.status === 'em_curso' ? 'text-amber-500' :
-                                                    'text-emerald-500'
+                                            <span className={`text-[9px] font-black uppercase flex items-center gap-1.5 ${absence.status === 'sugestao' ? 'text-amber-500' :
+                                                absence.status === 'aprovada_gestao' ? 'text-blue-500' :
+                                                    absence.status === 'aprovada_rh' ? 'text-emerald-500' :
+                                                        absence.status === 'finalizada_dp' ? 'text-purple-500' :
+                                                            'text-slate-500'
                                                 }`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${absence.status === 'programado' ? 'bg-blue-500' :
-                                                    absence.status === 'em_curso' ? 'bg-amber-500' :
-                                                        'bg-emerald-500'
+                                                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${absence.status === 'sugestao' ? 'bg-amber-500' :
+                                                    absence.status === 'aprovada_gestao' ? 'bg-blue-500' :
+                                                        absence.status === 'aprovada_rh' ? 'bg-emerald-500' :
+                                                            absence.status === 'finalizada_dp' ? 'bg-purple-500' :
+                                                                'bg-slate-500'
                                                     }`} />
-                                                {absence.status}
+                                                {absence.status.replace('_', ' ')}
                                             </span>
 
-                                            {new Date(absence.startDate) <= new Date() && new Date(absence.endDate) >= new Date() && (
+                                            {(new Date(absence.startDate) <= new Date() && new Date(absence.endDate) >= new Date()) && (
                                                 <span className="text-[9px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-md animate-bounce">EM CURSO</span>
                                             )}
                                         </div>
