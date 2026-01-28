@@ -19,7 +19,7 @@ const ProjectDetailView: React.FC = () => {
   const projectTasks = useMemo(() => {
     const pTasks = tasks.filter(t => t.projectId === projectId);
 
-    // Filtro para Developer / Standard (USER_REQUEST: só mostrar tarefas vinculadas a mim)
+    // Filtro para Developer / Standard (USER_REQUEST: tarefas onde sou responsável ou colaborador)
     if (currentUser && !isAdmin) {
       return pTasks.filter(t =>
         t.developerId === currentUser.id ||
@@ -261,8 +261,8 @@ const ProjectDetailView: React.FC = () => {
         </button>
       </div>
 
-      {/* Resumo de Performance e Finanças - NOVO */}
-      {performance && (
+      {/* Resumo de Performance e Finanças - Somente Admin */}
+      {isAdmin && performance && (
         <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card: Status Real-time */}
           <div className="bg-white dark:bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] shadow-sm">
@@ -330,175 +330,179 @@ const ProjectDetailView: React.FC = () => {
         </div>
       )}
 
-      {/* Executive Panel - Novo */}
-      <div className="mb-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Coluna 1 & 2: Visão Geral e Timeline */}
-        <div className="xl:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
-            <h3 className="text-sm font-black text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Info size={16} /> Detalhes Executivos
-            </h3>
+      {/* Executive & Weekly Report Panel - Somente Admin */}
+      {isAdmin && (
+        <>
+          <div className="mb-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Coluna 1 & 2: Visão Geral e Timeline */}
+            <div className="xl:col-span-2 space-y-6">
+              <div className="bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
+                <h3 className="text-sm font-black text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Info size={16} /> Detalhes Executivos
+                </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              {/* Stakeholders */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Parceiro Estratégico</label>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {(() => {
-                      const p = clients.find(c => c.id === project.partnerId);
-                      return p ? (
-                        <span className="flex items-center gap-2">
-                          <img src={p.logoUrl} className="w-5 h-5 object-contain rounded" alt="" />
-                          {p.name}
-                        </span>
-                      ) : 'Direto com Cliente';
-                    })()}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Gerente no Cliente</label>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{project.managerClient || 'Não informado'}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Responsável Nic-Labs</label>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {(() => {
-                      const u = users.find(u => u.id === project.responsibleNicLabsId);
-                      return u ? u.name : 'Não definido';
-                    })()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Timeline */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
-                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 flex items-center gap-1">
-                  <Calendar size={12} /> Cronograma do Projeto
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Início Previsto:</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">{project.startDate ? new Date(project.startDate).toLocaleDateString() : '-'}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Entrega Prevista:</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">{project.estimatedDelivery ? new Date(project.estimatedDelivery).toLocaleDateString() : '-'}</span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500">Início Real:</span>
-                      <span className={`font-bold ${project.startDateReal ? 'text-blue-600' : 'text-slate-400 italic'}`}>
-                        {project.startDateReal ? new Date(project.startDateReal).toLocaleDateString() : 'Não iniciado'}
-                      </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  {/* Stakeholders */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Parceiro Estratégico</label>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                        {(() => {
+                          const p = clients.find(c => c.id === project.partnerId);
+                          return p ? (
+                            <span className="flex items-center gap-2">
+                              <img src={p.logoUrl} className="w-5 h-5 object-contain rounded" alt="" />
+                              {p.name}
+                            </span>
+                          ) : 'Direto com Cliente';
+                        })()}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Gerente no Cliente</label>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{project.managerClient || 'Não informado'}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Responsável Nic-Labs</label>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                        {(() => {
+                          const u = users.find(u => u.id === project.responsibleNicLabsId);
+                          return u ? u.name : 'Não definido';
+                        })()}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Conclusão Real:</span>
-                    <span className={`font-bold ${project.endDateReal ? 'text-green-600' : 'text-slate-400 italic'}`}>
-                      {project.endDateReal ? new Date(project.endDateReal).toLocaleDateString() : 'Em aberto'}
-                    </span>
+
+                  {/* Timeline */}
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 flex items-center gap-1">
+                      <Calendar size={12} /> Cronograma do Projeto
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500">Início Previsto:</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{project.startDate ? new Date(project.startDate).toLocaleDateString() : '-'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500">Entrega Prevista:</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{project.estimatedDelivery ? new Date(project.estimatedDelivery).toLocaleDateString() : '-'}</span>
+                      </div>
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-slate-500">Início Real:</span>
+                          <span className={`font-bold ${project.startDateReal ? 'text-blue-600' : 'text-slate-400 italic'}`}>
+                            {project.startDateReal ? new Date(project.startDateReal).toLocaleDateString() : 'Não iniciado'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-500">Conclusão Real:</span>
+                        <span className={`font-bold ${project.endDateReal ? 'text-green-600' : 'text-slate-400 italic'}`}>
+                          {project.endDateReal ? new Date(project.endDateReal).toLocaleDateString() : 'Em aberto'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Escopo */}
+                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-2">Escopo do Projeto</label>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {project.description || 'Nenhuma descrição detalhada disponível.'}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Escopo */}
-            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-              <label className="text-[10px] font-black uppercase text-slate-400 block mb-2">Escopo do Projeto</label>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                {project.description || 'Nenhuma descrição detalhada disponível.'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Coluna 3: Riscos, Sucesso e Documentos */}
-        <div className="space-y-6">
-          {/* Riscos */}
-          <div className={`p-6 rounded-2xl border shadow-sm ${project.risks ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20' : 'bg-white dark:bg-[var(--surface)] border-[var(--border)]'}`}>
-            <h3 className="text-sm font-black text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <ShieldAlert size={16} /> Gestão de Riscos
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 italic">
-              {project.risks || 'Nenhum risco crítico mapeado até o momento.'}
-            </p>
-          </div>
-
-          {/* Fatores de Sucesso */}
-          <div className="bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
-            <h3 className="text-sm font-black text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <Zap size={16} /> Fator de Sucesso
-            </h3>
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{project.successFactor || 'Critérios padrão de entrega'}</p>
-            {project.criticalDate && (
-              <div className="flex items-center gap-2 text-xs font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg border border-amber-100 dark:border-amber-900/30">
-                <Clock size={12} /> DATA CRÍTICA: {new Date(project.criticalDate).toLocaleDateString()}
+            {/* Coluna 3: Riscos, Sucesso e Documentos */}
+            <div className="space-y-6">
+              {/* Riscos */}
+              <div className={`p-6 rounded-2xl border shadow-sm ${project.risks ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20' : 'bg-white dark:bg-[var(--surface)] border-[var(--border)]'}`}>
+                <h3 className="text-sm font-black text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <ShieldAlert size={16} /> Gestão de Riscos
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+                  {project.risks || 'Nenhum risco crítico mapeado até o momento.'}
+                </p>
               </div>
-            )}
+
+              {/* Fatores de Sucesso */}
+              <div className="bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
+                <h3 className="text-sm font-black text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <Zap size={16} /> Fator de Sucesso
+                </h3>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{project.successFactor || 'Critérios padrão de entrega'}</p>
+                {project.criticalDate && (
+                  <div className="flex items-center gap-2 text-xs font-black text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                    <Clock size={12} /> DATA CRÍTICA: {new Date(project.criticalDate).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+
+              {/* Links e Docs */}
+              <div className="bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
+                <h3 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <LinkIcon size={16} /> Documentação
+                </h3>
+                {project.docLink ? (
+                  <a
+                    href={project.docLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl hover:bg-blue-100 transition-colors text-sm font-bold truncate"
+                  >
+                    <LayoutGrid size={14} /> Acessar Escopo/Documentos
+                  </a>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Nenhum link externo vinculado.</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Links e Docs */}
-          <div className="bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
-            <h3 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <LinkIcon size={16} /> Documentação
+          {/* Seção Report Semanal */}
+          <div className="mb-8 bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
+            <h3 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <RefreshCw size={16} /> Monitoramento Semanal (Status Report)
             </h3>
-            {project.docLink ? (
-              <a
-                href={project.docLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl hover:bg-blue-100 transition-colors text-sm font-bold truncate"
-              >
-                <LayoutGrid size={14} /> Acessar Escopo/Documentos
-              </a>
-            ) : (
-              <p className="text-xs text-slate-400 italic">Nenhum link externo vinculado.</p>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Seção Report Semanal */}
-      <div className="mb-8 bg-white dark:bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm">
-        <h3 className="text-sm font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-2">
-          <RefreshCw size={16} /> Monitoramento Semanal (Status Report)
-        </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Gaps / Issues */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase text-red-500 bg-red-50 dark:bg-red-900/10 p-2 rounded-lg w-fit">
+                  <AlertTriangle size={12} /> Gaps / Issues / Impedimentos
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed min-h-[60px]">
+                  {project.gapsIssues || 'Nenhum impedimento crítico relatado no momento.'}
+                </p>
+              </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Gaps / Issues */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-red-500 bg-red-50 dark:bg-red-900/10 p-2 rounded-lg w-fit">
-              <AlertTriangle size={12} /> Gaps / Issues / Impedimentos
-            </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed min-h-[60px]">
-              {project.gapsIssues || 'Nenhum impedimento crítico relatado no momento.'}
-            </p>
-          </div>
+              {/* Considerações Importantes */}
+              <div className="space-y-3 lg:border-x border-slate-100 dark:border-slate-800 lg:px-8">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-900/10 p-2 rounded-lg w-fit">
+                  <Zap size={12} /> Considerações Importantes
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed min-h-[60px]">
+                  {project.importantConsiderations || 'Nenhuma consideração adicional para esta semana.'}
+                </p>
+              </div>
 
-          {/* Considerações Importantes */}
-          <div className="space-y-3 lg:border-x border-slate-100 dark:border-slate-800 lg:px-8">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-900/10 p-2 rounded-lg w-fit">
-              <Zap size={12} /> Considerações Importantes
-            </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed min-h-[60px]">
-              {project.importantConsiderations || 'Nenhuma consideração adicional para esta semana.'}
-            </p>
-          </div>
-
-          {/* Texto Mensagem Final */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/10 p-2 rounded-lg w-fit">
-              <StickyNote size={12} /> Mensagem para Status Report
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-              <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed italic">
-                "{project.weeklyStatusReport || 'Resumo do status report semanal ainda não preparado.'}"
-              </p>
+              {/* Texto Mensagem Final */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/10 p-2 rounded-lg w-fit">
+                  <StickyNote size={12} /> Mensagem para Status Report
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed italic">
+                    "{project.weeklyStatusReport || 'Resumo do status report semanal ainda não preparado.'}"
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Tarefas por Status */}
       {/* Controle e Filtros */}
