@@ -12,8 +12,16 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: '0.0.0.0',
+      port: 5173,
       // Suporte para SPA routing (F5 em rotas funciona)
       historyApiFallback: true,
+      // Configurações de HMR (Hot Module Replacement)
+      hmr: {
+        overlay: true,
+      },
+      watch: {
+        usePolling: true,
+      },
     },
     plugins: [
       react(),
