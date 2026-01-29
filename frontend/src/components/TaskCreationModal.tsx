@@ -61,27 +61,25 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
         const matchesClient = p.clientId === clientId;
         const isActive = p.active !== false;
 
-        return matchesClient && isActive;
+        // Permissão: Admin vê tudo, Colaborador vê apenas onde é membro
+        const isMember = isAdmin || projectMembers.some(pm => pm.projectId === p.id && pm.userId === currentUser?.id);
+
+        return matchesClient && isActive && isMember;
     });
 
-    // Filter Clients: Only show clients that have at least one project accessible to the user
-    // This improves UX by hiding empty clients for collaborators
+    // Filter Clients: Only show clients that have at least one accessible project
     const availableClients = clients.filter(c => {
         if (c.active === false) return false;
-
-        // If admin, show all active clients
         if (isAdmin) return true;
 
-        const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
-        const isOperational = activeCargos.includes(currentUser?.cargo?.toLowerCase() || '');
+        // Se não for admin, só mostra clientes que possuem projetos vinculados ao usuário
+        const hasAccessibleProject = projects.some(p =>
+            p.clientId === c.id &&
+            p.active !== false &&
+            projectMembers.some(pm => pm.projectId === p.id && pm.userId === currentUser?.id)
+        );
 
-        // Non-operational roles can only see NIC-LABS
-        if (!isOperational) {
-            return c.name.toLowerCase().includes('nic-labs');
-        }
-
-        // Operational collaborators see all active clients
-        return true;
+        return hasAccessibleProject;
     });
 
     const filteredUsers = projectId

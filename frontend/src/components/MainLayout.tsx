@@ -44,12 +44,9 @@ const MainLayout: React.FC = () => {
         { path: '/admin/team', icon: Users, label: 'Colaboradores' },
         { path: '/admin/rh', icon: Palmtree, label: 'Gestão RH' },
         { path: '/admin/reports', icon: LayoutDashboard, label: 'Relatórios' },
-        { path: '/admin/audit', icon: ShieldAlert, label: 'Auditoria' },
         { path: '/admin/sync', icon: RefreshCw, label: 'Sincronização' },
 
         { path: '/timesheet', icon: Clock, label: 'Timesheet' },
-        { path: '/notes', icon: StickyNote, label: 'Notas' },
-        { path: '/docs', icon: Book, label: 'Documentação' },
     ];
 
     const developerMenuItems = [

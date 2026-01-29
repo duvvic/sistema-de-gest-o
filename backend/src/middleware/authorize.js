@@ -10,7 +10,6 @@ import {
 } from '../services/projectService.js';
 import { getTaskById } from '../services/taskService.js';
 import { getUserById } from '../services/userService.js';
-import { createAuditLog } from '../services/auditService.js';
 
 /**
  * Middleware para validar se o usuário tem um dos roles permitidos
@@ -29,8 +28,6 @@ export const requireRole = (allowedRoles) => {
         const userRole = req.user.role || 'resource';
 
         if (!allowedRoles.includes(userRole)) {
-            // Log de tentativa de acesso negado
-            logAccessDenied(req.user, req.path, allowedRoles);
 
             return res.status(403).json({
                 error: 'Acesso negado',
@@ -99,8 +96,6 @@ export const validateProjectAccess = async (req, res, next) => {
         }
 
         if (!hasAccess) {
-            // Log de tentativa de acesso negado
-            logAccessDenied(user, `project/${pid}`, [user.role]);
 
             return res.status(403).json({
                 error: 'Acesso negado',
@@ -177,7 +172,6 @@ export const validateTaskAccess = async (req, res, next) => {
         }
 
         if (!hasAccess) {
-            logAccessDenied(user, `task/${tid}`, [user.role]);
 
             return res.status(403).json({
                 error: 'Acesso negado',
@@ -200,21 +194,3 @@ function getRoleDisplayName(role) {
     return ROLE_DISPLAY_NAMES[role] || role;
 }
 
-/**
- * Função para registrar tentativas de acesso negado
- */
-async function logAccessDenied(user, resource, requiredRoles) {
-    try {
-        await createAuditLog({
-            userId: user.id || 'unknown',
-            userRole: user.role || 'unknown',
-            action: 'ACCESS_DENIED',
-            resource: resource,
-            changes: { requiredRoles },
-            ipAddress: user.ipAddress,
-            userAgent: user.userAgent
-        });
-    } catch (error) {
-        console.error('Erro ao registrar log de acesso negado:', error);
-    }
-}
