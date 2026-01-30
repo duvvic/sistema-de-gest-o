@@ -32,10 +32,20 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
     const [error, setError] = useState('');
 
     // Reset fields when opening/closing or changing initial props
-    // Reset fields when opening/closing or changing initial props
     useEffect(() => {
         if (isOpen) {
-            setClientId(preSelectedClientId || '');
+            // Se temos um projeto pré-selecionado, precisamos setar o cliente automaticamente
+            let initialClientId = preSelectedClientId || '';
+
+            if (preSelectedProjectId && !preSelectedClientId) {
+                // Buscar o projeto para pegar o clientId
+                const project = projects.find(p => p.id === preSelectedProjectId);
+                if (project) {
+                    initialClientId = project.clientId;
+                }
+            }
+
+            setClientId(initialClientId);
             setProjectId(preSelectedProjectId || '');
             // Force developerId to be the current user
             setDeveloperId(currentUser?.id || '');
@@ -52,7 +62,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
 
             setError('');
         }
-    }, [isOpen, preSelectedClientId, preSelectedProjectId, currentUser]); // Added currentUser dependency
+    }, [isOpen, preSelectedClientId, preSelectedProjectId, currentUser, projects]);
 
     // Derived state for selects
 
