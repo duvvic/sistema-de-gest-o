@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
     fetchClients,
     fetchProjects,
@@ -49,7 +50,7 @@ const ReportDashboard: React.FC = () => {
     const [reportData, setReportData] = useState<ReportPreviewResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'preview' | 'costs'>('preview');
+    const [activeTab, setActiveTab] = useState<'preview' | 'costs' | 'tracking'>('preview');
 
     // Carregamento Inicial
     useEffect(() => {
@@ -283,27 +284,36 @@ const ReportDashboard: React.FC = () => {
 
                 {/* Área de Conteúdo Principal */}
                 <main className="xl:col-span-3 flex flex-col gap-6">
-                    {/* Tabs */}
-                    <div className="flex gap-2 p-1 bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-fit">
+                    {/* NAVEGAÇÃO DE SUB-MENUS (VERSÃO COMPACTA & FUNCIONAL) */}
+                    <div className="flex bg-[var(--surface-2)] p-1 rounded-lg border border-[var(--border)] w-fit mb-4">
                         <button
                             onClick={() => setActiveTab('preview')}
-                            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'preview'
-                                ? 'bg-[var(--primary)] text-white shadow-md'
-                                : 'text-[var(--text)] hover:bg-[var(--bg)]'
+                            className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'preview'
+                                ? 'bg-slate-800 text-white shadow-sm'
+                                : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                                 }`}
                         >
-                            <TableIcon className="w-4 h-4" />
                             Visualização Master
                         </button>
+
                         <button
                             onClick={() => setActiveTab('costs')}
-                            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'costs'
-                                ? 'bg-[var(--primary)] text-white shadow-md'
-                                : 'text-[var(--text)] hover:bg-[var(--bg)]'
+                            className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'costs'
+                                ? 'bg-slate-800 text-white shadow-sm'
+                                : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                                 }`}
                         >
-                            <DollarSign className="w-4 h-4" />
                             Custos de Projeto
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab('tracking')}
+                            className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'tracking'
+                                ? 'bg-slate-800 text-white shadow-sm'
+                                : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                                }`}
+                        >
+                            Rastreamento
                         </button>
                     </div>
 
@@ -413,6 +423,73 @@ const ReportDashboard: React.FC = () => {
                                                 onUpdate={handleUpdateCost}
                                             />
                                         ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {reportData && !loading && activeTab === 'tracking' && (
+                        <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="p-6 border-b border-[var(--border)]">
+                                <h3 className="font-bold text-[var(--text)]">Rastreamento de Planejamento</h3>
+                                <p className="text-xs text-[var(--muted)] mt-1">Status, complexidade e progresso real dos projetos ativos.</p>
+                            </div>
+                            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-[var(--border)] scrollbar-track-transparent">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-[var(--bg)] text-[var(--muted)] text-[10px] uppercase tracking-widest font-black">
+                                            <th className="px-6 py-4">Cliente / Projeto</th>
+                                            <th className="px-6 py-4">Status Planejamento</th>
+                                            <th className="px-6 py-4 text-center">Complexidade</th>
+                                            <th className="px-6 py-4 text-center">Progresso</th>
+                                            <th className="px-6 py-4 text-right">Período Planejado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--border)]">
+                                        {Array.from(new Set(reportData.rows.map(r => r.id_projeto))).map(id => {
+                                            const row = reportData.rows.find(r => r.id_projeto === id)!;
+                                            return (
+                                                <tr key={id} className="hover:bg-[var(--bg)]/50 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-bold text-sm text-[var(--text)]">{row.projeto}</div>
+                                                        <div className="text-xs text-[var(--muted)]">{row.cliente}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border ${row.status_p === 'Desenvolvimento' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                                row.status_p === 'Arquitetura' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                                                    'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                                            }`}>
+                                                            {row.status_p || 'N/A'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`text-[10px] font-bold ${row.complexidade_p === 'Alta' ? 'text-red-500' :
+                                                                row.complexidade_p === 'Média' ? 'text-amber-500' :
+                                                                    'text-emerald-500'
+                                                            }`}>
+                                                            {row.complexidade_p || '-'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <span className="font-black text-xs text-[var(--text)]">{row.progresso_p || 0}%</span>
+                                                            <div className="w-16 h-1 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-slate-600"
+                                                                    style={{ width: `${row.progresso_p || 0}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right text-[10px] font-medium text-[var(--muted)] tabular-nums">
+                                                        {row.data_inicio_p ? new Date(row.data_inicio_p).toLocaleDateString('pt-BR') : '-'}
+                                                        <br />
+                                                        {row.data_fim_p ? new Date(row.data_fim_p).toLocaleDateString('pt-BR') : '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

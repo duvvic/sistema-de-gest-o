@@ -173,6 +173,8 @@ export function mapDbProjectToProject(row: any): Project {
         gapsIssues: row.gaps_issues || undefined,
         importantConsiderations: row.important_considerations || undefined,
         weeklyStatusReport: row.weekly_status_report || undefined,
+        complexidade: row.complexidade || undefined,
+        horas_vendidas: row.horas_vendidas ? Number(row.horas_vendidas) : undefined,
     };
 }
 

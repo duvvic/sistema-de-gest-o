@@ -108,7 +108,7 @@ interface HierarchicalData {
 // --- Componentes Menores ---
 const Badge = ({ children, color = 'purple' }: { children: React.ReactNode, color?: 'purple' | 'green' | 'blue' }) => {
     const variants = {
-        purple: 'bg-purple-600/10 text-purple-400 border-purple-600/20',
+        purple: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
         green: 'bg-emerald-600/10 text-emerald-400 border-emerald-600/20',
         blue: 'bg-blue-600/10 text-blue-400 border-blue-600/20',
     };
@@ -133,7 +133,7 @@ const DateButton = ({ label, value, onChange }: { label: string, value: string, 
                 }
             }}
         >
-            <CalendarIcon className="w-4 h-4 text-purple-500 mr-3 group-hover:text-purple-400 transition-colors" />
+            <CalendarIcon className="w-4 h-4 text-purple-500 mr-3 group-hover:text-slate-600 transition-colors" />
             <div className="flex-1">
                 <div className="text-[10px] font-bold uppercase tracking-widest mb-0.5 group-hover:text-purple-500 transition-colors" style={{ color: 'var(--muted)' }}>{label}</div>
                 <div className="text-sm font-black transition-colors" style={{ color: 'var(--text)' }}>
@@ -201,6 +201,7 @@ const AdminFullReport: React.FC = () => {
     const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
+    const [activeTab, setActiveTab] = useState<'operacional' | 'executivo'>('operacional');
 
     // Novo Estado para rastrear mudanças não aplicadas
     const [hasUnappliedChanges, setHasUnappliedChanges] = useState(false);
@@ -276,6 +277,11 @@ const AdminFullReport: React.FC = () => {
                     projeto: r.projeto,
                     colaborador: r.colaborador,
                     status: r.status_tarefa,
+                    statusP: r.status_p,
+                    dataInicioP: r.data_inicio_p,
+                    dataFimP: r.data_fim_p,
+                    complexidadeP: r.complexidade_p,
+                    progressoP: r.progresso_p,
                     horas: 0,
                     valor: 0
                 };
@@ -416,607 +422,669 @@ const AdminFullReport: React.FC = () => {
     const topRef = useRef<HTMLDivElement>(null);
 
     return (
-        <div className="flex flex-col min-h-screen font-sans p-6 lg:p-10 space-y-8 overflow-x-hidden" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }} ref={topRef}>
+        <div className="flex flex-col min-h-screen font-sans p-6 lg:p-10 space-y-6 overflow-x-hidden" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }} ref={topRef}>
+            {/* --- NAVEGAÇÃO DE SUB-TELAS (TOPO) --- */}
+            <div className="flex bg-[var(--surface-2)] p-1.5 rounded-2xl border border-[var(--border)] w-fit shadow-sm">
+                <button
+                    onClick={() => setActiveTab('operacional')}
+                    className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'operacional'
+                        ? 'bg-slate-800 text-white shadow-xl scale-[1.02]'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-slate-500/5'
+                        }`}
+                >
+                    RELATÓRIO
+                </button>
+                <button
+                    onClick={() => setActiveTab('executivo')}
+                    className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'executivo'
+                        ? 'bg-slate-800 text-white shadow-xl scale-[1.02]'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-slate-500/5'
+                        }`}
+                >
+                    RASTREAMENTO
+                </button>
+            </div>
+
             {/* --- HEADER --- */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tighter" style={{ color: 'var(--text)' }}>
-                        Relatório Completo <span className="text-purple-500">(Horas & Custos)</span>
+                    <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text)' }}>
+                        Relatório Completo
                     </h1>
-                    <p className="font-medium text-sm mt-1" style={{ color: 'var(--muted)' }}>Gestão avançada de rentabilidade e alocação financeira por projeto.</p>
                 </div>
                 <div className="flex gap-3">
-
                     <button className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-bold text-sm border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-2)' }}>
                         <HelpCircle className="w-4 h-4" /> Ajuda Admin
                     </button>
                 </div>
             </header>
 
-            {/* --- BLOCO 1: FILTROS --- */}
-            <section className="border rounded-[32px] p-8 shadow-2xl relative z-30 group" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/5 blur-[120px] rounded-full -mr-20 -mt-20"></div>
+            {
+                (activeTab === 'operacional' || activeTab === 'executivo') && (
+                    <>
+                        {/* --- BLOCO 1: FILTROS --- */}
+                        <section className="border rounded-[32px] p-8 shadow-2xl relative z-30 group" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 blur-[120px] rounded-full -mr-20 -mt-20"></div>
 
-                <div className="flex items-center gap-2 mb-6 text-xs font-black uppercase tracking-[0.2em] text-purple-400">
-                    <Filter className="w-4 h-4" /> Filtros de Relatório
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* Período Customizado */}
-                    <div className="col-span-1 md:col-span-2 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Período de Análise</label>
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                                <input
-                                    type="checkbox"
-                                    checked={useDateFilter}
-                                    onChange={(e) => {
-                                        const checked = e.target.checked;
-                                        setUseDateFilter(checked);
-                                        if (checked) {
-                                            if (!startDate) setStartDate(daysAgoISO(30));
-                                            if (!endDate) setEndDate(todayISO());
-                                        } else {
-                                            setStartDate('');
-                                            setEndDate('');
-                                        }
-                                    }}
-                                    className="w-4 h-4 rounded border-2 border-purple-500/30 checked:bg-purple-600 checked:border-purple-600 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
-                                    style={{ backgroundColor: 'var(--bg)' }}
-                                />
-                                <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${useDateFilter ? 'text-purple-400' : 'group-hover:text-purple-400'}`} style={{ color: useDateFilter ? undefined : 'var(--muted)' }}>
-                                    Filtrar
-                                </span>
-                            </label>
-                        </div>
-                        {useDateFilter ? (
-                            <div className="grid grid-cols-2 gap-4 pt-1 transition-all">
-                                <DateButton
-                                    label="Início"
-                                    value={startDate}
-                                    onChange={e => setStartDate(e.target.value)}
-                                />
-                                <DateButton
-                                    label="Fim"
-                                    value={endDate}
-                                    onChange={e => setEndDate(e.target.value)}
-                                />
+                            <div className="flex items-center gap-2 mb-6 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                                <Filter className="w-4 h-4" /> Filtros de Relatório
                             </div>
-                        ) : (
-                            <div className="h-[50px] flex items-center justify-center border rounded-2xl text-xs font-bold uppercase tracking-widest" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--muted)' }}>
-                                Todo o Período
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {/* Período Customizado */}
+                                <div className="col-span-1 md:col-span-2 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Período de Análise</label>
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={useDateFilter}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setUseDateFilter(checked);
+                                                    if (checked) {
+                                                        if (!startDate) setStartDate(daysAgoISO(30));
+                                                        if (!endDate) setEndDate(todayISO());
+                                                    } else {
+                                                        setStartDate('');
+                                                        setEndDate('');
+                                                    }
+                                                }}
+                                                className="w-4 h-4 rounded border-2 border-slate-300 checked:bg-slate-800 checked:border-slate-800 focus:ring-2 focus:ring-slate-500/20 transition-all cursor-pointer"
+                                                style={{ backgroundColor: 'var(--bg)' }}
+                                            />
+                                            <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${useDateFilter ? 'text-slate-600' : 'group-hover:text-slate-600'}`} style={{ color: useDateFilter ? undefined : 'var(--muted)' }}>
+                                                Filtrar
+                                            </span>
+                                        </label>
+                                    </div>
+                                    {useDateFilter ? (
+                                        <div className="grid grid-cols-2 gap-4 pt-1 transition-all">
+                                            <DateButton
+                                                label="Início"
+                                                value={startDate}
+                                                onChange={e => setStartDate(e.target.value)}
+                                            />
+                                            <DateButton
+                                                label="Fim"
+                                                value={endDate}
+                                                onChange={e => setEndDate(e.target.value)}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="h-[50px] flex items-center justify-center border rounded-2xl text-xs font-bold uppercase tracking-widest" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--muted)' }}>
+                                            Todo o Período
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Clientes */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Clientes</label>
+                                    </div>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setActiveDropdown(activeDropdown === 'clients' ? null : 'clients')}
+                                            className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-slate-400"
+                                            style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                        >
+                                            <span className="truncate">
+                                                {clientIds.length === 0 ? 'Todos os Clientes' :
+                                                    clientIds.length === 1 ? clientOptions.find(c => c.id === clientIds[0])?.name :
+                                                        `${clientIds.length} Clientes Selecionados`}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'clients' ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {activeDropdown === 'clients' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
+                                                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                                >
+
+                                                    {clientOptions.map(c => (
+                                                        <div
+                                                            key={c.id}
+                                                            onClick={() => {
+                                                                if (clientIds.includes(c.id)) setClientIds(clientIds.filter(id => id !== c.id));
+                                                                else setClientIds([...clientIds, c.id]);
+                                                            }}
+                                                            className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
+                                                        >
+                                                            <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${clientIds.includes(c.id) ? 'bg-slate-800 border-slate-800' : 'border-white/10'}`}>
+                                                                {clientIds.includes(c.id) && <Check className="w-3 h-3 text-white" />}
+                                                            </div>
+                                                            <span className="text-xs" style={{ color: 'var(--text-2)' }}>{c.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+
+                                {/* Projetos */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Projetos</label>
+                                    </div>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setActiveDropdown(activeDropdown === 'projects' ? null : 'projects')}
+                                            className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-slate-400"
+                                            style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                        >
+                                            <span className="truncate">
+                                                {projectIds.length === 0 ? 'Todos os Projetos' :
+                                                    projectIds.length === 1 ? projectOptions.find(p => p.id === projectIds[0])?.name :
+                                                        `${projectIds.length} Projetos Selecionados`}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'projects' ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {activeDropdown === 'projects' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
+                                                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                                >
+
+                                                    {projectOptions
+                                                        .filter(p => clientIds.length === 0 || clientIds.includes(p.clientId))
+                                                        .map(p => (
+                                                            <div
+                                                                key={p.id}
+                                                                onClick={() => {
+                                                                    if (projectIds.includes(p.id)) setProjectIds(projectIds.filter(id => id !== p.id));
+                                                                    else setProjectIds([...projectIds, p.id]);
+                                                                }}
+                                                                className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
+                                                            >
+                                                                <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${projectIds.includes(p.id) ? 'bg-slate-800 border-slate-800' : 'border-white/10'}`}>
+                                                                    {projectIds.includes(p.id) && <Check className="w-3 h-3 text-white" />}
+                                                                </div>
+                                                                <span className="text-xs" style={{ color: 'var(--text-2)' }}>{p.name}</span>
+                                                            </div>
+                                                        ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Colaboradores</label>
+                                        <label
+                                            onClick={() => {
+                                                setUseCollaboratorFilter(!useCollaboratorFilter);
+                                                if (useCollaboratorFilter) setCollaboratorIds([]);
+                                            }}
+                                            className="flex items-center gap-2 cursor-pointer group"
+                                        >
+                                            <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${useCollaboratorFilter ? 'text-slate-600' : 'group-hover:text-slate-600'}`} style={{ color: useCollaboratorFilter ? undefined : 'var(--muted)' }}>
+                                                EXIBIR
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className={`relative ${!useCollaboratorFilter ? 'opacity-40 pointer-events-none' : ''}`}>
+                                        <button
+                                            onClick={() => setActiveDropdown(activeDropdown === 'collaborators' ? null : 'collaborators')}
+                                            className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-slate-400"
+                                            style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                        >
+                                            <span className="truncate">
+                                                {collaboratorIds.length === 0 ? 'Todos os Colaboradores' :
+                                                    collaboratorIds.length === 1 ? collaboratorOptions.find(c => c.id === collaboratorIds[0])?.name :
+                                                        `${collaboratorIds.length} Colaboradores Selecionados`}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'collaborators' ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {activeDropdown === 'collaborators' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
+                                                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                                >
+
+                                                    {collaboratorOptions.map(c => (
+                                                        <div
+                                                            key={c.id}
+                                                            onClick={() => {
+                                                                if (collaboratorIds.includes(c.id)) setCollaboratorIds(collaboratorIds.filter(id => id !== c.id));
+                                                                else setCollaboratorIds([...collaboratorIds, c.id]);
+                                                            }}
+                                                            className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
+                                                        >
+                                                            <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${collaboratorIds.includes(c.id) ? 'bg-slate-800 border-slate-800' : 'border-white/10'}`}>
+                                                                {collaboratorIds.includes(c.id) && <Check className="w-3 h-3 text-white" />}
+                                                            </div>
+                                                            <span className="text-xs" style={{ color: 'var(--text-2)' }}>{c.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+
+
+                                {/* Status da Tarefa */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Status da Tarefa</label>
+                                        <label
+                                            onClick={() => {
+                                                setUseStatusFilter(!useStatusFilter);
+                                                if (useStatusFilter) setSelectedStatuses([]);
+                                            }}
+                                            className="flex items-center gap-2 cursor-pointer group"
+                                        >
+                                            <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${useStatusFilter ? 'text-slate-600' : 'group-hover:text-slate-600'}`} style={{ color: useStatusFilter ? undefined : 'var(--muted)' }}>
+                                                EXIBIR
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className={`relative ${!useStatusFilter ? 'opacity-40 pointer-events-none' : ''}`}>
+                                        <button
+                                            onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
+                                            className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-slate-400"
+                                            style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                        >
+                                            <span className="truncate">
+                                                {selectedStatuses.length === 0 ? 'Todos os Status' :
+                                                    selectedStatuses.length === 1 ? selectedStatuses[0] :
+                                                        `${selectedStatuses.length} Status Selecionados`}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'status' ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {activeDropdown === 'status' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
+                                                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                                >
+
+                                                    {[
+                                                        { id: 'A Fazer', label: 'A Fazer' },
+                                                        { id: 'Em Andamento', label: 'Em Andamento' },
+                                                        { id: 'Revisão', label: 'Revisão' },
+                                                        { id: 'Concluído', label: 'Concluído' },
+                                                        { id: 'Atrasado', label: 'Atrasados' },
+                                                    ].map(st => (
+                                                        <div
+                                                            key={st.id}
+                                                            onClick={() => {
+                                                                if (selectedStatuses.includes(st.id)) setSelectedStatuses(selectedStatuses.filter(s => s !== st.id));
+                                                                else setSelectedStatuses([...selectedStatuses, st.id]);
+                                                            }}
+                                                            className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
+                                                        >
+                                                            <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${selectedStatuses.includes(st.id) ? 'bg-slate-800 border-slate-800' : 'border-white/10'}`}>
+                                                                {selectedStatuses.includes(st.id) && <Check className="w-3 h-3 text-white" />}
+                                                            </div>
+                                                            <span className="text-xs" style={{ color: 'var(--text-2)' }}>{st.label}</span>
+                                                        </div>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+
+                                {/* Colunas no Excel */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest pl-1 block mb-3" style={{ color: 'var(--muted)' }}>Colunas no Excel</label>
+                                    <div className="flex flex-wrap gap-4 px-1">
+                                        {[
+                                            { label: 'Custo', state: includeCost, setter: setIncludeCost },
+                                            { label: 'Horas', state: includeHours, setter: setIncludeHours },
+                                        ].map(col => (
+                                            <label key={col.label} className="flex items-center gap-2 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={col.state}
+                                                    onChange={(e) => col.setter(e.target.checked)}
+                                                    className="w-4 h-4 rounded border-2 border-slate-300 checked:bg-slate-800 checked:border-slate-800 focus:ring-2 focus:ring-slate-500/20 transition-all cursor-pointer"
+                                                    style={{ backgroundColor: 'var(--bg)' }}
+                                                />
+                                                <span className={`text-[11px] font-bold transition-colors uppercase tracking-tight ${col.state ? 'text-slate-600' : 'group-hover:text-slate-600'}`} style={{ color: col.state ? undefined : 'var(--muted)' }}>
+                                                    {col.label}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-8 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
+                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+                                    {reportData ? `Mostrando dados de ${reportData.rows.length} registros encontrados.` : 'Configure os filtros.'}
+                                </span>
+                                <div className="flex items-center gap-4 flex-wrap">
+                                    <button
+                                        onClick={handleClearFilters}
+                                        className="text-xs font-black hover:text-red-400 transition-colors uppercase tracking-widest mr-2"
+                                        style={{ color: 'var(--muted)' }}
+                                    >
+                                        Limpar Filtros
+                                    </button>
+
+                                    {/* Tarja Fixa de Filtros Alterados */}
+                                    <AnimatePresence>
+                                        {hasUnappliedChanges && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9, x: -10 }}
+                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                exit={{ opacity: 0, scale: 0.9, x: -10 }}
+                                                onClick={handleApplyFilters}
+                                                className="flex items-center gap-3 px-4 py-2 bg-slate-800 text-white rounded-2xl cursor-pointer hover:bg-slate-700 transition-colors border shadow-lg"
+                                                style={{ borderColor: 'var(--border)' }}
+                                            >
+                                                <div className="bg-white/20 p-1.5 rounded-full">
+                                                    <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest leading-tight">Filtros Alterados</span>
+                                                    <span className="text-[8px] opacity-80 leading-tight">Clique para atualizar a visualização.</span>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <button
+                                        onClick={handleApplyFilters}
+                                        disabled={loading}
+                                        title="Recarregar"
+                                        className={`p-3 rounded-2xl transition-all border ${hasUnappliedChanges ? 'bg-slate-800 hover:bg-slate-700 text-white animate-pulse' : 'hover:bg-black/10'}`}
+                                        style={{ backgroundColor: !hasUnappliedChanges ? 'var(--surface-2)' : undefined, borderColor: 'var(--border)', color: !hasUnappliedChanges ? 'var(--muted)' : 'white' }}
+                                    >
+                                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* --- BLOCO 2: CÁLCULOS E EXPORTAÇÃO (Somente se ativo no Filtro) --- */}
+                        {includeCost && (
+                            <div className="w-full border rounded-[32px] p-8 shadow-xl" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Layers className="w-5 h-5 text-slate-600" />
+                                    <h3 className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>Venda dos Projetos Selecionados</h3>
+                                </div>
+                                <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>Estime a rentabilidade por hora configurando os valores abaixo.</p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                                    {reportData?.projectTotals.map(pt => (
+                                        <ProjectConfigRow key={pt.id_projeto} pt={pt} onSave={handleUpdateBudget} />
+                                    ))}
+                                    {!reportData && <div className="text-xs italic" style={{ color: 'var(--muted)' }}>Gere o relatório para configurar custos.</div>}
+                                </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* Clientes */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Clientes</label>
-                        </div>
-                        <div className="relative">
-                            <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'clients' ? null : 'clients')}
-                                className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-purple-500/30"
-                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                            >
-                                <span className="truncate">
-                                    {clientIds.length === 0 ? 'Todos os Clientes' :
-                                        clientIds.length === 1 ? clientOptions.find(c => c.id === clientIds[0])?.name :
-                                            `${clientIds.length} Clientes Selecionados`}
-                                </span>
-                                <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'clients' ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            <AnimatePresence>
-                                {activeDropdown === 'clients' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
-                                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                                    >
-
-                                        {clientOptions.map(c => (
-                                            <div
-                                                key={c.id}
-                                                onClick={() => {
-                                                    if (clientIds.includes(c.id)) setClientIds(clientIds.filter(id => id !== c.id));
-                                                    else setClientIds([...clientIds, c.id]);
-                                                }}
-                                                className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
-                                            >
-                                                <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${clientIds.includes(c.id) ? 'bg-purple-600 border-purple-600' : 'border-white/10'}`}>
-                                                    {clientIds.includes(c.id) && <Check className="w-3 h-3 text-white" />}
-                                                </div>
-                                                <span className="text-xs" style={{ color: 'var(--text-2)' }}>{c.name}</span>
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-
-                    {/* Projetos */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Projetos</label>
-                        </div>
-                        <div className="relative">
-                            <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'projects' ? null : 'projects')}
-                                className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-purple-500/30"
-                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                            >
-                                <span className="truncate">
-                                    {projectIds.length === 0 ? 'Todos os Projetos' :
-                                        projectIds.length === 1 ? projectOptions.find(p => p.id === projectIds[0])?.name :
-                                            `${projectIds.length} Projetos Selecionados`}
-                                </span>
-                                <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'projects' ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            <AnimatePresence>
-                                {activeDropdown === 'projects' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
-                                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                                    >
-
-                                        {projectOptions
-                                            .filter(p => clientIds.length === 0 || clientIds.includes(p.clientId))
-                                            .map(p => (
-                                                <div
-                                                    key={p.id}
-                                                    onClick={() => {
-                                                        if (projectIds.includes(p.id)) setProjectIds(projectIds.filter(id => id !== p.id));
-                                                        else setProjectIds([...projectIds, p.id]);
-                                                    }}
-                                                    className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
-                                                >
-                                                    <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${projectIds.includes(p.id) ? 'bg-purple-600 border-purple-600' : 'border-white/10'}`}>
-                                                        {projectIds.includes(p.id) && <Check className="w-3 h-3 text-white" />}
-                                                    </div>
-                                                    <span className="text-xs" style={{ color: 'var(--text-2)' }}>{p.name}</span>
-                                                </div>
-                                            ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Colaboradores</label>
-                            <label
-                                onClick={() => {
-                                    setUseCollaboratorFilter(!useCollaboratorFilter);
-                                    if (useCollaboratorFilter) setCollaboratorIds([]);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer group"
-                            >
-                                <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${useCollaboratorFilter ? 'text-purple-400' : 'group-hover:text-purple-400'}`} style={{ color: useCollaboratorFilter ? undefined : 'var(--muted)' }}>
-                                    EXIBIR
-                                </span>
-                            </label>
-                        </div>
-                        <div className={`relative ${!useCollaboratorFilter ? 'opacity-40 pointer-events-none' : ''}`}>
-                            <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'collaborators' ? null : 'collaborators')}
-                                className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-purple-500/30"
-                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                            >
-                                <span className="truncate">
-                                    {collaboratorIds.length === 0 ? 'Todos os Colaboradores' :
-                                        collaboratorIds.length === 1 ? collaboratorOptions.find(c => c.id === collaboratorIds[0])?.name :
-                                            `${collaboratorIds.length} Colaboradores Selecionados`}
-                                </span>
-                                <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'collaborators' ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            <AnimatePresence>
-                                {activeDropdown === 'collaborators' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
-                                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                                    >
-
-                                        {collaboratorOptions.map(c => (
-                                            <div
-                                                key={c.id}
-                                                onClick={() => {
-                                                    if (collaboratorIds.includes(c.id)) setCollaboratorIds(collaboratorIds.filter(id => id !== c.id));
-                                                    else setCollaboratorIds([...collaboratorIds, c.id]);
-                                                }}
-                                                className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
-                                            >
-                                                <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${collaboratorIds.includes(c.id) ? 'bg-purple-600 border-purple-600' : 'border-white/10'}`}>
-                                                    {collaboratorIds.includes(c.id) && <Check className="w-3 h-3 text-white" />}
-                                                </div>
-                                                <span className="text-xs" style={{ color: 'var(--text-2)' }}>{c.name}</span>
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-
-
-                    {/* Status da Tarefa */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest pl-1" style={{ color: 'var(--muted)' }}>Status da Tarefa</label>
-                            <label
-                                onClick={() => {
-                                    setUseStatusFilter(!useStatusFilter);
-                                    if (useStatusFilter) setSelectedStatuses([]);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer group"
-                            >
-                                <span className={`text-[10px] font-bold transition-colors uppercase tracking-widest ${useStatusFilter ? 'text-purple-400' : 'group-hover:text-purple-400'}`} style={{ color: useStatusFilter ? undefined : 'var(--muted)' }}>
-                                    EXIBIR
-                                </span>
-                            </label>
-                        </div>
-                        <div className={`relative ${!useStatusFilter ? 'opacity-40 pointer-events-none' : ''}`}>
-                            <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
-                                className="w-full border rounded-2xl px-4 py-3 text-sm text-left flex justify-between items-center transition-all hover:border-purple-500/30"
-                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                            >
-                                <span className="truncate">
-                                    {selectedStatuses.length === 0 ? 'Todos os Status' :
-                                        selectedStatuses.length === 1 ? selectedStatuses[0] :
-                                            `${selectedStatuses.length} Status Selecionados`}
-                                </span>
-                                <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === 'status' ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            <AnimatePresence>
-                                {activeDropdown === 'status' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className="absolute z-50 w-full mt-2 border rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto custom-scrollbar"
-                                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                                    >
-
-                                        {[
-                                            { id: 'A Fazer', label: 'A Fazer' },
-                                            { id: 'Em Andamento', label: 'Em Andamento' },
-                                            { id: 'Revisão', label: 'Revisão' },
-                                            { id: 'Concluído', label: 'Concluído' },
-                                            { id: 'Atrasado', label: 'Atrasados' },
-                                        ].map(st => (
-                                            <div
-                                                key={st.id}
-                                                onClick={() => {
-                                                    if (selectedStatuses.includes(st.id)) setSelectedStatuses(selectedStatuses.filter(s => s !== st.id));
-                                                    else setSelectedStatuses([...selectedStatuses, st.id]);
-                                                }}
-                                                className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors"
-                                            >
-                                                <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${selectedStatuses.includes(st.id) ? 'bg-purple-600 border-purple-600' : 'border-white/10'}`}>
-                                                    {selectedStatuses.includes(st.id) && <Check className="w-3 h-3 text-white" />}
-                                                </div>
-                                                <span className="text-xs" style={{ color: 'var(--text-2)' }}>{st.label}</span>
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-
-                    {/* Colunas no Excel */}
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest pl-1 block mb-3" style={{ color: 'var(--muted)' }}>Colunas no Excel</label>
-                        <div className="flex flex-wrap gap-4 px-1">
-                            {[
-                                { label: 'Custo', state: includeCost, setter: setIncludeCost },
-                                { label: 'Horas', state: includeHours, setter: setIncludeHours },
-                            ].map(col => (
-                                <label key={col.label} className="flex items-center gap-2 cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={col.state}
-                                        onChange={(e) => col.setter(e.target.checked)}
-                                        className="w-4 h-4 rounded border-2 border-purple-500/30 checked:bg-purple-600 checked:border-purple-600 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
-                                        style={{ backgroundColor: 'var(--bg)' }}
-                                    />
-                                    <span className={`text-[11px] font-bold transition-colors uppercase tracking-tight ${col.state ? 'text-purple-400' : 'group-hover:text-purple-400'}`} style={{ color: col.state ? undefined : 'var(--muted)' }}>
-                                        {col.label}
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-center mt-8 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
-                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
-                        {reportData ? `Mostrando dados de ${reportData.rows.length} registros encontrados.` : 'Configure os filtros.'}
-                    </span>
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <button
-                            onClick={handleClearFilters}
-                            className="text-xs font-black hover:text-red-400 transition-colors uppercase tracking-widest mr-2"
-                            style={{ color: 'var(--muted)' }}
-                        >
-                            Limpar Filtros
-                        </button>
-
-                        {/* Tarja Fixa de Filtros Alterados */}
-                        <AnimatePresence>
-                            {hasUnappliedChanges && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, x: -10 }}
-                                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, x: -10 }}
-                                    onClick={handleApplyFilters}
-                                    className="flex items-center gap-3 px-4 py-2 bg-purple-600 text-white rounded-2xl cursor-pointer hover:bg-purple-500 transition-colors border shadow-lg"
-                                    style={{ borderColor: 'var(--border)' }}
-                                >
-                                    <div className="bg-white/20 p-1.5 rounded-full">
-                                        <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                        {/* --- BLOCO 3: VISUALIZAÇÃO EM TEMPO REAL --- */}
+                        <section ref={resultsRef} className="border rounded-[32px] overflow-hidden shadow-2xl"
+                            style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="p-8 border-b flex flex-wrap gap-6 items-center" style={{ borderColor: 'var(--border)' }}>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-slate-500/10 rounded-xl">
+                                        <LayoutDashboard className="w-5 h-5 text-slate-600" />
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-widest leading-tight">Filtros Alterados</span>
-                                        <span className="text-[8px] opacity-80 leading-tight">Clique para atualizar a visualização.</span>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        <button
-                            onClick={handleApplyFilters}
-                            disabled={loading}
-                            title="Recarregar"
-                            className={`p-3 rounded-2xl transition-all border ${hasUnappliedChanges ? 'bg-purple-600 hover:bg-purple-500 text-white animate-pulse' : 'hover:bg-black/10'}`}
-                            style={{ backgroundColor: !hasUnappliedChanges ? 'var(--surface-2)' : undefined, borderColor: 'var(--border)', color: !hasUnappliedChanges ? 'var(--muted)' : 'white' }}
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        </button>
-                    </div>
-                </div>
-            </section >
-
-            {/* --- BLOCO 2: CÁLCULOS E EXPORTAÇÃO --- */}
-            <div className="w-full gap-8">
-                {/* Configuração de Valores */}
-                {includeCost && (
-                    <div className="w-full border rounded-[32px] p-8 shadow-xl" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                        <div className="flex items-center gap-3 mb-2">
-                            <Layers className="w-5 h-5 text-purple-400" />
-                            <h3 className="text-sm font-black uppercase tracking-tight" style={{ color: 'var(--text)' }}>Configuração de Valores dos Projetos</h3>
-                        </div>
-                        <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>Insira os valores totais para cálculo de rentabilidade por hora.</p>
-
-                        <div className="space-y-4 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                            {reportData?.projectTotals.map(pt => (
-                                <ProjectConfigRow key={pt.id_projeto} pt={pt} onSave={handleUpdateBudget} />
-                            ))}
-                            {!reportData && <div className="text-xs italic" style={{ color: 'var(--muted)' }}>Gere o relatório para configurar custos.</div>}
-                        </div>
-                    </div>
-                )}
-
-                {/* Exportar removido daqui, pois agora está no cabeçalho dos filtros */}
-                <AnimatePresence>
-                </AnimatePresence>
-            </div>
-
-            {/* --- BLOCO 3: VISUALIZAÇÃO EM TEMPO REAL --- */}
-            <section ref={resultsRef} className="border rounded-[32px] overflow-hidden shadow-2xl"
-                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <div className="p-8 border-b flex flex-wrap gap-4 items-center" style={{ borderColor: 'var(--border)' }}>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-600/10 rounded-xl">
-                            <LayoutDashboard className="w-5 h-5 text-purple-400" />
-                        </div>
-                        <h3 className="text-sm font-black uppercase tracking-widest whitespace-nowrap" style={{ color: 'var(--text)' }}>Visualização em Tempo Real</h3>
-                    </div>
-
-                    <div className="flex flex-1 flex-wrap items-center justify-end gap-3 ml-auto">
-                        <button
-                            onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border"
-                            style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--muted)' }}
-                        >
-                            Alterar
-                        </button>
-
-                        <button
-                            onClick={() => addToast('PowerBI export em desenvolvimento.', 'info')}
-                            disabled={hasUnappliedChanges || !reportData}
-                            className="flex items-center gap-2 px-6 py-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border"
-                            style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                        >
-                            <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
-                            Power BI
-                        </button>
-                        <button
-                            onClick={handleExportExcel}
-                            disabled={exporting === 'excel' || hasUnappliedChanges || !reportData}
-                            className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl text-[10px] font-black text-white uppercase tracking-widest shadow-lg shadow-purple-500/20 transition-all border"
-                            style={{ borderColor: 'var(--border)' }}
-                        >
-                            {exporting === 'excel' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-                            Baixar Excel
-                        </button>
-
-                        <div className="flex items-center ml-2">
-                            {hasUnappliedChanges ? (
-                                <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest border border-red-500/20">
-                                    DADOS DESATUALIZADOS
-                                </span>
-                            ) : (
-                                <Badge color="green">DADOS ATUALIZADOS</Badge>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Resumo Geral */}
-                {detailedStats && (
-                    <div className="p-8 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)' }}>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                            {/* 1. Dias */}
-                            <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm"
-                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Dias Apontados</span>
-                                <div className="text-xl font-black" style={{ color: 'var(--text)' }}>{detailedStats.uniqueDays}</div>
-                            </div>
-
-                            {/* 2. Projetos */}
-                            <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm"
-                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Projetos</span>
-                                <div className="text-xl font-black" style={{ color: 'var(--text)' }}>{detailedStats.uniqueProjects}</div>
-                            </div>
-
-                            {/* 3. Colaboradores */}
-                            <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm"
-                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Colaboradores</span>
-                                <div className="text-xl font-black" style={{ color: 'var(--text)' }}>{detailedStats.uniqueColl}</div>
-                            </div>
-
-                            {/* 4. Card: Status (Mini Lista) */}
-                            <div className="border p-3 rounded-2xl overflow-y-auto max-h-[80px] custom-scrollbar lg:col-span-1 col-span-2 shadow-sm"
-                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                <span className="text-[9px] uppercase font-black block mb-1 text-center" style={{ color: 'var(--muted)' }}>Tarefas por Status</span>
-                                <div className="flex flex-col gap-1">
-                                    {Object.entries(detailedStats.statusCounts).map(([st, count]) => (
-                                        <div key={st} className="flex justify-between items-center text-[10px]" style={{ color: 'var(--text-2)' }}>
-                                            <span className="truncate max-w-[80px]">{st}</span>
-                                            <span className="font-bold px-1.5 rounded" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)' }}>{count}</span>
-                                        </div>
-                                    ))}
+                                    <h3 className="text-sm font-black uppercase tracking-widest whitespace-nowrap" style={{ color: 'var(--text)' }}>
+                                        {activeTab === 'operacional' ? 'Relatórios Detalhados' : 'Rastreamento de Execução'}
+                                    </h3>
                                 </div>
-                            </div>
 
-                            {/* 5. Card: Horas */}
-                            <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm"
-                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Total de Horas</span>
-                                <div className="text-xl font-black flex items-center gap-2" style={{ color: 'var(--text)' }}>
-                                    <Clock className="w-4 h-4 text-purple-400" />
-                                    {formatHours(totals.hours)}
-                                </div>
-                            </div>
+                                <div className="flex flex-1 flex-wrap items-center justify-end gap-3 ml-auto">
+                                    <button
+                                        onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border"
+                                        style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--muted)' }}
+                                    >
+                                        Alterar Filtros
+                                    </button>
 
-                            {/* 6. Card: Valor (Opcional) */}
-                            {includeCost && (
-                                <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm"
-                                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                    <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Custo Estimado</span>
-                                    <div className="text-xl font-black text-green-500 flex items-center gap-2">
-                                        <DollarSign className="w-4 h-4" />
-                                        {formatBRL(totals.val)}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+                                    <button
+                                        onClick={() => addToast('PowerBI export em desenvolvimento.', 'info')}
+                                        disabled={hasUnappliedChanges || !reportData}
+                                        className="flex items-center gap-2 px-6 py-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border"
+                                        style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                                    >
+                                        <BarChart3 className="w-3.5 h-3.5 text-slate-600" />
+                                        Power BI
+                                    </button>
+                                    <button
+                                        onClick={handleExportExcel}
+                                        disabled={exporting === 'excel' || hasUnappliedChanges || !reportData}
+                                        className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl text-[10px] font-black text-white uppercase tracking-widest shadow-lg shadow-slate-500/20 transition-all border"
+                                        style={{ borderColor: 'var(--border)' }}
+                                    >
+                                        {exporting === 'excel' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
+                                        Baixar Excel
+                                    </button>
 
-                <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
-                    <table className="w-full text-left border-collapse relative">
-                        <thead className="sticky top-0 z-10 shadow-lg">
-                            <tr className="text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--muted)' }}>
-                                <th className="pl-10 py-6" style={{ backgroundColor: 'var(--surface)' }}>Data</th>
-                                <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Cliente</th>
-                                <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Projeto</th>
-                                {useCollaboratorFilter && <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Colaborador</th>}
-                                {useStatusFilter && <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Status</th>}
-                                {includeHours && <th className="px-6 py-6 text-center" style={{ backgroundColor: 'var(--surface)' }}>Horas</th>}
-                                {includeCost && <th className="pr-10 py-6 text-right" style={{ backgroundColor: 'var(--surface)' }}>Valor Rateado (R$)</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                            {previewData.length === 0 && (
-                                <tr>
-                                    <td colSpan={10} className="py-20 text-center font-bold italic" style={{ color: 'var(--muted)' }}>Nenhum dado selecionado.</td>
-                                </tr>
-                            )}
-                            {previewData.map((row, idx) => (
-                                <tr key={idx} className="transition-colors group hover:bg-[var(--surface-2)]">
-                                    <td className="pl-10 py-4 font-black text-[10px] uppercase tracking-tighter" style={{ color: 'var(--muted)' }}>
-                                        {row.data ? new Date(row.data + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
-                                    </td>
-                                    <td className="px-6 py-4 font-bold" style={{ color: 'var(--text)' }}>
-                                        <div className="flex items-center gap-3">
-                                            <Briefcase className="w-4 h-4 text-purple-400/50" />
-                                            {row.cliente}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-xs font-black text-purple-600 uppercase">
-                                        <div className="flex items-center gap-3">
-                                            <Layers className="w-3.5 h-3.5 text-purple-500/50" />
-                                            {row.projeto}
-                                        </div>
-                                    </td>
-                                    {useCollaboratorFilter && (
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3" style={{ color: 'var(--text-2)' }}>
-                                                <UserIcon className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-                                                {row.colaborador}
-                                            </div>
-                                        </td>
-                                    )}
-                                    {useStatusFilter && (
-                                        <td className="px-6 py-4">
-                                            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded"
-                                                style={{ backgroundColor: 'var(--surface-2)', color: 'var(--muted)' }}>
-                                                {row.status || 'N/A'}
+                                    <div className="flex items-center ml-2">
+                                        {hasUnappliedChanges ? (
+                                            <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest border border-red-500/20">
+                                                DADOS DESATUALIZADOS
                                             </span>
-                                        </td>
-                                    )}
-                                    {includeHours && (
-                                        <td className="px-6 py-4 text-center font-black" style={{ color: 'var(--text-2)' }}>
-                                            {formatHours(row.horas)}
-                                        </td>
-                                    )}
-                                    {includeCost && (
-                                        <td className="pr-10 py-4 text-right font-black" style={{ color: 'var(--text)' }}>
-                                            {formatBRL(row.valor)}
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        ) : (
+                                            <Badge color="green">DADOS ATUALIZADOS</Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
 
-                <div className="p-4 flex justify-center items-center gap-2 text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--muted)' }}>
-                    <RefreshCw className="w-3 h-3" /> Sincronizando com timesheet em tempo real..
-                </div>
-            </section>
+                            {activeTab === 'operacional' && (
+                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    {detailedStats && (
+                                        <div className="p-8 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)' }}>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                                <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                                    <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Dias Apontados</span>
+                                                    <div className="text-xl font-black" style={{ color: 'var(--text)' }}>{detailedStats.uniqueDays}</div>
+                                                </div>
+                                                <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                                    <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Projetos</span>
+                                                    <div className="text-xl font-black" style={{ color: 'var(--text)' }}>{detailedStats.uniqueProjects}</div>
+                                                </div>
+                                                <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                                    <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Colaboradores</span>
+                                                    <div className="text-xl font-black" style={{ color: 'var(--text)' }}>{detailedStats.uniqueColl}</div>
+                                                </div>
+                                                <div className="border p-3 rounded-2xl overflow-y-auto max-h-[80px] custom-scrollbar lg:col-span-1 col-span-2 shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                                    <span className="text-[9px] uppercase font-black block mb-1 text-center" style={{ color: 'var(--muted)' }}>Tarefas</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        {Object.entries(detailedStats.statusCounts).map(([st, count]) => (
+                                                            <div key={st} className="flex justify-between items-center text-[10px]" style={{ color: 'var(--text-2)' }}>
+                                                                <span className="truncate max-w-[80px]">{st}</span>
+                                                                <span className="font-bold px-1.5 rounded" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)' }}>{count}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                                    <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Total Horas</span>
+                                                    <div className="text-xl font-black flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                                                        <Clock className="w-4 h-4 text-slate-600" />
+                                                        {formatHours(totals.hours)}
+                                                    </div>
+                                                </div>
+                                                {includeCost && (
+                                                    <div className="border p-4 rounded-2xl flex flex-col justify-center items-center shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                                        <span className="text-[10px] uppercase font-black mb-1" style={{ color: 'var(--muted)' }}>Custo Est.</span>
+                                                        <div className="text-xl font-black text-green-500 flex items-center gap-2">
+                                                            <DollarSign className="w-4 h-4" />
+                                                            {formatBRL(totals.val)}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+                                        <table className="w-full text-left border-collapse relative">
+                                            <thead className="sticky top-0 z-10 shadow-lg">
+                                                <tr className="text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--muted)' }}>
+                                                    <th className="pl-10 py-6" style={{ backgroundColor: 'var(--surface)' }}>Data</th>
+                                                    <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Cliente</th>
+                                                    <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Projeto</th>
+                                                    {useCollaboratorFilter && <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Colaborador</th>}
+                                                    {useStatusFilter && <th className="px-6 py-6" style={{ backgroundColor: 'var(--surface)' }}>Status T.</th>}
+                                                    {includeHours && <th className="px-6 py-6 text-center" style={{ backgroundColor: 'var(--surface)' }}>Horas</th>}
+                                                    {includeCost && <th className="pr-10 py-6 text-right" style={{ backgroundColor: 'var(--surface)' }}>Valor (R$)</th>}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                                                {previewData.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={10} className="py-20 text-center font-bold italic" style={{ color: 'var(--muted)' }}>Nenhum dado selecionado.</td>
+                                                    </tr>
+                                                )}
+                                                {previewData.map((row, idx) => (
+                                                    <tr key={idx} className="transition-colors group hover:bg-[var(--surface-2)]">
+                                                        <td className="pl-10 py-4 font-black text-[10px] uppercase tracking-tighter" style={{ color: 'var(--muted)' }}>
+                                                            {row.data ? new Date(row.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 font-bold" style={{ color: 'var(--text)' }}>{row.cliente}</td>
+                                                        <td className="px-6 py-4 text-xs font-black text-purple-600 uppercase">{row.projeto}</td>
+                                                        {useCollaboratorFilter && (
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-2)' }}>
+                                                                    {row.colaborador}
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                        {useStatusFilter && (
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--muted)' }}>
+                                                                    {row.status || 'N/A'}
+                                                                </span>
+                                                            </td>
+                                                        )}
+                                                        {includeHours && (
+                                                            <td className="px-6 py-4 text-center font-black" style={{ color: 'var(--text-2)' }}>
+                                                                {formatHours(row.horas)}
+                                                            </td>
+                                                        )}
+                                                        {includeCost && (
+                                                            <td className="pr-10 py-4 text-right font-black" style={{ color: 'var(--text)' }}>
+                                                                {formatBRL(row.valor)}
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'executivo' && (
+                                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-[var(--bg)] text-[var(--muted)] text-[10px] uppercase tracking-widest font-black border-b border-[var(--border)]">
+                                                    <th className="px-10 py-6">Cliente / Projeto</th>
+                                                    <th className="px-6 py-6">Status Planejamento</th>
+                                                    <th className="px-6 py-6 text-center">Complexidade</th>
+                                                    <th className="px-6 py-6 text-center">Progresso</th>
+                                                    <th className="pr-10 py-6 text-right">Período Planejado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[var(--border)]">
+                                                {previewData.reduce((acc: any[], current) => {
+                                                    if (!acc.find(r => r.projeto === current.projeto)) {
+                                                        acc.push(current);
+                                                    }
+                                                    return acc;
+                                                }, []).map((row, i) => (
+                                                    <tr key={i} className="hover:bg-[var(--bg)]/50 transition-colors">
+                                                        <td className="px-10 py-6">
+                                                            <div className="font-black text-xs text-[var(--text)] uppercase">{row.projeto}</div>
+                                                            <div className="text-[10px] font-bold text-[var(--muted)] uppercase">{row.cliente}</div>
+                                                        </td>
+                                                        <td className="px-6 py-6 font-bold">
+                                                            <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter border ${row.statusP === 'Desenvolvimento' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                                row.statusP === 'Arquitetura' ? 'bg-slate-800 text-white border-white/10' :
+                                                                    row.statusP === 'Análise da solução' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                                        row.statusP === 'Entendimento da demanda' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                                            'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                                                }`}>
+                                                                {row.statusP || 'Não Definido'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-6 text-center">
+                                                            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${row.complexidadeP === 'Alta' ? 'bg-red-500/10 text-red-500' :
+                                                                row.complexidadeP === 'Baixa' ? 'bg-green-500/10 text-green-500' :
+                                                                    'bg-blue-500/10 text-blue-500'
+                                                                }`}>
+                                                                {row.complexidadeP || 'Média'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-6">
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <span className="font-black text-[10px] text-[var(--text)] uppercase">{(row.progressoP || 0).toFixed(0)}%</span>
+                                                                <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-slate-800 rounded-full"
+                                                                        style={{ width: `${row.progressoP || 0}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="pr-10 py-6 text-right text-[10px] font-black text-slate-500 uppercase tabular-nums">
+                                                            {row.dataInicioP ? new Date(row.dataInicioP + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                                                            <br />
+                                                            {row.dataFimP ? new Date(row.dataFimP + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="p-4 flex justify-center items-center gap-2 text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--muted)' }}>
+                                <RefreshCw className="w-3 h-3" /> Sincronizando com timesheet em tempo real..
+                            </div>
+                        </section>
+                    </>
+                )
+            }
+
+
 
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-        </div >
+        </div>
     );
 };
 
 // --- Componente de Input de Moeda Inteligente ---
 const MoneyInput = ({ initialValue, onSave }: { initialValue: number | null, onSave: (val: number | null) => void }) => {
-    // Estado interno para controle visual imediato
     const [inputValue, setInputValue] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Converte número (ex: 50.00) para string formatada (ex: "50,00") sem o R$ para edição
     const formatToDisplay = (val: number | null) => {
         if (val === null) return '';
         return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1027,44 +1095,29 @@ const MoneyInput = ({ initialValue, onSave }: { initialValue: number | null, onS
     }, [initialValue]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // Remove tudo que não é dígito
         let digits = e.target.value.replace(/\D/g, '');
-
-        // Remove zeros à esquerda
         digits = digits.replace(/^0+/, '');
-
         if (digits === '') {
             setInputValue('0,00');
             return;
         }
-
-        // Se tiver menos de 3 dígitos, preenche com zeros à esquerda para formar decimal
         while (digits.length < 3) {
             digits = '0' + digits;
         }
-
-        // Insere a vírgula antes dos últimos 2 dígitos
         const integerPart = digits.slice(0, -2);
         const decimalPart = digits.slice(-2);
-
-        // Formata milhar
         const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
         setInputValue(`${formattedInteger},${decimalPart}`);
     };
 
     const handleBlur = async () => {
-        if (!inputValue) {
-            await onSave(null);
+        if (!inputValue || inputValue === '0,00') {
+            if (initialValue !== null) await onSave(null);
             return;
         }
-
-        // Converte "1.000,50" -> 1000.50
         const numericString = inputValue.replace(/\./g, '').replace(',', '.');
         const numberValue = parseFloat(numericString);
-
         if (isNaN(numberValue)) return;
-
         if (numberValue === initialValue) return;
 
         setLoading(true);
@@ -1092,7 +1145,7 @@ const MoneyInput = ({ initialValue, onSave }: { initialValue: number | null, onS
 
 const ProjectConfigRow = ({ pt, onSave }: { pt: ProjectTotal, onSave: (id: number, val: number | null) => void }) => {
     return (
-        <div className="flex items-center justify-between gap-4 p-4 rounded-2xl border hover:border-purple-500/30 transition-all group" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between gap-4 p-4 rounded-2xl border hover:border-slate-400 transition-all group" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
             <div className="flex-1 min-w-0">
                 <div className="text-xs font-black truncate uppercase tracking-tight" style={{ color: 'var(--text)' }}>{pt.projeto}</div>
                 <div className="text-[10px] font-bold uppercase truncate" style={{ color: 'var(--muted)' }}>{pt.cliente}</div>
@@ -1114,3 +1167,4 @@ const ProjectConfigRow = ({ pt, onSave }: { pt: ProjectTotal, onSave: (id: numbe
 };
 
 export default AdminFullReport;
+

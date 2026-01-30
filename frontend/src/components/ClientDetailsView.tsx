@@ -22,7 +22,7 @@ const ClientDetailsView: React.FC = () => {
   } = useDataController();
   const { isAdmin } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<ViewTab>('details');
+  const [activeTab, setActiveTab] = useState<ViewTab>('projects');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'project' | 'task' | 'client' } | null>(null);
@@ -120,71 +120,79 @@ const ClientDetailsView: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bgApp)' }}>
-      {/* HEADER - Estilo TeamMemberDetail */}
-      <div className="px-8 py-6 border-b flex items-center justify-between gap-4 bg-gradient-to-r from-[#4c1d95] to-purple-600 sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/admin/clients')} className="p-2 hover:bg-white/20 rounded-full transition-colors text-white">
-            <ArrowLeft className="w-5 h-5" />
+      <div className="px-8 py-4 bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] shadow-lg flex items-center justify-between text-white z-20 sticky top-0">
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => navigate('/admin/clients')}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+          >
+            <ArrowLeft />
           </button>
-          <div className="w-16 h-16 rounded-xl bg-white p-2 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
-            <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" onError={(e) => (e.currentTarget.src = "https://placehold.co/100x100?text=Logo")} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">{client.name}</h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-sm border bg-white/20 text-white border-white/30">
-                {client.tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente Final'}
-              </span>
-              {client.pais && <><span className="text-purple-200 opacity-50">•</span><p className="text-sm text-purple-100 font-medium">{client.pais}</p></>}
+          <div className="flex items-center gap-4">
+            {client.logoUrl && (
+              <div className="w-12 h-12 bg-white rounded-xl p-1.5 shadow-xl">
+                <img
+                  src={client.logoUrl}
+                  className="w-full h-full object-contain"
+                  alt={client.name}
+                  onError={(e) => (e.currentTarget.src = "https://placehold.co/100x100?text=Logo")}
+                />
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">{client.name}</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[9px] font-black uppercase bg-white/10 border border-white/20 px-2 py-0.5 rounded-full tracking-widest text-white/90">
+                  {client.tipo_cliente === 'parceiro' ? 'PARCEIRO' : 'CLIENTE FINAL'}
+                </span>
+                {client.pais && (
+                  <span className="text-[10px] font-medium text-white/50">• {client.pais}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {isAdmin && activeTab === 'details' && (
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className={`px-5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg ${isEditing ? 'bg-white text-purple-600 hover:bg-purple-50' : 'bg-purple-800/40 text-white hover:bg-purple-800/60 border border-white/20'}`}
+        {/* COMPACT TABS INTEGRATED IN HEADER (FUNCTIONAL VERSION) */}
+        <div className="flex items-center gap-2">
+          <div
+            onClick={() => setActiveTab('projects')}
+            className={`px-3 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-3 ${activeTab === 'projects' ? 'border-white bg-white/20 shadow-sm' : 'border-white/10 bg-black/10 hover:bg-white/5'}`}
           >
-            {isEditing ? 'Cancelar Edição' : <> <Edit className="w-4 h-4" /> Editar Cliente </>}
-          </button>
-        )}
+            <span className="text-[10px] font-black uppercase tracking-widest text-white">Projetos</span>
+            <span className="text-sm font-black text-white">{clientProjects.length}</span>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('details')}
+            className={`px-3 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-3 ${activeTab === 'details' ? 'border-white bg-white/20 shadow-sm' : 'border-white/10 bg-black/10 hover:bg-white/5'}`}
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest text-white">Informações</span>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('tasks')}
+            className={`px-3 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-3 ${activeTab === 'tasks' ? 'border-white bg-white/20 shadow-sm' : 'border-white/10 bg-black/10 hover:bg-white/5'}`}
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest text-white">Tarefas</span>
+            <span className="text-sm font-black text-white">{clientTasks.length}</span>
+          </div>
+
+          {isAdmin && activeTab === 'details' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsEditing(!isEditing); }}
+              className={`ml-2 px-3 py-1.5 rounded-lg transition-all border ${isEditing ? 'bg-white text-slate-800' : 'bg-black/20 text-white border-white/20 hover:bg-black/30'}`}
+              title={isEditing ? 'Cancelar Edição' : 'Editar Cliente'}
+            >
+              <span className="text-[10px] font-black uppercase tracking-widest">{isEditing ? 'Sair' : 'Editar'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
         <div className="max-w-7xl mx-auto space-y-8">
 
-          {/* 1. CARDS DE RESUMO (TABS) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div onClick={() => setActiveTab('details')} className={`cursor-pointer p-5 rounded-2xl border transition-all ${activeTab === 'details' ? 'ring-2 ring-purple-600 bg-purple-50 border-purple-200 shadow-md' : 'bg-white border-slate-200 hover:border-purple-300 shadow-sm'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className={`w-4 h-4 ${activeTab === 'details' ? 'text-purple-600' : 'text-slate-400'}`} />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Informações</span>
-              </div>
-              <span className={`text-lg font-bold ${activeTab === 'details' ? 'text-purple-700' : 'text-slate-700'}`}>Dados do Cliente</span>
-            </div>
-
-            <div onClick={() => setActiveTab('projects')} className={`cursor-pointer p-5 rounded-2xl border transition-all ${activeTab === 'projects' ? 'ring-2 ring-blue-600 bg-blue-50 border-blue-200 shadow-md' : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Briefcase className={`w-4 h-4 ${activeTab === 'projects' ? 'text-blue-600' : 'text-slate-400'}`} />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Projetos</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className={`text-3xl font-black ${activeTab === 'projects' ? 'text-blue-700' : 'text-slate-800'}`}>{clientProjects.length}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase">Ativos</span>
-              </div>
-            </div>
-
-            <div onClick={() => setActiveTab('tasks')} className={`cursor-pointer p-5 rounded-2xl border transition-all ${activeTab === 'tasks' ? 'ring-2 ring-emerald-600 bg-emerald-50 border-emerald-200 shadow-md' : 'bg-white border-slate-200 hover:border-emerald-300 shadow-sm'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <CheckSquare className={`w-4 h-4 ${activeTab === 'tasks' ? 'text-emerald-600' : 'text-slate-400'}`} />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entregas</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className={`text-3xl font-black ${activeTab === 'tasks' ? 'text-emerald-700' : 'text-slate-800'}`}>{clientTasks.length}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase">Total de Tarefas</span>
-              </div>
-            </div>
-          </div>
 
           {/* 2. CONTEÚDO DAS TABS */}
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

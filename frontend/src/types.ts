@@ -61,6 +61,8 @@ export interface Project {
   gapsIssues?: string;
   importantConsiderations?: string;
   weeklyStatusReport?: string;
+  horas_vendidas?: number;
+  complexidade?: 'Alta' | 'Média' | 'Baixa';
 }
 
 export interface Task {

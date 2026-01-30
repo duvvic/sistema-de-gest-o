@@ -69,6 +69,24 @@ const MainLayout: React.FC = () => {
     // Listamos as rotas "raiz" do menu para forçar a animação
     const MAIN_PATHS = menuItems.map(m => m.path).concat(['/profile']);
 
+    // Fechar sidebar automaticamente em telas específicas (ex: Executive Insights)
+    React.useEffect(() => {
+        const checkTab = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'executivo') {
+                setSidebarOpen(false);
+            }
+        };
+
+        const handleCloseSidebar = () => setSidebarOpen(false);
+
+        window.addEventListener('closeSidebar', handleCloseSidebar);
+        // Verifica no mount e em mudanças de location
+        checkTab();
+
+        return () => window.removeEventListener('closeSidebar', handleCloseSidebar);
+    }, [location.search]);
+
     // Ref para guardar o path anterior e calcular direção instantaneamente
     const prevPathRef = React.useRef(location.pathname);
     const [direction, setDirection] = useState<'root' | 'forward' | 'back' | 'menu-down' | 'menu-up'>('root');
@@ -277,8 +295,8 @@ const MainLayout: React.FC = () => {
                                 onClick={() => navigate(item.path)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${!sidebarOpen && 'justify-center'}`}
                                 style={{
-                                    backgroundColor: active ? 'var(--surface)' : 'transparent',
-                                    color: active ? 'var(--primary)' : 'rgba(255, 255, 255, 0.8)',
+                                    backgroundColor: active ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                                    color: active ? 'white' : 'rgba(255, 255, 255, 0.8)',
                                 }}
                                 onMouseEnter={(e) => {
                                     if (!active) {
@@ -348,8 +366,8 @@ const MainLayout: React.FC = () => {
                 </div>
             </div>
 
-            {/* Contextual Help System */}
-            <HelpButton />
+            {/* Contextual Help System - Oculto na aba executiva para maximizar espaço */}
+            {new URLSearchParams(location.search).get('tab') !== 'executivo' && <HelpButton />}
         </div>
     );
 };

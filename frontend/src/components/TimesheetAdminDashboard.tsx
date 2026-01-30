@@ -430,31 +430,29 @@ const TimesheetAdminDashboard: React.FC = () => {
          ) : (
             // Detalhe do Cliente com Abas
             <div className="flex-1 flex flex-col overflow-hidden">
-               {/* Tabs */}
-               <div className="px-8 py-2 border-b flex gap-6 shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                  <button
-                     onClick={() => setActiveTab('projects')}
-                     className={`py-4 font-black text-xs uppercase tracking-widest border-b-2 transition-all flex items-center gap-2`}
-                     style={{
-                        borderColor: activeTab === 'projects' ? 'var(--primary)' : 'transparent',
-                        color: activeTab === 'projects' ? 'var(--primary)' : 'var(--muted)'
-                     }}
-                  >
-                     <Briefcase className="w-4 h-4" />
-                     Projetos ({projectsWithHours.length})
-                  </button>
+               {/* NAVEGAÇÃO DE SUB-MENUS (VERSÃO COMPACTA & FUNCIONAL) */}
+               <div className="px-8 py-3 bg-[var(--surface)] border-b border-[var(--border)]">
+                  <div className="flex bg-[var(--surface-2)] p-1 rounded-lg border border-[var(--border)] w-fit">
+                     <button
+                        onClick={() => setActiveTab('projects')}
+                        className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'projects'
+                              ? 'bg-slate-800 text-white shadow-sm'
+                              : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                           }`}
+                     >
+                        Projetos <span className="ml-1 opacity-60">({projectsWithHours.length})</span>
+                     </button>
 
-                  <button
-                     onClick={() => setActiveTab('collaborators')}
-                     className={`py-4 font-black text-xs uppercase tracking-widest border-b-2 transition-all flex items-center gap-2`}
-                     style={{
-                        borderColor: activeTab === 'collaborators' ? 'var(--primary)' : 'transparent',
-                        color: activeTab === 'collaborators' ? 'var(--primary)' : 'var(--muted)'
-                     }}
-                  >
-                     <Users className="w-4 h-4" />
-                     Colaboradores ({collaboratorsWithHours.length})
-                  </button>
+                     <button
+                        onClick={() => setActiveTab('collaborators')}
+                        className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'collaborators'
+                              ? 'bg-slate-800 text-white shadow-sm'
+                              : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                           }`}
+                     >
+                        Colaboradores <span className="ml-1 opacity-60">({collaboratorsWithHours.length})</span>
+                     </button>
+                  </div>
                </div>
 
                {/* Conteúdo das Abas */}

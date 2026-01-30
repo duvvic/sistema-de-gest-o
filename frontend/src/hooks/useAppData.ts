@@ -198,20 +198,28 @@ export function useAppData(): AppData {
 
         const absencesMapped = (absencesRes.data || []).map(mapDbAbsenceToAbsence);
 
+        const deduplicateById = <T extends { id: string }>(items: T[]): T[] => {
+          return Array.from(new Map(items.map(i => [i.id, i])).values());
+        };
+
         // Atualiza os states (retorna todos, filtragem no componente)
-        setUsers(usersData);
-        setClients(clientsData);
-        setProjects(projectsData);
-        setTasks(tasksMapped);
-        setTimesheetEntries(timesheetMapped);
-        setAbsences(absencesMapped);
+        setUsers(deduplicateById(usersData));
+        setClients(deduplicateById(clientsData));
+        setProjects(deduplicateById(projectsData));
+        setTasks(deduplicateById(tasksMapped));
+        setTimesheetEntries(deduplicateById(timesheetMapped));
+        setAbsences(deduplicateById(absencesMapped));
 
         if (membersRes.data) {
           const membersMapped = membersRes.data.map((row: any) => ({
             projectId: String(row.id_projeto),
             userId: String(row.id_colaborador)
           }));
-          setProjectMembers(membersMapped);
+
+          // Deduplicate members
+          const uniqueMembers = Array.from(new Map(membersMapped.map((m: any) => [`${m.projectId}-${m.userId}`, m])).values());
+
+          setProjectMembers(uniqueMembers);
 
           // SALVAR NO CACHE
           const cacheData = {

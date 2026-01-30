@@ -238,7 +238,12 @@ router.get('/excel', requireAdmin, async (req, res) => {
             { header: 'COLABORADOR', key: 'colaborador', width: 25 },
             { header: 'TAREFA', key: 'tarefa', width: 45 },
             { header: 'HORAS', key: 'horas', width: 12 },
-            { header: 'PROJETOS', key: 'projeto', width: 30 }
+            { header: 'PROJETOS', key: 'projeto', width: 30 },
+            { header: 'STATUS P.', key: 'status_p', width: 15 },
+            { header: 'CPX', key: 'complexidade_p', width: 10 },
+            { header: 'INÍCIO P.', key: 'data_inicio_p', width: 15 },
+            { header: 'FIM P.', key: 'data_fim_p', width: 15 },
+            { header: 'PROGRESSO P. (%)', key: 'progresso_p', width: 15 },
         ];
 
         wsDados.getRow(1).eachCell(cell => {
@@ -284,10 +289,18 @@ router.get('/excel', requireAdmin, async (req, res) => {
                 colaborador: collName,
                 tarefa: taskName,
                 horas: h / 24,
-                projeto: projName
+                projeto: projName,
+                status_p: r.status_p,
+                complexidade_p: r.complexidade_p,
+                data_inicio_p: r.data_inicio_p ? new Date(r.data_inicio_p + 'T12:00:00') : null,
+                data_fim_p: r.data_fim_p ? new Date(r.data_fim_p + 'T12:00:00') : null,
+                progresso_p: r.progresso_p ? Number(r.progresso_p) / 100 : 0,
             });
 
             row.getCell('data').numFmt = formats.date;
+            row.getCell('data_inicio_p').numFmt = formats.date;
+            row.getCell('data_fim_p').numFmt = formats.date;
+            row.getCell('progresso_p').numFmt = '0%';
             row.getCell('horas').numFmt = formats.hours;
             row.eachCell(cell => cell.border = styles.border);
         });

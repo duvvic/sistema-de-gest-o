@@ -43,6 +43,13 @@ export type ReportRow = {
     horas_projeto_total: number;        // horas totais do projeto no período (pra rateio)
     valor_hora_projeto: number | null;  // R$/h (já calculado pelo backend)
     valor_rateado: number | null;       // R$ (horas * valor_hora_projeto)
+
+    // Novos campos de planejamento de projeto
+    data_inicio_p: string | null;
+    data_fim_p: string | null;
+    status_p: string | null;
+    complexidade_p: string | null;
+    progresso_p: number | null;
 };
 
 export type ProjectTotal = {

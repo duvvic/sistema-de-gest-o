@@ -154,57 +154,77 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-[var(--surface)] rounded-2xl shadow-sm border border-[var(--border)] overflow-hidden">
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface)] sticky top-0 z-10">
-        <div className="flex items-center gap-4">
+      {/* Header with Integrated KPIs */}
+      <div className="px-8 py-4 bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] shadow-lg flex items-center justify-between text-white z-20 sticky top-0">
+        <div className="flex items-center gap-6">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-[var(--surfaceHover)] rounded-full transition-colors text-[var(--textMuted)]"
+            className="p-2 hover:bg-white/10 rounded-full transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-[var(--textTitle)] flex items-center gap-3">
-              {client.logoUrl && (
+          <div className="flex items-center gap-4">
+            {client.logoUrl && (
+              <div className="w-12 h-12 bg-white rounded-xl p-1.5 shadow-xl">
                 <img
                   src={client.logoUrl}
+                  className="w-full h-full object-contain"
                   alt={client.name}
-                  className="w-8 h-8 rounded-lg object-contain bg-[var(--bgApp)] border border-[var(--border)] p-1"
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
                 />
-              )}
-              {client.name}
-            </h1>
-            <p className="text-sm text-[var(--textMuted)] mt-1">Gestão de Cliente</p>
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">{client.name}</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[9px] font-black uppercase bg-white/10 border border-white/20 px-2 py-0.5 rounded-full tracking-widest text-white/90">
+                  {client.tipo_cliente === 'parceiro' ? 'PARCEIRO' : 'CLIENTE FINAL'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 px-8 py-4 border-b border-[var(--border)] bg-[var(--bgApp)]">
-        <button onClick={() => setActiveTab('details')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'details' ? 'bg-[var(--brand)] text-white' : 'text-[var(--textMuted)] hover:bg-[var(--surfaceHover)]'}`}>
-          <Info className="w-4 h-4" /> Visão Geral
-        </button>
-        <button
-          onClick={() => setActiveTab('projects')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'projects'
-            ? 'bg-[var(--brand)] text-white'
-            : 'text-[var(--textMuted)] hover:bg-[var(--surfaceHover)]'
-            }`}
-        >
-          <FolderKanban className="w-4 h-4" />
-          Projetos ({clientProjects.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('tasks')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'tasks'
-            ? 'bg-[var(--brand)] text-white'
-            : 'text-[var(--textMuted)] hover:bg-[var(--surfaceHover)]'
-            }`}
-        >
-          <CheckSquare className="w-4 h-4" />
-          Tarefas ({clientTasks.length})
-        </button>
+        {/* COMPACT KPI CARDS */}
+        <div className="flex items-center gap-3">
+          <div
+            onClick={() => setActiveTab('projects')}
+            className={`px-4 py-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-center min-w-[120px] ${activeTab === 'projects' ? 'border-white bg-white/20 shadow-md' : 'border-white/10 bg-black/10 hover:bg-white/5'}`}
+          >
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Briefcase size={12} className="text-white/70" />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-white/70">PROJETOS</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black text-white">{clientProjects.length}</span>
+              <span className="text-[10px] font-bold text-white/50">ATIVOS</span>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('details')}
+            className={`px-4 py-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-center min-w-[120px] ${activeTab === 'details' ? 'border-white bg-white/20 shadow-md' : 'border-white/10 bg-black/10 hover:bg-white/5'}`}
+          >
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <FileText size={12} className="text-white/70" />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-white/70">INFORMAÇÕES</span>
+            </div>
+            <span className="text-xs font-black text-white leading-tight">Dados do Cliente</span>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('tasks')}
+            className={`px-4 py-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-center min-w-[120px] ${activeTab === 'tasks' ? 'border-white bg-white/20 shadow-md' : 'border-white/10 bg-black/10 hover:bg-white/5'}`}
+          >
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <CheckSquare size={12} className="text-white/70" />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-white/70">ENTREGAS</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black text-white">{clientTasks.length}</span>
+              <span className="text-[10px] font-bold text-white/50">TOTAL</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Content */}

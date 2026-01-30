@@ -1,5 +1,6 @@
 // components/TeamMemberDetail.tsx - Reestruturado: Resumo Topo + Edição Principal
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { Task, Role } from '@/types';
@@ -157,7 +158,7 @@ const TeamMemberDetail: React.FC = () => {
    return (
       <div className="h-full flex flex-col rounded-2xl shadow-sm border overflow-hidden" style={{ backgroundColor: 'var(--bgApp)', borderColor: 'var(--border)' }}>
          {/* HEADER */}
-         <div className="px-8 py-6 border-b flex items-center justify-between gap-4 bg-gradient-to-r from-[#4c1d95] to-purple-600 sticky top-0 z-10" style={{ borderColor: 'var(--border)' }}>
+         <div className="px-8 py-6 border-b flex items-center justify-between gap-4 bg-slate-900 sticky top-0 z-10" style={{ borderColor: 'var(--border)' }}>
             <div className="flex items-center gap-4">
                <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/20 rounded-full transition-colors text-white">
                   <ArrowLeft className="w-5 h-5" />
@@ -168,8 +169,8 @@ const TeamMemberDetail: React.FC = () => {
                <div>
                   <h1 className="text-xl font-bold text-white">{user.name}</h1>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
-                     <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-sm border" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', borderColor: 'rgba(255, 255, 255, 0.3)' }}>{getRoleDisplayName(user.role)}</span>
-                     {user.cargo && <><span className="text-purple-200 opacity-50">•</span><p className="text-sm text-purple-100 font-medium">{user.cargo}</p></>}
+                     <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-sm border bg-white/10 text-white border-white/20">{getRoleDisplayName(user.role)}</span>
+                     {user.cargo && <><span className="text-white/20">•</span><p className="text-sm text-white/70 font-medium">{user.cargo}</p></>}
                   </div>
                </div>
             </div>
@@ -178,32 +179,55 @@ const TeamMemberDetail: React.FC = () => {
          <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
             <div className="max-w-7xl mx-auto space-y-8">
 
-               {/* 1. CARDS DE RESUMO HORIZONTAL */}
-               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                  <div onClick={() => setActiveTab('details')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${activeTab === 'details' ? 'ring-2 ring-slate-600 bg-slate-50' : 'hover:border-slate-300'} bg-white shadow-sm`}>
-                     <div className="flex items-center gap-2 mb-2"><UserIcon className="w-4 h-4 text-slate-600" /><span className="text-xs font-bold text-slate-500 uppercase">Visão Geral</span></div>
-                     <span className="text-xs font-bold text-slate-600">Dados & Info</span>
-                  </div>
-                  <div onClick={() => setActiveTab('projects')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${activeTab === 'projects' ? 'ring-2 ring-purple-600 bg-purple-50' : 'hover:border-purple-300'} bg-white shadow-sm`}>
-                     <div className="flex items-center gap-2 mb-2"><Briefcase className="w-4 h-4 text-purple-600" /><span className="text-xs font-bold text-slate-500 uppercase">Projetos</span></div>
-                     <span className="text-2xl font-black text-slate-800">{userProjects.length}</span>
-                  </div>
-                  <div onClick={() => setActiveTab('tasks')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${activeTab === 'tasks' ? 'ring-2 ring-blue-600 bg-blue-50' : 'hover:border-blue-300'} bg-white shadow-sm`}>
-                     <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-blue-600" /><span className="text-xs font-bold text-slate-500 uppercase">Tarefas</span></div>
-                     <span className="text-2xl font-black text-slate-800">{totalTasks}</span>
-                  </div>
-                  <div onClick={() => setActiveTab('delayed')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${activeTab === 'delayed' ? 'ring-2 ring-red-600 bg-red-50' : 'hover:border-red-300'} bg-white shadow-sm`}>
-                     <div className="flex items-center gap-2 mb-2"><AlertCircle className="w-4 h-4 text-red-600" /><span className="text-xs font-bold text-slate-500 uppercase">Atrasos</span></div>
-                     <span className="text-2xl font-black text-slate-800">{delayedTasks.length}</span>
-                  </div>
-                  <div onClick={() => setActiveTab('ponto')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${activeTab === 'ponto' ? 'ring-2 ring-orange-600 bg-orange-50' : 'hover:border-orange-300'} bg-white shadow-sm`}>
-                     <div className="flex items-center gap-2 mb-2"><Timer className="w-4 h-4 text-orange-600" /><span className="text-xs font-bold text-slate-500 uppercase">Ponto</span></div>
-                     <span className="text-2xl font-black text-slate-800">{missingPontoDays}</span>
-                  </div>
-                  <div onClick={() => setActiveTab('absences')} className={`cursor-pointer p-4 rounded-2xl border transition-all ${activeTab === 'absences' ? 'ring-2 ring-emerald-600 bg-emerald-50' : 'hover:border-emerald-300'} bg-white shadow-sm`}>
-                     <div className="flex items-center gap-2 mb-2"><Palmtree className="w-4 h-4 text-emerald-600" /><span className="text-xs font-bold text-slate-500 uppercase">Ausências</span></div>
-                     <span className="text-xs font-bold text-emerald-600">Gerenciar</span>
-                  </div>
+               {/* NAVEGAÇÃO DE SUB-MENUS (VERSÃO COMPACTA & FUNCIONAL) */}
+               <div className="flex bg-[var(--surface-2)] p-1 rounded-lg border border-[var(--border)] w-fit mx-auto mb-6">
+                  <button
+                     onClick={() => setActiveTab('details')}
+                     className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'details' ? 'bg-slate-800 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                  >
+                     Geral
+                  </button>
+
+                  <button
+                     onClick={() => setActiveTab('projects')}
+                     className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'projects' ? 'bg-slate-800 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                  >
+                     Projetos {userProjects.length > 0 && <span className="ml-1 opacity-60">({userProjects.length})</span>}
+                  </button>
+
+                  <button
+                     onClick={() => setActiveTab('tasks')}
+                     className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'tasks' ? 'bg-slate-800 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                  >
+                     Tarefas {totalTasks > 0 && <span className="ml-1 opacity-60">({totalTasks})</span>}
+                  </button>
+
+                  <button
+                     onClick={() => setActiveTab('delayed')}
+                     className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'delayed' ? 'bg-red-800 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                  >
+                     Atrasos {delayedTasks.length > 0 && <span className="ml-1 opacity-60">({delayedTasks.length})</span>}
+                  </button>
+
+                  <button
+                     onClick={() => setActiveTab('ponto')}
+                     className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'ponto' ? 'bg-slate-800 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                  >
+                     Ponto
+                  </button>
+
+                  <button
+                     onClick={() => setActiveTab('absences')}
+                     className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'absences' ? 'bg-slate-800 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                        }`}
+                  >
+                     Ausências
+                  </button>
                </div>
 
                {/* 2. TAB CONTENT AREA */}
@@ -212,14 +236,14 @@ const TeamMemberDetail: React.FC = () => {
                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                         <div className="flex items-center justify-between mb-8">
                            <h3 className="text-xl font-bold flex items-center gap-3 text-slate-800">
-                              <UserIcon className="w-6 h-6 text-purple-600" />
+                              <UserIcon className="w-6 h-6 text-slate-600" />
                               Dados do Colaborador
                            </h3>
                            <button
                               onClick={() => setIsEditing(!isEditing)}
-                              className={`px-5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${isEditing ? 'bg-slate-100 text-slate-600' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-200'}`}
+                              className={`px-5 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm ${isEditing ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
                            >
-                              {isEditing ? 'Cancelar Edição' : <> <Edit className="w-4 h-4" /> Editar Informações </>}
+                              {isEditing ? 'Sair' : <> <Edit className="w-4 h-4" /> Editar </>}
                            </button>
                         </div>
 
