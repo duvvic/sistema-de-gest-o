@@ -119,8 +119,8 @@ const ClientDetailsView: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bgApp)' }}>
-      <div className="px-8 py-4 bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] shadow-lg flex items-center justify-between text-white z-20 sticky top-0">
+    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bgApp)', color: 'var(--text)' }}>
+      <div className="px-8 py-4 shadow-lg flex items-center justify-between text-white z-20 sticky top-0" style={{ background: 'linear-gradient(to right, var(--sidebar-bg), var(--sidebar-bg-2))' }}>
         <div className="flex items-center gap-6">
           <button
             onClick={() => navigate('/admin/clients')}
@@ -130,7 +130,7 @@ const ClientDetailsView: React.FC = () => {
           </button>
           <div className="flex items-center gap-4">
             {client.logoUrl && (
-              <div className="w-12 h-12 bg-white rounded-xl p-1.5 shadow-xl">
+              <div className="w-12 h-12 rounded-xl p-1.5 shadow-xl border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'rgba(255,255,255,0.1)' }}>
                 <img
                   src={client.logoUrl}
                   className="w-full h-full object-contain"
@@ -197,14 +197,14 @@ const ClientDetailsView: React.FC = () => {
           {/* 2. CONTEÚDO DAS TABS */}
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeTab === 'details' && (
-              <div className="bg-white rounded-[32px] shadow-sm border border-slate-200 p-10">
-                <div className="flex items-center gap-3 mb-10 border-b border-slate-100 pb-6">
-                  <div className="p-3 bg-purple-100 rounded-2xl text-purple-600">
+              <div className="rounded-[32px] shadow-sm border p-10" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                <div className="flex items-center gap-3 mb-10 border-b pb-6" style={{ borderColor: 'var(--border)' }}>
+                  <div className="p-3 rounded-2xl text-purple-600" style={{ backgroundColor: 'var(--surface-hover)' }}>
                     <UserIcon size={24} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-800">Perfil Corporativo</h3>
-                    <p className="text-sm text-slate-400">Gerenciamento de dados e configurações contratuais</p>
+                    <h3 className="text-2xl font-black" style={{ color: 'var(--text)' }}>Perfil Corporativo</h3>
+                    <p className="text-sm" style={{ color: 'var(--muted)' }}>Gerenciamento de dados e configurações contratuais</p>
                   </div>
                 </div>
 
@@ -384,7 +384,7 @@ const ClientDetailsView: React.FC = () => {
             {activeTab === 'projects' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Projetos em Andamento ({clientProjects.length})</h3>
+                  <h3 className="text-xl font-black tracking-tight" style={{ color: 'var(--text)' }}>Projetos em Andamento ({clientProjects.length})</h3>
                   <button
                     onClick={() => navigate(`/admin/clients/${clientId}/projects/new`)}
                     className="px-5 py-2.5 bg-purple-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all flex items-center gap-2"
@@ -404,7 +404,8 @@ const ClientDetailsView: React.FC = () => {
                         whileHover={{ y: -5 }}
                         key={project.id}
                         onClick={() => navigate(`/admin/projects/${project.id}`)}
-                        className="bg-white p-7 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-200 transition-all cursor-pointer group relative"
+                        className="p-7 rounded-[32px] border shadow-sm hover:shadow-xl transition-all cursor-pointer group relative"
+                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                       >
                         <button
                           onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: project.id, type: 'project' }); }}
@@ -416,21 +417,21 @@ const ClientDetailsView: React.FC = () => {
 
                         <div className="space-y-6">
                           <div>
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
                               <span>Evolução Física</span>
-                              <span className="text-purple-600">{progress}%</span>
+                              <span style={{ color: 'var(--brand)' }}>{progress}%</span>
                             </div>
-                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-purple-600 to-blue-500" style={{ width: `${progress}%` }} />
+                            <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                              <div className="h-full bg-gradient-to-r from-[var(--brand)] to-[var(--primary-hover)]" style={{ width: `${progress}%` }} />
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                          <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
                             <div className="flex items-center gap-2">
-                              <CheckSquare size={14} className="text-purple-400" />
-                              <span className="text-xs font-bold text-slate-500">{doneTasks} / {projectTasks.length}</span>
+                              <CheckSquare size={14} style={{ color: 'var(--brand)' }} />
+                              <span className="text-xs font-bold" style={{ color: 'var(--muted)' }}>{doneTasks} / {projectTasks.length}</span>
                             </div>
-                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] border ${project.status === 'Concluído' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] border ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
                               {project.status || 'Ativo'}
                             </span>
                           </div>
@@ -442,11 +443,11 @@ const ClientDetailsView: React.FC = () => {
                                 const member = users.find(u => u.id === pm.userId);
                                 if (!member) return null;
                                 return (
-                                  <div key={member.id} className="w-9 h-9 rounded-2xl border-4 border-white shadow-sm overflow-hidden" title={member.name}>
+                                  <div key={member.id} className="w-9 h-9 rounded-2xl border-4 shadow-sm overflow-hidden" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-hover)' }} title={member.name}>
                                     {member.avatarUrl ? (
                                       <img src={member.avatarUrl} className="w-full h-full object-cover" />
                                     ) : (
-                                      <div className="w-full h-full bg-slate-100 flex items-center justify-center font-bold text-[10px] text-slate-500">{member.name.substring(0, 2)}</div>
+                                      <div className="w-full h-full flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--muted)' }}>{member.name.substring(0, 2).toUpperCase()}</div>
                                     )}
                                   </div>
                                 );
@@ -468,9 +469,9 @@ const ClientDetailsView: React.FC = () => {
             )}
 
             {activeTab === 'tasks' && (
-              <div className="space-y-6">
+              <div className="space-y-10">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Monitoramento de Tarefas ({clientTasks.length})</h3>
+                  <h3 className="text-xl font-black tracking-tight" style={{ color: 'var(--text)' }}>Monitoramento de Tarefas ({clientTasks.length})</h3>
                   <button
                     onClick={() => navigate(`/tasks/new?client=${clientId}`)}
                     className="px-5 py-2.5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center gap-2"
@@ -479,45 +480,142 @@ const ClientDetailsView: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {clientTasks.map(task => (
-                    <div
-                      key={task.id}
-                      onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex justify-between items-center group"
-                    >
-                      <div className="flex-1 pr-4">
-                        <h5 className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors line-clamp-1">{task.title}</h5>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${task.status === 'Done' ? 'bg-emerald-50 text-emerald-600' : task.status === 'In Progress' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
-                            {task.status}
-                          </span>
-                          <span className="text-[10px] text-slate-400">• {task.projectName}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col items-end mr-2">
-                          <span className="text-sm font-black text-slate-700">{task.progress}%</span>
-                          {task.estimatedDelivery && <span className="text-[9px] text-slate-400 font-bold mt-0.5">{new Date(task.estimatedDelivery).toLocaleDateString()}</span>}
-                        </div>
-                        {task.developerId && (
-                          <div className="w-10 h-10 rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden" title={task.developer}>
-                            {users.find(u => u.id === task.developerId)?.avatarUrl ? (
-                              <img src={users.find(u => u.id === task.developerId)?.avatarUrl} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[10px] uppercase">
-                                {(task.developer || '??').substring(0, 2)}
+                {clientProjects.filter(p => clientTasks.some(t => t.projectId === p.id)).length === 0 ? (
+                  <div className="py-20 rounded-[32px] border-2 border-dashed text-center" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                    <CheckSquare className="w-12 h-12 mx-auto mb-4 opacity-20" style={{ color: 'var(--text)' }} />
+                    <p className="font-bold uppercase tracking-widest text-sm" style={{ color: 'var(--muted)' }}>Nenhuma tarefa ativa para este cliente</p>
+                  </div>
+                ) : (
+                  clientProjects
+                    .filter(project => clientTasks.some(task => task.projectId === project.id))
+                    .map(project => {
+                      const projectTasks = clientTasks.filter(t => t.projectId === project.id);
+                      return (
+                        <div key={project.id} className="space-y-4">
+                          {/* Rich Project Status Bar */}
+                          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 rounded-2xl border transition-all"
+                            style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-1.5 h-10 rounded-full bg-gradient-to-b from-blue-500 to-purple-600 shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
+                              <div className="flex flex-col">
+                                <h4 className="font-black text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--text)' }}>
+                                  {project.name}
+                                </h4>
+                                <div className="flex items-center gap-3">
+                                  <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                    }`}>
+                                    {project.status || 'Ativo'}
+                                  </div>
+                                  <span className="text-[10px] font-bold opacity-30" style={{ color: 'var(--text)' }}>•</span>
+                                  <span className="text-[10px] font-bold" style={{ color: 'var(--muted)' }}>
+                                    {projectTasks.length} {projectTasks.length === 1 ? 'Tarefa' : 'Tarefas'}
+                                  </span>
+                                </div>
                               </div>
-                            )}
+                            </div>
+
+                            <div className="flex items-center justify-between md:justify-end gap-8 px-4 border-t md:border-t-0 md:border-l pt-4 md:pt-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                              {/* Physical Evolution Stats */}
+                              <div className="flex flex-col min-w-[100px]">
+                                <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Evolução Média</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-black" style={{ color: 'var(--brand)' }}>
+                                    {projectTasks.length > 0
+                                      ? Math.round(projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0) / projectTasks.length)
+                                      : 0}%
+                                  </span>
+                                  <div className="flex-1 h-1 w-16 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-[var(--brand)]" style={{
+                                      width: `${projectTasks.length > 0 ? projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0) / projectTasks.length : 0}%`
+                                    }} />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Completion Stats */}
+                              <div className="flex flex-col">
+                                <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Conclusão</span>
+                                <div className="flex items-center gap-2">
+                                  <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
+                                  <span className="text-sm font-black" style={{ color: 'var(--text)' }}>
+                                    {projectTasks.filter(t => t.status === 'Done').length}/{projectTasks.length}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => navigate(`/admin/projects/${project.id}`)}
+                                className="p-2 hover:bg-white/5 rounded-xl transition-all border border-white/5 group"
+                              >
+                                <ArrowLeft className="w-4 h-4 rotate-180 transition-transform group-hover:translate-x-1" style={{ color: 'var(--muted)' }} />
+                              </button>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {clientTasks.length === 0 && (
-                    <div className="col-span-full py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center text-slate-400 font-bold text-sm uppercase">Nenhuma tarefa encontrada</div>
-                  )}
-                </div>
+
+                          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar-thin pl-1">
+                            {projectTasks.map(task => (
+                              <motion.div
+                                whileHover={{ y: -4 }}
+                                key={task.id}
+                                onClick={() => navigate(`/tasks/${task.id}`)}
+                                className="min-w-[320px] max-w-[320px] p-5 rounded-2xl border shadow-sm transition-all cursor-pointer group flex flex-col justify-between h-[110px]"
+                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                              >
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <h5 className="font-bold text-sm group-hover:text-blue-500 transition-colors line-clamp-1" style={{ color: 'var(--text)' }}>
+                                      {task.title}
+                                    </h5>
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                        task.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                          'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                        }`}>
+                                        {task.status}
+                                      </span>
+                                      {task.estimatedDelivery && (
+                                        <span className="text-[9px] font-medium" style={{ color: 'var(--muted)' }}>
+                                          {new Date(task.estimatedDelivery).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="shrink-0">
+                                    {task.developerId && (
+                                      <div className="w-8 h-8 rounded-xl border p-0.5 shadow-sm" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                        {users.find(u => u.id === task.developerId)?.avatarUrl ? (
+                                          <img src={users.find(u => u.id === task.developerId)?.avatarUrl} className="w-full h-full object-cover rounded-lg" alt="Dev" />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center font-bold text-[10px] uppercase" style={{ color: 'var(--muted)' }}>
+                                            {(task.developer || '??').substring(0, 2)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="mt-4">
+                                  <div className="flex justify-between items-center mb-1.5">
+                                    <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Progresso</span>
+                                    <span className="text-[10px] font-black" style={{ color: 'var(--brand)' }}>{task.progress}%</span>
+                                  </div>
+                                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                                    <div
+                                      className="h-full bg-gradient-to-r from-[var(--brand)] to-[var(--primary-hover)] transition-all duration-500"
+                                      style={{ width: `${task.progress}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
               </div>
             )}
           </div>

@@ -209,10 +209,10 @@ const MainLayout: React.FC = () => {
     };
 
     const handleLogout = async () => {
-        console.log('[MainLayout] Iniciando logout...');
+
         try {
             await logout();
-            console.log('[MainLayout] Logout concluído, redirecionando...');
+
             navigate('/login', { replace: true });
         } catch (error) {
             console.error('[MainLayout] Erro crítico no logout:', error);
@@ -229,11 +229,10 @@ const MainLayout: React.FC = () => {
             {/* Sidebar */}
             <div
                 className={`${sidebarOpen ? 'w-64' : 'w-20'
-                    } transition-all duration-300 flex flex-col z-20 shadow-xl relative`}
+                    } transition-all duration-300 flex flex-col z-20 shadow-2xl relative border-r border-white/5`}
                 style={{ background: 'linear-gradient(180deg, var(--sidebar-bg), var(--sidebar-bg-2))' }}
             >
-                {/* Header */}
-                <div className="p-6 flex items-center justify-between border-b border-white/10">
+                <div className={`flex items-center justify-between border-b border-white/10 ${sidebarOpen ? 'p-6' : 'p-4 justify-center'}`}>
                     {sidebarOpen ? (
                         <>
                             <div className="flex items-center gap-3">
@@ -250,7 +249,7 @@ const MainLayout: React.FC = () => {
                     ) : (
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors mx-auto text-white"
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
                         >
                             <Menu className="w-5 h-5" />
                         </button>
@@ -259,7 +258,7 @@ const MainLayout: React.FC = () => {
 
                 {/* User Info Melhorado e Clicável */}
                 <button
-                    className={`p-6 border-b border-white/10 w-full bg-white/5 hover:bg-white/10 transition-all flex items-center gap-3 group focus:outline-none`}
+                    className={`${sidebarOpen ? 'p-6' : 'p-4'} border-b border-white/10 w-full bg-white/5 hover:bg-white/10 transition-all flex items-center gap-3 group focus:outline-none relative`}
                     style={{ cursor: 'pointer' }}
                     onClick={() => {
                         navigate('/profile');
@@ -267,6 +266,9 @@ const MainLayout: React.FC = () => {
                     }}
                     title="Ver/editar perfil"
                 >
+                    {isActive('/profile') && (
+                        <div className="absolute left-0 top-0 w-1 h-full bg-white" />
+                    )}
                     {currentUser?.avatarUrl ? (
                         <img
                             src={currentUser.avatarUrl}
@@ -299,7 +301,7 @@ const MainLayout: React.FC = () => {
                                     navigate(item.path);
                                     setSidebarOpen(false);
                                 }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${!sidebarOpen && 'justify-center'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${!sidebarOpen && 'justify-center'}`}
                                 style={{
                                     backgroundColor: active ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                                     color: active ? 'white' : 'rgba(255, 255, 255, 0.8)',
@@ -319,6 +321,9 @@ const MainLayout: React.FC = () => {
                             >
                                 <Icon className="w-5 h-5 flex-shrink-0" />
                                 {sidebarOpen && <span className="font-medium" translate="no">{item.label}</span>}
+                                {active && (
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+                                )}
                             </button>
                         );
                     })}

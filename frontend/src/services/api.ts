@@ -93,7 +93,7 @@ export interface DbTaskRow {
  */
 export async function fetchUsers(): Promise<User[]> {
   try {
-    console.log("[API] Buscando users (v2-fix-role)...");
+
     const { data, error } = await supabase
       .from("dim_colaboradores")
       .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, role, ativo, torre, nivel");
@@ -110,7 +110,7 @@ export async function fetchUsers(): Promise<User[]> {
 
     const mapped: User[] = data.map((row: any) => mapDbUserToUser(row));
 
-    console.log("[API] Usuarios mapeados:", mapped.length);
+
     return mapped;
   } catch (err) {
     console.error("[API] Falha no fetchUsers:", err);

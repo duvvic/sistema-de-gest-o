@@ -118,7 +118,7 @@ const TaskDetail: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); // Prevent standard form submission
-    console.log("Submit clicked");
+
 
     if (!formData.projectId || !formData.clientId || !formData.title) {
       alert("Preencha todos os campos obrigatórios (Título, Cliente, Projeto)");

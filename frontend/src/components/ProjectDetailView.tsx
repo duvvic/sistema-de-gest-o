@@ -53,7 +53,8 @@ const ProjectDetailView: React.FC = () => {
     weeklyStatusReport: '',
     valor_total_rs: 0,
     horas_vendidas: 0,
-    complexidade: 'Média' as 'Alta' | 'Média' | 'Baixa'
+    complexidade: 'Média' as 'Alta' | 'Média' | 'Baixa',
+    torre: ''
   });
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
@@ -78,7 +79,8 @@ const ProjectDetailView: React.FC = () => {
         weeklyStatusReport: (project as any).weeklyStatusReport || (project as any).weekly_status_report || '',
         valor_total_rs: (project as any).valor_total_rs || 0,
         horas_vendidas: (project as any).horas_vendidas || 0,
-        complexidade: (project as any).complexidade || 'Média'
+        complexidade: (project as any).complexidade || 'Média',
+        torre: (project as any).torre || ''
       });
       const members = getProjectMembers(project.id);
       setSelectedUsers(members);
@@ -413,20 +415,50 @@ const ProjectDetailView: React.FC = () => {
                     <div className="p-6 rounded-[32px] border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                       <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: 'var(--text)' }}><Users size={16} className="text-purple-500" /> Equipe Alocada</h3>
                       <div className="space-y-3">
-                        {projectMembers.filter(pm => pm.projectId === projectId).map(pm => {
-                          const u = users.find(user => user.id === pm.userId);
-                          return u ? (
-                            <div key={u.id} className="flex items-center gap-3 p-2 rounded-xl border transition-all group" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--bg)' }}>
-                              <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
-                                {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-black" style={{ color: 'var(--primary)' }}>{u.name.substring(0, 2).toUpperCase()}</div>}
+                        {isEditing ? (
+                          <div className="border rounded-2xl p-4 max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar shadow-inner" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
+                            {users.filter(u => u.active !== false).sort((a, b) => a.name.localeCompare(b.name)).map(user => (
+                              <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-purple-500/30 bg-purple-500/5' : 'border-transparent opacity-60'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedUsers.includes(user.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedUsers(prev => [...prev, user.id]);
+                                    } else {
+                                      setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                                    }
+                                  }}
+                                  className="w-4 h-4 rounded border-[var(--border)] text-purple-600 focus:ring-purple-500"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold overflow-hidden bg-[var(--surface-2)]" style={{ color: 'var(--text)' }}>
+                                    {user.avatarUrl ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" /> : user.name.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>{user.name}</p>
+                                    <p className="text-[8px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          projectMembers.filter(pm => pm.projectId === projectId).map(pm => {
+                            const u = users.find(user => user.id === pm.userId);
+                            return u ? (
+                              <div key={u.id} className="flex items-center gap-3 p-2 rounded-xl border transition-all" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--bg)' }}>
+                                <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
+                                  {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-black" style={{ color: 'var(--primary)' }}>{u.name.substring(0, 2).toUpperCase()}</div>}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
+                                  <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--primary)' }}>{u.torre || 'Consultor'}</p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
-                                <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--primary)' }}>{u.torre || 'Consultor'}</p>
-                              </div>
-                            </div>
-                          ) : null;
-                        })}
+                            ) : null;
+                          })
+                        )}
                       </div>
                     </div>
 

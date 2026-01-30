@@ -31,7 +31,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
     name: '',
     description: '',
     budget: '',
-    manager: '',
+    managerClient: '',
     startDate: '',
     estimatedDelivery: '',
   });
@@ -42,14 +42,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
     // Exemplo: refetchProjects();
     // Ou chame onNewProject/onDeleteProject se apropriado
     // Aqui apenas um console.log para debug
-    console.log('Realtime Project Event', payload);
+
   }, []);
 
   const handleTaskRealtime = useCallback((payload) => {
     // Atualize a lista de tarefas conforme necessário
     // Exemplo: refetchTasks();
     // Ou chame onTaskClick se apropriado
-    console.log('Realtime Task Event', payload);
+
   }, []);
 
   useSupabaseRealtime('projects', handleProjectRealtime);
@@ -74,7 +74,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
       clientId: client.id,
       description: formData.description || undefined,
       budget: formData.budget ? Number(formData.budget) : undefined,
-      manager: formData.manager || undefined,
+      managerClient: formData.managerClient || undefined,
       startDate: formData.startDate || undefined,
       estimatedDelivery: formData.estimatedDelivery || undefined,
       status: 'Em andamento',
@@ -87,7 +87,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
       name: '',
       description: '',
       budget: '',
-      manager: '',
+      managerClient: '',
       startDate: '',
       estimatedDelivery: '',
     });
@@ -166,8 +166,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                     <label className="block text-sm font-medium text-slate-700 mb-2">Gerente</label>
                     <input
                       type="text"
-                      value={formData.manager}
-                      onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
+                      value={formData.managerClient}
+                      onChange={(e) => setFormData({ ...formData, managerClient: e.target.value })}
                       placeholder="Nome do gerente"
                       className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#4c1d95] outline-none transition-all text-slate-800"
                     />
@@ -246,9 +246,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
                             <p className="text-sm text-slate-600 mt-2">{project.description}</p>
                           )}
                           <div className="flex gap-6 mt-4 text-sm text-slate-600">
-                            {project.manager && (
+                            {project.managerClient && (
                               <div>
-                                <span className="font-medium">Gerente:</span> {project.manager}
+                                <span className="font-medium">Gerente:</span> {project.managerClient}
                               </div>
                             )}
                             {project.budget && (

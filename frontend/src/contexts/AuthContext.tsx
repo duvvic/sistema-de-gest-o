@@ -117,7 +117,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (loadingRef.current === emailToFind) return;
         loadingRef.current = emailToFind;
 
-        console.log(`[Auth] Buscando perfil para: ${emailToFind}...`);
+
 
         try {
             // Tenta buscar o usuário nas tabelas dim_colaboradores buscando primeiro na coluna indexada 'email'
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
                 setCurrentUser(normalizedUser);
                 localStorage.setItem(USER_CACHE_KEY, JSON.stringify(normalizedUser));
                 lastLoadedEmail.current = emailToFind;
-                console.log('[Auth] Perfil carregado com sucesso.');
+
             } else {
                 console.warn('[Auth] Usuário não encontrado no banco, usando fallback do Supabase.');
                 const isVictor = emailToFind === 'victor.picoli@nic-labs.com.br';
@@ -189,7 +189,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
             if (isMounted) {
                 setAuthReady(ready => {
                     if (!ready) {
-                        console.warn('[Auth] Safety timeout atingido (15s). Destravando interface.');
                         setIsLoading(false);
                         return true;
                     }
@@ -210,7 +209,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
                         const sessionEmail = normalizeEmail(session.user.email);
 
                         if (cachedEmail === sessionEmail) {
-                            console.log('[Auth] Usuário validado via cache, liberando interface...');
+
                             setAuthReady(true);
                             setIsLoading(false);
                             // Atualiza em background sem dar await
@@ -238,7 +237,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!isMounted) return;
-            console.log(`[Auth] Evento: ${event}`);
+
 
             if (event === 'SIGNED_OUT') {
                 lastLoadedEmail.current = null;
@@ -298,12 +297,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
     const logout = async () => {
         try {
-            await supabase.auth.signOut({ scope: 'global' });
-        } catch (err) {
-            console.error('[Auth] Erro ao deslogar do Supabase:', err);
-        } finally {
+            // Limpa o estado local IMEDIATAMENTE para evitar que a UI tente usar uma sessão morta
             setCurrentUser(null);
             localStorage.removeItem(USER_CACHE_KEY);
+
+            // Tenta avisar o Supabase, mas não deixa um erro 403 travar o processo
+            await supabase.auth.signOut({ scope: 'local' });
+        } catch (err) {
+            // Silencia o erro 403 que ocorre se a sessão já estiver expirada
+            // console.warn('Supabase session already closed or invalid'); 
         }
     };
     const updateUser = (user: User) => {

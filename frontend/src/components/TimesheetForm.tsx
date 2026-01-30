@@ -180,51 +180,14 @@ const TimesheetForm: React.FC = () => {
       lunchDeduction: deductLunch,
     };
 
-    // Check Availability
-    const targetUserId = entry.userId;
-    const targetUser = users.find(u => u.id === targetUserId);
+    // Simplified availability and hours checks (requested by user to remove limits)
+    // We can still keep the checks for visual signaling if needed, but not block the save.
 
-    if (targetUser) {
-      const dayHours = timesheetEntries
-        .filter(e => e.userId === targetUserId && e.date === entry.date && e.id !== entry.id)
-        .reduce((sum, e) => sum + e.totalHours, 0);
-
-      const totalDayAfter = dayHours + entry.totalHours;
-      const dailyLimit = targetUser.dailyAvailableHours || 8;
-
-      if (totalDayAfter > dailyLimit) {
-        setAvailabilityWarning(`Este lançamento excederá sua carga horária diária de ${dailyLimit}h (Total no dia: ${totalDayAfter.toFixed(2)}h).`);
-        setPendingSave(entry);
-        setAvailabilityModalOpen(true);
-        return;
-      }
-
-      // Monthly Check (Optional but requested)
-      const monthStart = entry.date.substring(0, 7); // YYYY-MM
-      const monthHours = timesheetEntries
-        .filter(e => e.userId === targetUserId && e.date.startsWith(monthStart) && e.id !== entry.id)
-        .reduce((sum, e) => sum + e.totalHours, 0);
-
-      const totalMonthAfter = monthHours + entry.totalHours;
-      const monthlyLimit = targetUser.monthlyAvailableHours || 160;
-
-      if (totalMonthAfter > monthlyLimit) {
-        setAvailabilityWarning(`Este lançamento excederá seu limite mensal de ${monthlyLimit}h (Total no mês: ${totalMonthAfter.toFixed(2)}h).`);
-        setPendingSave(entry);
-        setAvailabilityModalOpen(true);
-        return;
-      }
-    }
+    // Non-blocking warning logic for dashboard could be here, but for now we just proceed to save.
 
     if (willBeCompleted) {
       setPendingSave(entry);
       setCompletionModalOpen(true);
-      return;
-    }
-
-    if (adjustedTotalHours > 11) {
-      setPendingSave(entry);
-      setWarningModalOpen(true);
       return;
     }
 
@@ -290,21 +253,30 @@ const TimesheetForm: React.FC = () => {
   const { projectMembers } = useDataController();
 
   const availableProjectsIds = React.useMemo(() => {
-    if (isAdmin) return projects.map(p => p.id);
+    const targetUserId = formData.userId || currentUser?.id;
+    if (!targetUserId) return [];
 
-    // Projetos onde o usuário é membro oficial
+    // Se o usuário alvo for um Admin (diretoria/gestor), talvez ele deva ver tudo,
+    // mas a regra solicitada é restritiva ao vínculo.
+    // Vamos verificar se o usuário alvo tem cargo de gestão/admin.
+    const targetUser = users.find(u => u.id === targetUserId);
+    const targetIsAdmin = ['admin', 'system_admin', 'diretoria', 'gestor', 'pmo'].includes(targetUser?.role?.toLowerCase() || '');
+
+    if (targetIsAdmin) return projects.map(p => p.id);
+
+    // Projetos onde o usuário alvo é membro oficial
     const memberProjectIds = projectMembers
-      .filter(pm => pm.userId === user?.id)
+      .filter(pm => pm.userId === targetUserId)
       .map(pm => pm.projectId);
 
-    // Projetos que contêm tarefas vinculadas ao usuário
+    // Projetos que contêm tarefas vinculadas ao usuário alvo
     const taskProjectIds = tasks
-      .filter(t => t.developerId === user?.id || t.collaboratorIds?.includes(user?.id || ''))
+      .filter(t => t.developerId === targetUserId || t.collaboratorIds?.includes(targetUserId))
       .map(t => t.projectId);
 
     // Combinar ambos e remover duplicatas
     return [...new Set([...memberProjectIds, ...taskProjectIds])];
-  }, [projectMembers, tasks, user, isAdmin, projects]);
+  }, [projectMembers, tasks, formData.userId, currentUser, projects, users]);
 
   const availableProjects = projects.filter(p =>
     availableProjectsIds.includes(p.id) &&
@@ -312,12 +284,19 @@ const TimesheetForm: React.FC = () => {
   );
 
   const availableClientIds = React.useMemo(() => {
-    if (isAdmin) return clients.map(c => c.id);
+    const targetUserId = formData.userId || currentUser?.id;
+    if (!targetUserId) return [];
 
-    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
-    const isOperational = activeCargos.includes(currentUser?.cargo?.toLowerCase() || '');
+    const targetUser = users.find(u => u.id === targetUserId);
+    const targetIsAdmin = ['admin', 'system_admin', 'diretoria', 'gestor', 'pmo'].includes(targetUser?.role?.toLowerCase() || '');
+
+    if (targetIsAdmin) return clients.map(c => c.id);
+
+    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'analista'];
+    const isOperational = activeCargos.includes(targetUser?.cargo?.toLowerCase() || '');
 
     if (!isOperational) {
+      // Se não for operacional e não for admin, vê apenas projetos internos (ex: Nic-Labs)
       return clients
         .filter(c => c.name.toLowerCase().includes('nic-labs'))
         .map(c => c.id);
@@ -325,7 +304,7 @@ const TimesheetForm: React.FC = () => {
 
     const userProjects = projects.filter(p => availableProjectsIds.includes(p.id));
     return [...new Set(userProjects.map(p => p.clientId))];
-  }, [clients, projects, availableProjectsIds, isAdmin, currentUser]);
+  }, [clients, projects, availableProjectsIds, formData.userId, currentUser, users]);
 
   const filteredClients = clients.filter(c => availableClientIds.includes(c.id));
   const filteredProjects = availableProjects;
@@ -609,7 +588,7 @@ const TimesheetForm: React.FC = () => {
                       {deductLunch ? '(Considerando 1h de almoço)' : '(Sem desconto de almoço)'}
                     </span>
                   </div>
-                  <div className={`text-4xl font-black transition-all ${adjustedTotalHours > 11 ? 'text-red-500 scale-110' : ''}`} style={{ color: adjustedTotalHours > 11 ? undefined : 'var(--primary)' }}>
+                  <div className={`text-4xl font-black transition-all ${adjustedTotalHours > 14 ? 'text-red-500 scale-110' : ''}`} style={{ color: adjustedTotalHours > 14 ? undefined : 'var(--primary)' }}>
                     {timeDisplay}
                   </div>
                 </div>

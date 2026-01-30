@@ -13,7 +13,7 @@ type SortOption = 'recent' | 'alphabetical' | 'creation';
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { clients, projects, tasks, error, loading, users, deleteProject } = useDataController();
+  const { clients, projects, tasks, error, loading, users, deleteProject, projectMembers } = useDataController();
   const { currentUser, isAdmin } = useAuth();
   const [sortBy, setSortBy] = useState<SortOption>(() => (localStorage.getItem('admin_clients_sort_by') as SortOption) || 'alphabetical');
   const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | 'late' | 'ongoing' | 'done'>('all');
@@ -33,11 +33,11 @@ const AdminDashboard: React.FC = () => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    return (localStorage.getItem('admin_clients_view_mode') as 'grid' | 'list') || 'grid';
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'tasks'>(() => {
+    return (localStorage.getItem('admin_clients_view_mode') as 'grid' | 'list' | 'tasks') || 'grid';
   });
 
-  const toggleViewMode = (mode: 'grid' | 'list') => {
+  const toggleViewMode = (mode: 'grid' | 'list' | 'tasks') => {
     setViewMode(mode);
     localStorage.setItem('admin_clients_view_mode', mode);
   };
@@ -721,9 +721,7 @@ const AdminDashboard: React.FC = () => {
 
 
       {activeTab === 'operacional' && (
-        <>
-
-
+        <div className="px-8 pb-10">
           {/* NEW COMPACT HEADER */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div className="flex items-center gap-4">
@@ -815,6 +813,7 @@ const AdminDashboard: React.FC = () => {
                     backgroundColor: viewMode === 'grid' ? 'var(--text)' : 'transparent',
                     color: viewMode === 'grid' ? 'var(--bg)' : 'var(--muted)'
                   }}
+                  title="Mural de Clientes"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
@@ -825,8 +824,20 @@ const AdminDashboard: React.FC = () => {
                     backgroundColor: viewMode === 'list' ? 'var(--text)' : 'transparent',
                     color: viewMode === 'list' ? 'var(--bg)' : 'var(--muted)'
                   }}
+                  title="Portfólio de Projetos"
                 >
                   <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => toggleViewMode('tasks')}
+                  className="p-2 px-3 rounded-lg transition-all flex items-center gap-2"
+                  style={{
+                    backgroundColor: viewMode === 'tasks' ? 'var(--text)' : 'transparent',
+                    color: viewMode === 'tasks' ? 'var(--bg)' : 'var(--muted)'
+                  }}
+                  title="Monitoramento de Operações"
+                >
+                  <Layers className="w-4 h-4" />
                 </button>
               </div>
 
@@ -915,7 +926,7 @@ const AdminDashboard: React.FC = () => {
                       onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
                       <div className="flex items-center gap-5 cursor-pointer" onClick={() => navigate(`/admin/clients/${client.id}`)}>
-                        <div className="w-16 h-16 rounded-xl border bg-white p-2 flex items-center justify-center shadow-lg" style={{ borderColor: 'var(--border)' }}>
+                        <div className="w-16 h-16 rounded-xl border p-2 flex items-center justify-center shadow-lg" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
                           <img
                             src={client.logoUrl}
                             alt={client.name}
@@ -950,71 +961,233 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar-thin pl-2">
-                      {clientProjects.length === 0 ? (
-                        <div className="text-xs text-slate-500 italic py-4">Nenhum projeto cadastrado para este cliente.</div>
-                      ) : (
-                        clientProjects.map(project => {
-                          const projectTasks = safeTasks.filter(t => t.projectId === project.id);
-                          const doneTasks = projectTasks.filter(t => t.status === 'Done').length;
-                          const progress = projectTasks.length > 0 ? Math.round((doneTasks / projectTasks.length) * 100) : 0;
+                    {viewMode === 'list' ? (
+                      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar-thin pl-2">
+                        {clientProjects.length === 0 ? (
+                          <div className="text-xs text-slate-500 italic py-4">Nenhum projeto cadastrado para este cliente.</div>
+                        ) : (
+                          clientProjects.map(project => {
+                            const projectTasks = safeTasks.filter(t => t.projectId === project.id);
+                            const doneTasks = projectTasks.filter(t => t.status === 'Done').length;
+                            const progress = projectTasks.length > 0 ? Math.round((doneTasks / projectTasks.length) * 100) : 0;
 
-                          return (
-                            <motion.div
-                              whileHover={{ y: -4 }}
-                              key={project.id}
-                              onClick={() => navigate(`/admin/projects/${project.id}`)}
-                              className="min-w-[280px] max-w-[280px] border rounded-2xl p-5 cursor-pointer transition-all group/card shadow-lg relative"
-                              style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                            >
-                              {isAdmin && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setProjectToDelete(project.id);
-                                  }}
-                                  className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all z-10 opacity-0 group-hover/card:opacity-100"
-                                  title="Excluir Projeto"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                              <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider" style={{ color: 'var(--text)' }}>{project.name}</h4>
+                            return (
+                              <motion.div
+                                whileHover={{ y: -4 }}
+                                key={project.id}
+                                onClick={() => navigate(`/admin/projects/${project.id}`)}
+                                className="min-w-[280px] max-w-[280px] border rounded-2xl p-5 cursor-pointer transition-all group/card shadow-lg relative"
+                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                              >
+                                {isAdmin && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setProjectToDelete(project.id);
+                                    }}
+                                    className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all z-10 opacity-0 group-hover/card:opacity-100"
+                                    title="Excluir Projeto"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider" style={{ color: 'var(--text)' }}>{project.name}</h4>
 
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
-                                  <span>Progresso</span>
-                                  <span className="text-slate-600">{progress}%</span>
-                                </div>
-                                <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
-                                  <div
-                                    className="h-full bg-slate-600 transition-all duration-1000"
-                                    style={{ width: `${progress}%` }}
-                                  />
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                                    <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
-                                    <span>{doneTasks}/{projectTasks.length}</span>
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+                                    <span>Evolução Física</span>
+                                    <span style={{ color: 'var(--brand)' }}>{progress}%</span>
                                   </div>
-                                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                    }`}>
-                                    {project.status || 'Ativo'}
-                                  </span>
+                                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                                    <div
+                                      className="h-full bg-gradient-to-r from-[var(--brand)] to-[var(--primary-hover)] transition-all duration-1000"
+                                      style={{ width: `${progress}%` }}
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--muted)' }}>
+                                      <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
+                                      <span>{doneTasks}/{projectTasks.length}</span>
+                                    </div>
+                                    <div className={`p-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border flex items-center gap-1 ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                      }`}>
+                                      <div className={`w-1 h-1 rounded-full ${project.status === 'Concluído' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                      {project.status || 'Ativo'}
+                                    </div>
+                                  </div>
+
+                                  {/* Project Team Avatars */}
+                                  <div className="pt-3 border-t flex items-center -space-x-1.5 overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                                    {projectMembers
+                                      .filter(pm => pm.projectId === project.id)
+                                      .slice(0, 5)
+                                      .map(pm => {
+                                        const member = users.find(u => u.id === pm.userId);
+                                        if (!member) return null;
+                                        return (
+                                          <div
+                                            key={member.id}
+                                            className="w-6 h-6 rounded-full border border-[var(--surface)] flex items-center justify-center overflow-hidden bg-[var(--surface-hover)]"
+                                            title={member.name}
+                                          >
+                                            {member.avatarUrl ? (
+                                              <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                              <span className="text-[8px] font-bold" style={{ color: 'var(--muted)' }}>
+                                                {member.name.substring(0, 2).toUpperCase()}
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    {projectMembers.filter(pm => pm.projectId === project.id).length > 5 && (
+                                      <div className="w-6 h-6 rounded-full border border-[var(--surface)] bg-[var(--surface-2)] flex items-center justify-center text-[8px] font-bold" style={{ color: 'var(--muted)' }}>
+                                        +{projectMembers.filter(pm => pm.projectId === project.id).length - 5}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })
+                        )}
+                      </div>
+                    ) : (
+                      /* NEW OPERATIONS VIEW (PROJECT BAR + TASK CARDS) */
+                      <div className="space-y-6">
+                        {clientProjects.length === 0 ? (
+                          <div className="text-xs text-slate-500 italic py-4">Nenhum projeto cadastrado para este cliente.</div>
+                        ) : (
+                          clientProjects.map(project => {
+                            const projectTasks = safeTasks.filter(t => t.projectId === project.id);
+                            const doneTasks = projectTasks.filter(t => t.status === 'Done').length;
+                            const avgProgress = projectTasks.length > 0
+                              ? Math.round(projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0) / projectTasks.length)
+                              : 0;
+
+                            return (
+                              <div key={project.id} className="space-y-3">
+                                {/* Project Banner Bar */}
+                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 rounded-2xl border transition-all"
+                                  style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+
+                                  <div className="flex items-center gap-4 flex-1">
+                                    <div className="w-1.5 h-10 rounded-full bg-gradient-to-b from-blue-500 to-purple-600 shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
+                                    <div className="flex flex-col">
+                                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text)' }}>
+                                        {project.name}
+                                      </h4>
+                                      <div className="flex items-center gap-3">
+                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                                          {project.status || 'Ativo'}
+                                        </div>
+                                        <span className="text-[10px] font-bold opacity-30" style={{ color: 'var(--text)' }}>•</span>
+                                        <span className="text-[10px] font-bold" style={{ color: 'var(--muted)' }}>
+                                          {projectTasks.length} {projectTasks.length === 1 ? 'Tarefa' : 'Tarefas'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center justify-between md:justify-end gap-6 px-4 border-t md:border-t-0 md:border-l pt-4 md:pt-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                    {/* Evolution Stats */}
+                                    <div className="flex flex-col min-w-[90px]">
+                                      <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Evolução Média</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-black" style={{ color: 'var(--brand)' }}>{avgProgress}%</span>
+                                        <div className="flex-1 h-1 w-12 bg-white/5 rounded-full overflow-hidden">
+                                          <div className="h-full bg-[var(--brand)]" style={{ width: `${avgProgress}%` }} />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Completion Stats */}
+                                    <div className="flex flex-col">
+                                      <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Conclusão</span>
+                                      <div className="flex items-center gap-2">
+                                        <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
+                                        <span className="text-sm font-black" style={{ color: 'var(--text)' }}>{doneTasks}/{projectTasks.length}</span>
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      onClick={() => navigate(`/admin/projects/${project.id}`)}
+                                      className="p-2 hover:bg-white/5 rounded-xl transition-all border border-white/5 group"
+                                    >
+                                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" style={{ color: 'var(--muted)' }} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Task Line */}
+                                <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar-thin pl-1">
+                                  {projectTasks.length === 0 ? (
+                                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-30 py-4 pl-4" style={{ color: 'var(--muted)' }}>Nenhuma tarefa nesta operação</div>
+                                  ) : (
+                                    projectTasks.map(task => (
+                                      <motion.div
+                                        whileHover={{ y: -4 }}
+                                        key={task.id}
+                                        onClick={() => navigate(`/tasks/${task.id}`)}
+                                        className="min-w-[280px] max-w-[280px] p-4 rounded-2xl border shadow-sm transition-all cursor-pointer group flex flex-col justify-between h-[100px]"
+                                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                      >
+                                        <div className="flex justify-between items-start gap-4">
+                                          <div className="min-w-0 flex-1">
+                                            <h5 className="font-bold text-xs group-hover:text-blue-500 transition-colors line-clamp-1" style={{ color: 'var(--text)' }}>
+                                              {task.title}
+                                            </h5>
+                                            <div className="mt-1 flex items-center gap-2">
+                                              <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-md border ${task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                task.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                                  'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                                }`}>
+                                                {task.status}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          <div className="shrink-0">
+                                            {task.developerId && (
+                                              <div className="w-7 h-7 rounded-lg border p-0.5 shadow-sm" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                                {users.find(u => u.id === task.developerId)?.avatarUrl ? (
+                                                  <img src={users.find(u => u.id === task.developerId)?.avatarUrl} className="w-full h-full object-cover rounded" alt="Dev" />
+                                                ) : (
+                                                  <div className="w-full h-full flex items-center justify-center font-bold text-[8px] uppercase" style={{ color: 'var(--muted)' }}>
+                                                    {(task.developer || '??').substring(0, 2)}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div className="mt-2 text-right">
+                                          <span className="text-[10px] font-black" style={{ color: 'var(--brand)' }}>{task.progress}%</span>
+                                          <div className="w-full h-1 rounded-full overflow-hidden mt-1" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                                            <div
+                                              className="h-full bg-gradient-to-r from-[var(--brand)] to-[var(--primary-hover)] transition-all duration-500"
+                                              style={{ width: `${task.progress}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
-                            </motion.div>
-                          );
-                        })
-                      )}
-                    </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* FLOAT SCROLL TO TOP */}

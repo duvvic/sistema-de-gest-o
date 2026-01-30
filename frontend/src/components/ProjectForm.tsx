@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Users, Briefcase, Calendar, Info, Zap, DollarSign, Target, Shield, Layout, Clock } from 'lucide-react';
 
 const ProjectForm: React.FC = () => {
   const { projectId, clientId: routeClientId } = useParams<{ projectId?: string; clientId?: string }>();
@@ -48,6 +48,10 @@ const ProjectForm: React.FC = () => {
   const [gapsIssues, setGapsIssues] = useState('');
   const [importantConsiderations, setImportantConsiderations] = useState('');
   const [weeklyStatusReport, setWeeklyStatusReport] = useState('');
+  const [complexity, setComplexity] = useState<'Alta' | 'Média' | 'Baixa'>('Média');
+  const [valorTotalRs, setValorTotalRs] = useState(0);
+  const [horasVendidas, setHorasVendidas] = useState(0);
+  const [torre, setTorre] = useState('');
 
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,8 +75,12 @@ const ProjectForm: React.FC = () => {
       setCriticalDate(project.criticalDate || '');
       setDocLink(project.docLink || '');
       setGapsIssues(project.gapsIssues || '');
-      setImportantConsiderations(project.importantConsiderations || '');
-      setWeeklyStatusReport(project.weeklyStatusReport || '');
+      setImportantConsiderations(project.importantConsiderations || (project as any).important_considerations || '');
+      setWeeklyStatusReport(project.weeklyStatusReport || (project as any).weekly_status_report || '');
+      setComplexity((project as any).complexidade || 'Média');
+      setValorTotalRs((project as any).valor_total_rs || 0);
+      setHorasVendidas((project as any).horas_vendidas || 0);
+      setTorre((project as any).torre || '');
     }
   }, [project]);
 
@@ -116,6 +124,10 @@ const ProjectForm: React.FC = () => {
         gaps_issues: gapsIssues,
         important_considerations: importantConsiderations,
         weekly_status_report: weeklyStatusReport,
+        complexidade: complexity,
+        valor_total_rs: valorTotalRs,
+        horas_vendidas: horasVendidas,
+        torre: torre,
         active: true
       };
 
@@ -181,385 +193,269 @@ const ProjectForm: React.FC = () => {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-2xl space-y-6">
-          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
-              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
-              Informações Básicas
-            </h3>
+        <div className="max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Nome do Projeto *
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Ex: Desenvolvimento do Website"
-                  required
-                />
-              </div>
+          {/* Left Column */}
+          <div className="space-y-6">
+            <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+                <Briefcase className="w-5 h-5" />
+                Informações do Projeto
+              </h3>
 
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Cliente Final *
-                </label>
-                <select
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  required
-                >
-                  <option value="">Selecione o cliente final</option>
-                  {clients.filter(c => c.active !== false && c.tipo !== 'parceiro').map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Parceiro (Opcional)
-                </label>
-                <select
-                  value={partnerId}
-                  onChange={(e) => setPartnerId(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                >
-                  <option value="">Nenhum parceiro</option>
-                  {clients.filter(c => c.active !== false && c.tipo === 'parceiro').map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Escopo Resumido
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all h-24 resize-none"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Descreva brevemente o objetivo do projeto..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Status do Projeto
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                >
-                  <option value="Planejamento">Planejamento</option>
-                  <option value="Em Andamento">Em Andamento</option>
-                  <option value="Em Pausa">Em Pausa</option>
-                  <option value="Concluído">Concluído</option>
-                  <option value="Cancelado">Cancelado</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Link da Documentação
-                </label>
-                <input
-                  type="url"
-                  value={docLink}
-                  onChange={(e) => setDocLink(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="https://docs.exemplo.com/..."
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Stakeholders Section */}
-          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
-              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
-              Responsabilidades
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Gerente (Lado Cliente)
-                </label>
-                <input
-                  type="text"
-                  value={managerClient}
-                  onChange={(e) => setManagerClient(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Nome do gerente no cliente"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Responsável (Nic-Labs)
-                </label>
-                <select
-                  value={responsibleNicLabsId}
-                  onChange={(e) => setResponsibleNicLabsId(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                >
-                  <option value="">Selecione o responsável interno</option>
-                  {users.filter(u => u.active !== false).map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.cargo || u.role})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Timeline Section */}
-          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
-              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
-              Linha do Tempo
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="md:col-span-2 lg:col-span-1">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Início Previsto</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-1">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Fim Previsto</label>
-                <input
-                  type="date"
-                  value={estimatedDelivery}
-                  onChange={(e) => setEstimatedDelivery(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-1">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Início Real</label>
-                <input
-                  type="date"
-                  value={startDateReal}
-                  onChange={(e) => setStartDateReal(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-1">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>Fim Real</label>
-                <input
-                  type="date"
-                  value={endDateReal}
-                  onChange={(e) => setEndDateReal(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Risks & Success Section */}
-          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
-              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
-              Riscos e Sucesso
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Riscos do Projeto
-                </label>
-                <textarea
-                  value={risks}
-                  onChange={(e) => setRisks(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-20 resize-none"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Ex: Atraso em aprovações de API..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Fator de Sucesso
-                </label>
-                <input
-                  type="text"
-                  value={successFactor}
-                  onChange={(e) => setSuccessFactor(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="O que define o sucesso..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Data Crítica
-                </label>
-                <input
-                  type="date"
-                  value={criticalDate}
-                  onChange={(e) => setCriticalDate(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Status Report Semanal Section */}
-          <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
-              <div className="w-2 h-6 bg-[var(--primary)] rounded-full" />
-              Status Report Semanal
-            </h3>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Gaps / Issues / Impedimentos
-                </label>
-                <textarea
-                  value={gapsIssues}
-                  onChange={(e) => setGapsIssues(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-24 resize-none"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Liste problemas técnicos ou burocráticos..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Considerações Importantes
-                </label>
-                <textarea
-                  value={importantConsiderations}
-                  onChange={(e) => setImportantConsiderations(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-24 resize-none"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Informações relevantes para a diretoria..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-                  Mensagem para o Status Report
-                </label>
-                <textarea
-                  value={weeklyStatusReport}
-                  onChange={(e) => setWeeklyStatusReport(e.target.value)}
-                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none shadow-sm transition-all h-32 resize-none"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                  placeholder="Escreva o texto final que será enviado ao cliente/stakeholders..."
-                />
-                <p className="text-[10px] mt-1 text-[var(--muted)] italic">
-                  * Este texto será a base para a exportação do relatório semanal.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Membros do Projeto */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text)' }}>
-              Membros do Projeto
-            </label>
-            <div className="border rounded-xl p-4 max-h-60 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3 custom-scrollbar shadow-inner"
-              style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-              {users.filter(u => u.active !== false).map(user => (
-                <label key={user.id} className="flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2 rounded-lg transition-colors group">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Nome *</label>
                   <input
-                    type="checkbox"
-                    checked={selectedUsers.includes(user.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedUsers(prev => [...prev, user.id]);
-                      } else {
-                        setSelectedUsers(prev => prev.filter(id => id !== user.id));
-                      }
-                    }}
-                    className="w-5 h-5 rounded border-[var(--border)] focus:ring-[var(--ring)]"
-                    style={{ color: 'var(--primary)', backgroundColor: 'var(--surface)' }}
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="Nome do projeto"
+                    required
                   />
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden"
-                      style={{ backgroundColor: 'var(--primary)', color: 'white' }}>
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                      ) : (
-                        user.name.substring(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium transition-colors" style={{ color: 'var(--text)' }}>{user.name}</p>
-                      <p className="text-xs capitalize" style={{ color: 'var(--muted)' }}>{user.role}</p>
-                    </div>
-                  </div>
-                </label>
-              ))}
-              {(() => {
-                const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
-                if (users.some(u => u.active !== false && !activeCargos.includes(u.cargo?.toLowerCase() || ''))) {
-                  return (
-                    <div className="col-span-full p-2 text-[10px] font-bold uppercase tracking-widest text-[var(--muted)] opacity-50 border-t border-[var(--border)] mt-2">
-                      * Usuários de outros cargos não participam de projetos.
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+                </div>
 
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Cliente *</label>
+                  <select
+                    value={clientId}
+                    onChange={(e) => setClientId(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    {clients.filter(c => c.active !== false && c.tipo_cliente !== 'parceiro').map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Parceiro</label>
+                  <select
+                    value={partnerId}
+                    onChange={(e) => setPartnerId(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  >
+                    <option value="">Nenhum</option>
+                    {clients.filter(c => c.active !== false && c.tipo_cliente === 'parceiro').map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  >
+                    <option value="Planejamento">Planejamento</option>
+                    <option value="Em Andamento">Em Andamento</option>
+                    <option value="Em Pausa">Em Pausa</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Torre / Vertical</label>
+                  <input
+                    type="text"
+                    value={torre}
+                    onChange={(e) => setTorre(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="Ex: ERP, Infra, Dev"
+                  />
+                </div>
+              </div>
             </div>
-            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-              Selecione os colaboradores que trabalharão neste projeto.
-            </p>
+
+            <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+                <DollarSign className="w-5 h-5" />
+                Dados Financeiros e Complexidade
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Valor Total (R$)</label>
+                  <input
+                    type="number"
+                    value={valorTotalRs}
+                    onChange={(e) => setValorTotalRs(Number(e.target.value))}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Horas Vendidas</label>
+                  <input
+                    type="number"
+                    value={horasVendidas}
+                    onChange={(e) => setHorasVendidas(Number(e.target.value))}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Complexidade Estimada</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Baixa', 'Média', 'Alta'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setComplexity(c as any)}
+                        className={`py-3 rounded-xl font-bold border transition-all ${complexity === c ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md translate-y-[-2px]' : 'bg-[var(--surface)] text-[var(--text)] border-[var(--border)] opacity-60'}`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+                <Calendar className="w-5 h-5" />
+                Cronograma
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Início Previsto</label>
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface)] border-[var(--border)] text-[var(--text)]" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Entrega Estimada</label>
+                  <input type="date" value={estimatedDelivery} onChange={e => setEstimatedDelivery(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface)] border-[var(--border)] text-[var(--text)]" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Início Real</label>
+                  <input type="date" value={startDateReal} onChange={e => setStartDateReal(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface)] border-[var(--border)] text-[var(--text)]" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Fim Real</label>
+                  <input type="date" value={endDateReal} onChange={e => setEndDateReal(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface)] border-[var(--border)] text-[var(--text)]" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Botões */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="px-6 py-3 border rounded-xl font-bold transition-colors shadow-sm"
-              style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-3 text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 shadow-md transition-all transform active:scale-95"
-              style={{ backgroundColor: 'var(--primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}
-              disabled={loading}
-            >
-              <Save className="w-4 h-4" />
-              {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Projeto'}
-            </button>
+          {/* Right Column */}
+          <div className="space-y-6">
+            <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] shadow-md space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+                <Users className="w-5 h-5" />
+                Squad e Responsáveis
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Responsável Nic-Labs</label>
+                  <select
+                    value={responsibleNicLabsId}
+                    onChange={(e) => setResponsibleNicLabsId(e.target.value)}
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  >
+                    <option value="">Selecione o responsável interno</option>
+                    {users.filter(u => u.active !== false).map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.cargo || u.role})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-2 opacity-70" style={{ color: 'var(--text)' }}>Colaboradores do Projeto</label>
+                  <div className="border rounded-xl p-4 max-h-[340px] overflow-y-auto grid grid-cols-1 gap-2 custom-scrollbar shadow-inner"
+                    style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                    {users.filter(u => u.active !== false).sort((a, b) => a.name.localeCompare(b.name)).map(user => (
+                      <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2.5 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent opacity-70'}`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.includes(user.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUsers(prev => [...prev, user.id]);
+                            } else {
+                              setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                            }
+                          }}
+                          className="w-5 h-5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
+                        />
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold overflow-hidden shadow-sm border border-white/10"
+                            style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)' }}>
+                            {user.avatarUrl ? (
+                              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                            ) : (
+                              user.name.substring(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>{user.name}</p>
+                            <p className="text-[9px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[var(--surface-2)] p-6 rounded-2xl border border-[var(--border)] shadow-sm space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--primary)' }}>
+                <Shield className="w-5 h-5" />
+                Governança e Gaps
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Link Documentação</label>
+                  <input type="url" value={docLink} onChange={e => setDocLink(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface)] border-[var(--border)] text-[var(--text)]" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Impedimentos / Gaps</label>
+                  <textarea value={gapsIssues} onChange={e => setGapsIssues(e.target.value)} className="w-full px-4 py-2 border rounded-xl text-xs bg-[var(--surface)] border-[var(--border)] transition-all h-20 resize-none" placeholder="Problemas detectados..." />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Status Report Semanal</label>
+                  <textarea value={weeklyStatusReport} onChange={e => setWeeklyStatusReport(e.target.value)} className="w-full px-4 py-2 border rounded-xl text-xs bg-[var(--surface)] border-[var(--border)] transition-all h-24 resize-none" placeholder="Texto para o cliente..." />
+                </div>
+              </div>
+            </div>
+
+            {/* Save Buttons */}
+            <div className="flex gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="flex-1 px-6 py-4 border rounded-2xl font-black uppercase tracking-widest text-xs transition-all hover:bg-red-500/10 hover:text-red-500"
+                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--muted)' }}
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-[2] px-6 py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl transition-all transform active:scale-95 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--primary)' }}
+                disabled={loading}
+              >
+                <Save className="w-5 h-5" />
+                {loading ? 'Processando...' : isEdit ? 'Atualizar Projeto' : 'Criar Novo Projeto'}
+              </button>
+            </div>
           </div>
         </div>
       </form>

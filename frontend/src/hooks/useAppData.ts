@@ -119,12 +119,12 @@ export function useAppData(): AppData {
         const hasValidToken = urlParams.get('token') === 'xyz123';
 
         if (!session && !currentUser && !hasValidToken) {
-          console.log('[useAppData] Sem sessão ativa no Supabase, aguardando login...');
+
           setLoading(false);
           return;
         }
 
-        console.log('[useAppData] Carregando dados do banco...');
+
 
         const [usersData, clientsData, projectsData, tasksData, tasksCollaboratorsData, membersRes, rawTimesheets, absencesRes] = await Promise.all([
           fetchUsers(),
@@ -211,7 +211,7 @@ export function useAppData(): AppData {
         setAbsences(deduplicateById(absencesMapped));
 
         if (membersRes.data) {
-          console.log('🔍 Project Members Raw Data:', membersRes.data);
+
           const membersMapped = membersRes.data.map((row: any) => ({
             projectId: String(row.id_projeto),
             userId: String(row.id_colaborador)
@@ -220,7 +220,7 @@ export function useAppData(): AppData {
           // Deduplicate members
           const uniqueMembers = Array.from(new Map(membersMapped.map((m: any) => [`${m.projectId}-${m.userId}`, m])).values());
 
-          console.log('🔍 Project Members Mapped:', uniqueMembers);
+
           setProjectMembers(uniqueMembers);
 
           // SALVAR NO CACHE

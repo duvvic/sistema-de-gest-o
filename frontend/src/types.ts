@@ -63,6 +63,7 @@ export interface Project {
   weeklyStatusReport?: string;
   horas_vendidas?: number;
   complexidade?: 'Alta' | 'Média' | 'Baixa';
+  torre?: string;
 }
 
 export interface Task {
