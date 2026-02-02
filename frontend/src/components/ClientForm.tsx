@@ -8,7 +8,7 @@ import ConfirmationModal from './ConfirmationModal';
 const ClientForm: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { getClientById, createClient, updateClient, deleteClient, clients } = useDataController();
+  const { getClientById, createClient, updateClient, deleteClient, clients, users } = useDataController();
 
   const isEdit = !!clientId;
   const client = clientId ? getClientById(clientId) : null;
@@ -21,6 +21,9 @@ const ClientForm: React.FC = () => {
   const [partner_id, setPartnerId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [email_contato, setEmailContato] = useState('');
+  const [responsavel_interno_id, setResponsavelInternoId] = useState('');
+  const [responsavel_externo, setResponsavelExterno] = useState('');
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -39,6 +42,9 @@ const ClientForm: React.FC = () => {
       setTelefone(client.telefone || '');
       setTipoCliente(client.tipo_cliente || 'cliente_final');
       setPartnerId(client.partner_id || '');
+      setEmailContato(client.email_contato || '');
+      setResponsavelInternoId(client.responsavel_interno_id || '');
+      setResponsavelExterno(client.responsavel_externo || '');
     }
   }, [client]);
 
@@ -59,7 +65,10 @@ const ClientForm: React.FC = () => {
         cnpj,
         telefone,
         tipo_cliente,
-        partner_id: tipo_cliente === 'cliente_final' ? partner_id : undefined
+        partner_id: tipo_cliente === 'cliente_final' ? partner_id : undefined,
+        email_contato,
+        responsavel_interno_id,
+        responsavel_externo
       };
 
       if (isEdit && clientId) {
@@ -122,144 +131,203 @@ const ClientForm: React.FC = () => {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl space-y-6">
-          {/* Dados Básicos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+        <div className="max-w-3xl space-y-8">
+          {/* Sessão 1: Identificação */}
+          <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
                 Nome do Cliente *
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
+                className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-[var(--text)] transition-all font-medium"
                 placeholder="Ex: Empresa XYZ"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[var(--text)] mb-2">
-                CNPJ
-              </label>
-              <input
-                type="text"
-                value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
-                placeholder="00.000.000/0000-00"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
+                  CNPJ
+                </label>
+                <input
+                  type="text"
+                  value={cnpj}
+                  onChange={(e) => setCnpj(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] transition-all font-medium"
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
+                  Telefone
+                </label>
+                <input
+                  type="text"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] transition-all font-medium"
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text)] mb-2">
-                Telefone
-              </label>
-              <input
-                type="text"
-                value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+              <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
                 Tipo de Cliente
               </label>
               <div className="flex gap-4">
-                <label className={`flex-1 flex items-center justify-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${tipo_cliente === 'cliente_final' ? 'border-[var(--brand)] bg-[var(--brandMuted)] text-[var(--brandHover)]' : 'border-[var(--border)] hover:bg-[var(--surfaceHover)]'}`}>
-                  <input
-                    type="radio"
-                    name="tipo"
-                    value="cliente_final"
-                    checked={tipo_cliente === 'cliente_final'}
-                    onChange={() => setTipoCliente('cliente_final')}
-                    className="sr-only"
-                  />
-                  <span className="font-semibold">Cliente Final</span>
-                </label>
-                <label className={`flex-1 flex items-center justify-center gap-2 p-4 border rounded-xl cursor-pointer transition-all ${tipo_cliente === 'parceiro' ? 'border-[var(--brand)] bg-[var(--brandMuted)] text-[var(--brandHover)]' : 'border-[var(--border)] hover:bg-[var(--surfaceHover)]'}`}>
-                  <input
-                    type="radio"
-                    name="tipo"
-                    value="parceiro"
-                    checked={tipo_cliente === 'parceiro'}
-                    onChange={() => setTipoCliente('parceiro')}
-                    className="sr-only"
-                  />
-                  <span className="font-semibold">Parceiro Nic-Labs</span>
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setTipoCliente('cliente_final')}
+                  className={`flex-1 py-4 px-6 rounded-2xl border-2 font-black text-sm transition-all flex items-center justify-center gap-3 ${tipo_cliente === 'cliente_final'
+                    ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-slate-300'
+                    }`}
+                >
+                  Cliente Final
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipoCliente('parceiro')}
+                  className={`flex-1 py-4 px-6 rounded-2xl border-2 font-black text-sm transition-all flex items-center justify-center gap-3 ${tipo_cliente === 'parceiro'
+                    ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-slate-300'
+                    }`}
+                >
+                  Parceiro Nic-Labs
+                </button>
               </div>
             </div>
+          </div>
 
-            {tipo_cliente === 'cliente_final' && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[var(--text)] mb-2">
-                  Vincular a um Parceiro (Opcional)
+          {tipo_cliente === 'cliente_final' && (
+            <div className="p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
+              <label className="block text-xs font-black uppercase tracking-widest text-slate-500 mb-2">
+                Vincular a um Parceiro (Opcional)
+              </label>
+              <select
+                value={partner_id}
+                onChange={(e) => setPartnerId(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 text-slate-700 font-medium"
+              >
+                <option value="">Nenhum Parceiro (Direto)</option>
+                {(clients || []).filter(c => c.tipo_cliente === 'parceiro' && c.id !== clientId).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {tipo_cliente === 'parceiro' && (
+            <div className="space-y-6 pt-2">
+              <div className="flex flex-col gap-1">
+                <h3 className="font-black text-sm text-[var(--textTitle)]">Informações de Parceiro</h3>
+                <div className="h-px w-full bg-[var(--border)]" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
+                    Email de Contato
+                  </label>
+                  <input
+                    type="email"
+                    value={email_contato}
+                    onChange={(e) => setEmailContato(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] transition-all font-medium"
+                    placeholder="contato@parceiro.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
+                    Responsável (Parceiro)
+                  </label>
+                  <input
+                    type="text"
+                    value={responsavel_externo}
+                    onChange={(e) => setResponsavelExterno(e.target.value)}
+                    className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] transition-all font-medium"
+                    placeholder="Nome do contato no parceiro"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
+                  Responsável Interno (Nossa Empresa)
                 </label>
                 <select
-                  value={partner_id}
-                  onChange={(e) => setPartnerId(e.target.value)}
-                  className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] text-[var(--text)]"
+                  value={responsavel_interno_id}
+                  onChange={(e) => setResponsavelInternoId(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] transition-all font-medium"
                 >
-                  <option value="">Nenhum Parceiro (Direto)</option>
-                  {(clients || []).filter(c => c.tipo_cliente === 'parceiro' && c.id !== clientId).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  <option value="">Selecione um responsável</option>
+                  {(users || []).filter(u => u.active !== false).map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Logo URL */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--text)] mb-2">
+          <div className="space-y-4">
+            <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-2">
               URL do Logo
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input
                 type="url"
                 value={logoUrl}
                 onChange={(e) => setLogoUrl(e.target.value)}
-                className="flex-1 px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent text-[var(--text)]"
+                className="flex-1 px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] transition-all font-medium"
                 placeholder="https://exemplo.com/logo.png"
               />
               <button
                 type="button"
-                className="px-4 py-3 border border-[var(--border)] rounded-lg hover:bg-[var(--surfaceHover)] flex items-center gap-2 text-[var(--text)]"
+                className="px-6 py-3.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 text-[var(--text)] font-black text-xs uppercase tracking-widest shadow-sm transition-all"
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4 text-purple-500" />
                 Upload
               </button>
             </div>
             {logoUrl && (
-              <div className="mt-4 p-4 border border-[var(--border)] rounded-lg bg-[var(--bgApp)]">
-                <p className="text-sm text-[var(--textMuted)] mb-2">Preview:</p>
-                <img
-                  src={logoUrl}
-                  alt="Preview"
-                  className="h-20 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://placehold.co/200x200?text=Logo';
-                  }}
-                />
+              <div className="mt-4 p-6 border border-dashed border-[var(--border)] rounded-2xl bg-[var(--surface-2)] flex flex-col items-center">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)] mb-4">Preview da Identidade</p>
+                <div className="w-32 h-32 bg-white rounded-2xl p-4 shadow-xl border border-[var(--border)] flex items-center justify-center">
+                  <img
+                    src={logoUrl}
+                    alt="Preview"
+                    className="max-w-full max-h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://placehold.co/200x200?text=Logo';
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
 
-          {!isEdit && (
-            <div className="bg-[var(--bgApp)] p-4 rounded-xl border border-[var(--border)] space-y-4">
-              <h3 className="font-semibold text-[var(--textTitle)]">Contrato de Serviço</h3>
+          {/* Sessão: Contrato de Serviço */}
+          <div className="p-8 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] space-y-6">
+            <div className="flex flex-col gap-1 mb-2">
+              <h3 className="font-black text-sm text-[var(--textTitle)] uppercase tracking-wider">Contrato de Serviço</h3>
+              <div className="h-0.5 w-12 bg-purple-500 rounded-full" />
+            </div>
 
+            <div className="grid grid-cols-1 gap-6">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-2">Possui tempo de contrato determinado?</label>
+                <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-3">Possui tempo de contrato determinado?</label>
                 <select
                   name="contractChoice"
-                  className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] text-[var(--text)]"
+                  className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] font-medium transition-all"
                   defaultValue="nao"
                   id="contractChoiceSelect"
                   onChange={(e) => {
@@ -278,37 +346,41 @@ const ClientForm: React.FC = () => {
                 </select>
               </div>
 
-              <div id="monthsInput" className="hidden">
-                <label className="block text-sm font-medium text-[var(--text)] mb-2">Duração (Meses)</label>
+              <div id="monthsInput" className="hidden animate-in fade-in slide-in-from-top-2">
+                <label className="block text-xs font-black uppercase tracking-widest text-[var(--muted)] mb-3">Duração da Parceria (Meses)</label>
                 <input
                   type="number"
                   name="contractMonths"
                   min="1"
                   defaultValue="12"
-                  className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[var(--brand)] text-[var(--text)]"
+                  className="w-full px-4 py-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-purple-500 text-[var(--text)] font-medium"
                 />
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Botões */}
-          <div className="flex justify-between items-center pt-4">
-            <div className="flex gap-3">
+          {/* Botões de Ação */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-[var(--border)]">
+            <div className="flex w-full md:w-auto gap-3">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="px-6 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surfaceHover)]"
+                className="flex-1 md:flex-none px-8 py-4 border border-[var(--border)] text-[var(--text)] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[var(--surfaceHover)] transition-all"
                 disabled={loading}
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-6 py-3 bg-[var(--brand)] text-white rounded-lg hover:bg-[var(--brandHover)] flex items-center gap-2 disabled:opacity-50"
+                className="flex-1 md:flex-none px-10 py-4 bg-purple-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-purple-700 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-purple-500/20 transition-all active:scale-95"
                 disabled={loading}
               >
-                <Save className="w-4 h-4" />
-                {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Cliente'}
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isEdit ? 'Salvar Alterações' : 'Confirmar Cadastro'}
               </button>
             </div>
 
@@ -316,11 +388,11 @@ const ClientForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowDeleteModal(true)}
-                className="px-6 py-3 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2 transition-colors"
+                className="w-full md:w-auto px-6 py-4 text-red-500 font-black text-xs uppercase tracking-widest hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100 flex items-center justify-center gap-2"
                 disabled={loading}
               >
                 <Trash2 className="w-4 h-4" />
-                Excluir Cliente
+                Arquivar Parceiro
               </button>
             )}
           </div>

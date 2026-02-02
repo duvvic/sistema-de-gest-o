@@ -74,13 +74,13 @@ const ProjectDetailView: React.FC = () => {
         endDateReal: project.endDateReal || '',
         criticalDate: project.criticalDate || '',
         docLink: project.docLink || '',
-        gapsIssues: (project as any).gapsIssues || (project as any).gaps_issues || '',
-        importantConsiderations: (project as any).importantConsiderations || (project as any).important_considerations || '',
-        weeklyStatusReport: (project as any).weeklyStatusReport || (project as any).weekly_status_report || '',
-        valor_total_rs: (project as any).valor_total_rs || 0,
-        horas_vendidas: (project as any).horas_vendidas || 0,
-        complexidade: (project as any).complexidade || 'Média',
-        torre: (project as any).torre || ''
+        gapsIssues: project.gapsIssues || '',
+        importantConsiderations: project.importantConsiderations || '',
+        weeklyStatusReport: project.weeklyStatusReport || '',
+        valor_total_rs: project.valor_total_rs || 0,
+        horas_vendidas: project.horas_vendidas || 0,
+        complexidade: project.complexidade || 'Média',
+        torre: project.torre || ''
       });
       const members = getProjectMembers(project.id);
       setSelectedUsers(members);

@@ -194,15 +194,16 @@ const TaskDetail: React.FC = () => {
         updatedCollaboratorIds.splice(newOwnerIndex, 1);
       }
 
-      // Add current owner as collaborator
-      if (!updatedCollaboratorIds.includes(currentUser.id)) {
-        updatedCollaboratorIds.push(currentUser.id);
+      // Add old owner as collaborator (always the current task.developerId)
+      const oldOwnerId = task.developerId;
+      if (oldOwnerId && !updatedCollaboratorIds.includes(oldOwnerId)) {
+        updatedCollaboratorIds.push(oldOwnerId);
       }
 
       await updateTask(task.id, {
         developerId: newOwnerId,
         developer: newOwner.name,
-        collaboratorIds: updatedCollaboratorIds
+        collaboratorIds: updatedCollaboratorIds.filter(id => id !== newOwnerId)
       });
 
       setTransferModalOpen(false);
@@ -321,7 +322,7 @@ const TaskDetail: React.FC = () => {
           <div className="px-6 py-2.5 rounded-xl flex items-center gap-2 font-bold border shadow-sm"
             style={{ backgroundColor: 'var(--success-soft)', color: 'var(--success)', borderColor: 'var(--success)' }}>
             <CheckSquare className="w-4 h-4" />
-            Finalizada
+            Finalizada {task?.actualDelivery && ` em ${task.actualDelivery.split('-').reverse().slice(0, 2).join('/')}`}
           </div>
         )}
       </div>
@@ -519,12 +520,26 @@ const TaskDetail: React.FC = () => {
                     <select
                       value={formData.developerId || ''}
                       onChange={(e) => {
-                        const selectedUser = users.find(u => u.id === e.target.value);
+                        const nextOwnerId = e.target.value;
+                        const selectedUser = users.find(u => u.id === nextOwnerId);
+                        const oldOwnerId = formData.developerId;
+
                         markDirty();
+
+                        // New collaborator list: remove new owner, add old owner
+                        let newCollabs = [...(formData.collaboratorIds || [])];
+                        if (nextOwnerId) {
+                          newCollabs = newCollabs.filter(id => id !== nextOwnerId);
+                        }
+                        if (oldOwnerId && !newCollabs.includes(oldOwnerId) && oldOwnerId !== nextOwnerId) {
+                          newCollabs.push(oldOwnerId);
+                        }
+
                         setFormData({
                           ...formData,
-                          developerId: e.target.value,
-                          developer: selectedUser?.name || ''
+                          developerId: nextOwnerId,
+                          developer: selectedUser?.name || '',
+                          collaboratorIds: newCollabs
                         });
                       }}
                       className="w-full p-2.5 border rounded-xl text-xs font-bold shadow-sm outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all"

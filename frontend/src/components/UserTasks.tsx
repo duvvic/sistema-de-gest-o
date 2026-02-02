@@ -346,23 +346,25 @@ const TaskColumn: React.FC<{
                   })()}
 
                   {/* Colaboradores Extras */}
-                  {(task.collaboratorIds || []).slice(0, 3).map(uid => {
-                    const u = users.find(user => user.id === uid);
-                    return (
-                      <div
-                        key={uid}
-                        className="w-6 h-6 rounded-full flex items-center justify-center border hover:z-10 transition-all bg-slate-50 overflow-hidden"
-                        style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
-                        title={`Colaborador: ${u?.name || uid}`}
-                      >
-                        {u?.avatarUrl ? (
-                          <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <UserIcon size={12} />
-                        )}
-                      </div>
-                    );
-                  })}
+                  {(task.collaboratorIds || [])
+                    .filter(uid => uid !== task.developerId) // Evitar duplicar o dono
+                    .slice(0, 3).map(uid => {
+                      const u = users.find(user => user.id === uid);
+                      return (
+                        <div
+                          key={uid}
+                          className="w-6 h-6 rounded-full flex items-center justify-center border hover:z-10 transition-all bg-slate-50 overflow-hidden"
+                          style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                          title={`Colaborador: ${u?.name || uid}`}
+                        >
+                          {u?.avatarUrl ? (
+                            <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <UserIcon size={12} />
+                          )}
+                        </div>
+                      );
+                    })}
 
                   {(task.collaboratorIds?.length || 0) > 3 && (
                     <div

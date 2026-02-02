@@ -25,15 +25,19 @@ export async function createClient(data: Partial<Client>): Promise<number> {
   const payload: Record<string, any> = {
     NomeCliente: data.name || "(Sem nome)",
     NewLogo: data.logoUrl || "https://placehold.co/150?text=Logo",
-    ativo: true,
+    ativo: data.active !== undefined ? data.active : true,
     Criado: toDateStr(now),
   };
   if (contratoDateStr) payload.Contrato = contratoDateStr;
-  if (data.pais) payload.pais = data.pais;
+  if (data.pais) payload.Pais = data.pais;
   if (data.contato_principal) payload.contato_principal = data.contato_principal;
   if (data.cnpj) payload.cnpj = data.cnpj;
   if (data.telefone) payload.telefone = data.telefone;
-  if (data.tipo) payload.tipo_cliente = data.tipo;
+  if (data.tipo_cliente) payload.tipo_cliente = data.tipo_cliente;
+  if (data.partner_id) payload.partner_id = data.partner_id;
+  if (data.responsavel_interno_id) payload.responsavel_interno_id = data.responsavel_interno_id;
+  if (data.responsavel_externo) payload.responsavel_externo = data.responsavel_externo;
+  if (data.email_contato) payload.email_contato = data.email_contato;
 
   const { data: inserted, error } = await supabase
     .from("dim_clientes")
@@ -42,7 +46,6 @@ export async function createClient(data: Partial<Client>): Promise<number> {
     .single();
 
   if (error) {
-
     throw error;
   }
 
@@ -58,11 +61,15 @@ export async function updateClient(clientId: string, data: Partial<Client>): Pro
   if (data.name !== undefined) payload.NomeCliente = data.name;
   if (data.logoUrl !== undefined) payload.NewLogo = data.logoUrl;
   if (data.active !== undefined) payload.ativo = data.active;
-  if (data.pais !== undefined) payload.pais = data.pais;
+  if (data.pais !== undefined) payload.Pais = data.pais;
   if (data.contato_principal !== undefined) payload.contato_principal = data.contato_principal;
   if (data.cnpj !== undefined) payload.cnpj = data.cnpj;
   if (data.telefone !== undefined) payload.telefone = data.telefone;
-  if (data.tipo !== undefined) payload.tipo_cliente = data.tipo;
+  if (data.tipo_cliente !== undefined) payload.tipo_cliente = data.tipo_cliente;
+  if (data.partner_id !== undefined) payload.partner_id = data.partner_id;
+  if (data.responsavel_interno_id !== undefined) payload.responsavel_interno_id = data.responsavel_interno_id;
+  if (data.responsavel_externo !== undefined) payload.responsavel_externo = data.responsavel_externo;
+  if (data.email_contato !== undefined) payload.email_contato = data.email_contato;
 
   const { error } = await supabase
     .from("dim_clientes")

@@ -53,15 +53,10 @@ const TimesheetForm: React.FC = () => {
   const [availabilityWarning, setAvailabilityWarning] = useState('');
   const { isDirty, showPrompt, markDirty, requestBack, discardChanges, continueEditing } = useUnsavedChangesPrompt();
 
-  // Validate time range 07:30 - 19:00
+  // Validate time - now accepts full 24h range
   const validateAndSetTime = (field: 'startTime' | 'endTime', val: string) => {
     markDirty();
-    let newVal = val;
-
-    if (newVal < "07:30") newVal = "07:30";
-    if (newVal > "19:00") newVal = "19:00";
-
-    setFormData(prev => ({ ...prev, [field]: newVal }));
+    setFormData(prev => ({ ...prev, [field]: val }));
   };
 
   // Init form
@@ -154,10 +149,81 @@ const TimesheetForm: React.FC = () => {
     ? calculateTimeDisplay(formData.startTime!, formData.endTime!, deductLunch)
     : `${formData.totalHours || 0}h`;
 
+  // Get entries for the same day and user
+  const entriesForDay = React.useMemo(() => {
+    const targetUserId = formData.userId || user?.id;
+    const targetDate = formData.date;
+    if (!targetUserId || !targetDate) return [];
+
+    return timesheetEntries.filter(e =>
+      e.userId === targetUserId &&
+      e.date === targetDate &&
+      e.id !== initialEntry?.id // Exclude current entry if editing
+    ).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [timesheetEntries, formData.userId, formData.date, user?.id, initialEntry?.id]);
+
+  // Debug: log entries for day
+  React.useEffect(() => {
+    console.log('📅 Apontamentos do dia:', {
+      date: formData.date,
+      userId: formData.userId || user?.id,
+      total: entriesForDay.length,
+      entries: entriesForDay
+    });
+  }, [entriesForDay, formData.date, formData.userId, user?.id]);
+
+  // Check for time conflicts
+  const hasTimeConflict = React.useMemo(() => {
+    if (!formData.startTime || !formData.endTime) return false;
+
+    const newStart = formData.startTime;
+    const newEnd = formData.endTime;
+
+    return entriesForDay.some(entry => {
+      const existingStart = entry.startTime;
+      const existingEnd = entry.endTime;
+
+      // Check if ranges overlap
+      return (newStart < existingEnd && newEnd > existingStart);
+    });
+  }, [entriesForDay, formData.startTime, formData.endTime]);
+
+  // Calculate total hours for the day
+  const totalHoursForDay = React.useMemo(() => {
+    return entriesForDay.reduce((sum, e) => sum + (e.totalHours || 0), 0) + adjustedTotalHours;
+  }, [entriesForDay, adjustedTotalHours]);
+
+  // Calculate occupied hours for visual feedback in TimePicker
+  const occupiedHours = React.useMemo(() => {
+    const occupied = new Set<string>();
+
+    entriesForDay.forEach(entry => {
+      const startHour = parseInt(entry.startTime.split(':')[0]);
+      const endHour = parseInt(entry.endTime.split(':')[0]);
+
+      // Mark all hours in the range as occupied
+      for (let h = startHour; h < endHour; h++) {
+        occupied.add(h.toString().padStart(2, '0'));
+      }
+      // Also mark the end hour if it's not exactly on the hour
+      if (entry.endTime.split(':')[1] !== '00') {
+        occupied.add(endHour.toString().padStart(2, '0'));
+      }
+    });
+
+    return Array.from(occupied);
+  }, [entriesForDay]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.clientId || !formData.projectId || !formData.taskId || !formData.date || !formData.startTime || !formData.endTime) {
       alert("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    // Check for time conflicts
+    if (hasTimeConflict) {
+      alert("Conflito de horário! Você já tem um apontamento neste período. Por favor, ajuste o horário.");
       return;
     }
 
@@ -358,24 +424,35 @@ const TimesheetForm: React.FC = () => {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
-          {isEditing && (
-            <button
-              onClick={() => setDeleteModalOpen(true)}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm text-sm"
-            >
-              <Trash2 className="w-3 h-3" />
-              Excluir
-            </button>
+        <div className="flex items-center gap-3">
+          {entriesForDay.length > 0 && (
+            <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">
+              <Clock className="w-3.5 h-3.5 text-white/80" />
+              <div className="flex flex-col leading-tight">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-white/60">Já apontado hoje</span>
+                <span className="text-sm font-black text-white">{entriesForDay.reduce((sum, e) => sum + (e.totalHours || 0), 0).toFixed(1)}h</span>
+              </div>
+            </div>
           )}
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !canEnterTime}
-            className="bg-white hover:bg-slate-50 text-[var(--primary)] px-4 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-2 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="w-3 h-3" />
-            {loading ? 'Salvando...' : 'Salvar'}
-          </button>
+          <div className="flex gap-2">
+            {isEditing && (
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm text-sm"
+              >
+                <Trash2 className="w-3 h-3" />
+                Excluir
+              </button>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !canEnterTime}
+              className="bg-white hover:bg-slate-50 text-[var(--primary)] px-4 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-2 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-3 h-3" />
+              {loading ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -533,12 +610,14 @@ const TimesheetForm: React.FC = () => {
                     icon={<Clock className="w-3 h-3 text-emerald-500" />}
                     value={formData.startTime || '09:00'}
                     onChange={(val) => validateAndSetTime('startTime', val)}
+                    disabledHours={occupiedHours}
                   />
                   <TimePicker
                     label="Fim *"
                     icon={<Clock className="w-3 h-3 text-red-500" />}
                     value={formData.endTime || '18:00'}
                     onChange={(val) => validateAndSetTime('endTime', val)}
+                    disabledHours={occupiedHours}
                   />
                 </div>
 
@@ -591,6 +670,57 @@ const TimesheetForm: React.FC = () => {
                   <div className={`text-4xl font-black transition-all ${adjustedTotalHours > 14 ? 'text-red-500 scale-110' : ''}`} style={{ color: adjustedTotalHours > 14 ? undefined : 'var(--primary)' }}>
                     {timeDisplay}
                   </div>
+                </div>
+
+                {/* Horários já apontados no dia */}
+                <div className="mt-3 p-3 rounded-xl border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                  <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-dashed" style={{ borderColor: 'var(--border)' }}>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                        Horários já apontados hoje
+                      </span>
+                    </div>
+                    {entriesForDay.length > 0 && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+                        <span className="text-[10px] font-bold text-[var(--primary)]">
+                          {entriesForDay.reduce((sum, e) => sum + (e.totalHours || 0), 0).toFixed(1)}h
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {entriesForDay.length > 0 ? (
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+                      {entriesForDay.map(entry => {
+                        const project = projects.find(p => p.id === entry.projectId);
+                        const task = tasks.find(t => t.id === entry.taskId);
+                        return (
+                          <div key={entry.id} className="p-2.5 rounded-lg bg-[var(--bg)] border border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-[var(--primary)] px-2 py-0.5 rounded bg-[var(--primary)]/10">
+                                {entry.totalHours?.toFixed(1)}h
+                              </span>
+                              <div className="text-[11px] font-bold text-[var(--text)] truncate flex-1 min-w-[100px]">
+                                {task?.title || 'Tarefa'}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0 text-[10px] font-mono">
+                                <span className="font-bold text-emerald-600">{entry.startTime}</span>
+                                <span className="text-[var(--muted)]">→</span>
+                                <span className="font-bold text-red-600">{entry.endTime}</span>
+                              </div>
+                            </div>
+                            <div className="text-[9px] text-[var(--muted)] truncate mt-1 ml-1">
+                              {project?.name || 'Projeto'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-[10px] text-[var(--muted)] opacity-50">
+                      Nenhum horário apontado ainda hoje
+                    </div>
+                  )}
                 </div>
 
                 {formData.taskId && (

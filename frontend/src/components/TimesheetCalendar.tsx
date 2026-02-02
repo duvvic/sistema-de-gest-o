@@ -288,7 +288,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
           type: 'day-off',
           startDate: date,
           endDate: date,
-          status: 'programado',
+          status: 'aprovada_gestao',
           observations: 'Registrado via preenchimento rápido'
         });
         alert('Day-off registrado!');
@@ -497,15 +497,16 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
               ))}
             </div>
 
-            <div className="grid min-h-full gap-[1px] border-b"
+            <div className="grid gap-[1px] border-b"
               style={{
                 backgroundColor: 'var(--border)',
                 borderColor: 'var(--border)',
-                gridTemplateColumns: 'minmax(0, 0.4fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 0.4fr)'
+                gridTemplateColumns: 'minmax(0, 0.4fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 0.4fr)',
+                gridAutoRows: 'minmax(100px, auto)'
               }}>
               {/* Empty Slots */}
               {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="min-h-[60px]" style={{ backgroundColor: 'var(--surface-hover)', opacity: 0.3 }}></div>
+                <div key={`empty-${i}`} className="min-h-[100px]" style={{ backgroundColor: 'var(--surface-hover)', opacity: 0.3 }}></div>
               ))}
 
               {/* Days */}
@@ -535,7 +536,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                     key={d}
                     onClick={() => navigate(`/timesheet/new?date=${dateStr}${targetUserId ? `&userId=${targetUserId}` : ''}`)}
                     className={`
-                                        p-1.5 relative cursor-pointer min-h-[60px] transition-all group hover:z-10 hover:shadow-xl border-r border-b flex flex-col
+                                        p-1.5 relative cursor-pointer min-h-[100px] transition-all group hover:z-10 hover:shadow-xl border-r border-b flex flex-col
                                     `}
                     style={{
                       backgroundColor: isToday ? 'var(--primary-soft)' : 'var(--surface)',
@@ -650,6 +651,11 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                   </div>
                 );
               })}
+
+              {/* Trailing Empty Slots to maintain 6-row grid consistency (Total 42 slots) */}
+              {Array.from({ length: 42 - (firstDay + daysInMonth) }).map((_, i) => (
+                <div key={`empty-end-${i}`} className="min-h-[100px]" style={{ backgroundColor: 'var(--surface-hover)', opacity: 0.1 }}></div>
+              ))}
             </div>
           </div>
         )}

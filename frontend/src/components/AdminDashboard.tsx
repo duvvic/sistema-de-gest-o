@@ -3,12 +3,146 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useDataController } from '@/controllers/useDataController';
 import { Client, Project, Task } from "@/types";
-import { Plus, Building2, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronDown, Filter, Clock, AlertCircle, ArrowUp, Trash2, DollarSign, TrendingUp, BarChart, Users, PieChart, ArrowRight, Layers, FileSpreadsheet, X } from "lucide-react";
+import { Plus, Building2, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronDown, Filter, Clock, AlertCircle, ArrowUp, Trash2, DollarSign, Target, TrendingUp, BarChart, Users, User, Calendar, PieChart, ArrowRight, Layers, FileSpreadsheet, X, HelpCircle, Info, Handshake, ArrowLeft, Mail, Phone, ExternalLink } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from "framer-motion";
 
 type SortOption = 'recent' | 'alphabetical' | 'creation';
+
+const InfoTooltip: React.FC<{ title: string; content: string }> = ({ title, content }) => (
+  <div className="group/tooltip relative inline-block ml-1">
+    <HelpCircle className="w-2.5 h-2.5 text-current opacity-40 hover:opacity-100 cursor-help" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-950/95 text-[10px] text-white rounded-xl opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[60] shadow-2xl border border-white/10 backdrop-blur-md">
+      <div className="flex items-center gap-1.5 mb-1.5 border-b border-white/10 pb-1.5">
+        <Info className="w-3 h-3 text-blue-400" />
+        <p className="font-black uppercase tracking-widest text-[9px]">{title}</p>
+      </div>
+      <p className="leading-relaxed font-medium text-slate-300 lowercase first-letter:uppercase">{content}</p>
+    </div>
+  </div>
+);
+
+// --- COMPONENTES AUXILIARES PARA FLUIDEZ ---
+
+const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navigate }: {
+  p: Project;
+  idx: number;
+  safeClients: Client[];
+  users: any[];
+  groupedData: any;
+  navigate: any;
+}) => {
+  const client = safeClients.find(c => c.id === p.clientId);
+  const partner = safeClients.find(c => c.id === p.partnerId);
+  const projectTasks = groupedData.tasksByProj[p.id] || [];
+  const pTimesheets = groupedData.timesByProj[p.id] || [];
+
+  const costToday = pTimesheets.reduce((acc: number, e: any) => {
+    const u = users.find(user => user.id === e.userId);
+    return acc + (e.totalHours * (u?.hourlyCost || 0));
+  }, 0);
+
+  const sumProgress = projectTasks.reduce((acc: number, t: any) => acc + (t.progress || 0), 0);
+  const progress = projectTasks.length > 0 ? sumProgress / projectTasks.length : 0;
+
+  const hoursSold = p.horas_vendidas || p.budget || 0;
+  const hoursReal = pTimesheets.reduce((acc: number, e: any) => acc + (Number(e.totalHours) || 0), 0);
+  const sold = p.valor_total_rs || 0;
+  const result = sold - costToday;
+  const margin = sold > 0 ? (result / sold * 100) : 0;
+
+  const now = new Date();
+  const startP = p.startDate ? new Date(p.startDate) : null;
+  const endP = p.estimatedDelivery ? new Date(p.estimatedDelivery) : null;
+  let plannedProgress = 0;
+  if (startP && endP && startP < endP) {
+    if (now > endP) plannedProgress = 100;
+    else if (now > startP) {
+      const total = endP.getTime() - startP.getTime();
+      const elapsed = now.getTime() - startP.getTime();
+      plannedProgress = (elapsed / total) * 100;
+    }
+  }
+
+  const getPlannedStatus = (prog: number, complexity?: string) => {
+    const c = (complexity || 'Média') as 'Alta' | 'Média' | 'Baixa';
+    if (prog >= 100) return 'Concluído';
+    if (prog <= 0) return 'A Iniciar';
+    const thresholds = { 'Alta': [10, 20, 50], 'Média': [10, 20, 55], 'Baixa': [10, 20, 60] };
+    const [t1, t2, t3] = thresholds[c];
+    if (prog <= t1) return 'Entendimento';
+    if (prog <= t2) return 'Análise';
+    if (prog <= t3) return 'Arquitetura';
+    return 'Desenvolvimento';
+  };
+
+  const statusP = getPlannedStatus(plannedProgress, p.complexidade);
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr || dateStr === "") return <span className="opacity-10">--/--/--</span>;
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+  };
+
+  const isEven = idx % 2 === 0;
+  const rowBg = isEven ? 'var(--surface)' : 'var(--surface-2)';
+
+  return (
+    <tr
+      onClick={() => navigate(`/admin/projects/${p.id}`)}
+      className={`group hover:bg-[var(--surface-hover)] transition-all cursor-pointer relative border-b border-[var(--border)] ${isEven ? 'bg-[var(--surface)]' : 'bg-[var(--surface-2)] shadow-inner'}`}
+    >
+      <td className="p-3 sticky left-0 z-30 shadow-[1px_0_3px_rgba(0,0,0,0.05)] text-center group-hover:bg-[var(--surface-hover)] transition-colors border-r border-white/5" style={{ backgroundColor: rowBg }}>
+        <input type="checkbox" onClick={(e) => e.stopPropagation()} className="rounded border-slate-300 text-slate-800 focus:ring-slate-800 opacity-20 group-hover:opacity-100 transition-opacity" />
+      </td>
+      <td className="p-3 sticky left-10 z-10 font-bold text-[9px] group-hover:bg-[var(--surface-hover)] shadow-[1px_0_5px_rgba(0,0,0,0.05)] uppercase tracking-wider truncate border-r border-white/5" style={{ backgroundColor: rowBg, color: 'var(--muted)' }}>
+        {partner?.name || <span className="opacity-25 px-1 bg-white/5 rounded">N/A</span>}
+      </td>
+      <td className="p-3 sticky left-[150px] z-10 font-black text-[10px] group-hover:bg-[var(--surface-hover)] shadow-[1px_0_5px_rgba(0,0,0,0.05)] truncate border-r border-white/5" style={{ backgroundColor: rowBg, color: 'var(--text)' }}>
+        {client?.name || "-"}
+      </td>
+      <td className="p-3 sticky left-[290px] z-10 font-black text-xs group-hover:bg-[var(--surface-hover)] shadow-[2px_0_8px_rgba(0,0,0,0.05)] truncate border-r border-white/5" style={{ backgroundColor: rowBg, color: 'var(--text)' }}>
+        {p.name}
+      </td>
+      <td className="p-3 border-r border-white/5 bg-blue-500/[0.02]"><span className="text-[10px] text-blue-400 whitespace-nowrap">{statusP}</span></td>
+      <td className="p-3 text-[10px] font-mono bg-blue-500/[0.02]" style={{ color: 'var(--text-2)' }}>{formatDate(p.startDate)}</td>
+      <td className="p-3 text-[10px] font-mono font-bold bg-blue-500/[0.02]" style={{ color: 'var(--text)' }}>{formatDate(p.estimatedDelivery)}</td>
+      <td className="p-3 border-r border-white/5 bg-blue-500/[0.02]">
+        <div className="flex items-center gap-1.5 opacity-60">
+          <div className="w-12 h-1 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
+            <div className="h-full bg-blue-400" style={{ width: `${plannedProgress}%` }} />
+          </div>
+          <span className="text-[10px] font-bold" style={{ color: 'var(--text-2)' }}>{Math.round(plannedProgress)}%</span>
+        </div>
+      </td>
+      <td className="p-3 bg-emerald-500/[0.02]">
+        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 w-fit ${p.status === 'Concluído' || p.status === 'Done' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+          <div className={`w-1 h-1 rounded-full ${p.status === 'Concluído' || p.status === 'Done' ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+          {p.status === 'Done' ? 'CONCLUÍDO' : p.status === 'In Progress' ? 'EM ANDAMENTO' : String(p.status || 'ATIVO').toUpperCase()}
+        </span>
+      </td>
+      <td className="p-3 text-[10px] font-mono bg-emerald-500/[0.02]" style={{ color: 'var(--text-2)' }}>{formatDate(p.startDateReal)}</td>
+      <td className="p-3 text-[10px] font-mono bg-emerald-500/[0.02]" style={{ color: 'var(--text-2)' }}>{formatDate(p.endDateReal)}</td>
+      <td className="p-3 border-r border-white/5 bg-emerald-500/[0.02]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-12 h-1 bg-emerald-500/10 rounded-full overflow-hidden border border-emerald-500/20">
+            <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="text-[10px] font-black" style={{ color: 'var(--text)' }}>{Math.round(progress)}%</span>
+        </div>
+      </td>
+      <td className="p-3 border-l border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02]" style={{ color: 'var(--text-2)' }}>{Math.round(hoursSold)}h</td>
+      <td className={`p-3 border-r border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02] ${hoursReal > hoursSold ? 'text-red-400' : 'text-emerald-400'}`}>{Math.round(hoursReal)}h</td>
+      <td className="p-3 border-r border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02]" style={{ color: 'var(--text)' }}>{sold.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td className="p-3 border-r border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02]" style={{ color: 'var(--text-2)' }}>{costToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td className={`p-3 text-[11px] font-black font-mono border-l bg-amber-500/5 ${result < 0 ? 'text-red-500' : 'text-emerald-500'}`} style={{ borderColor: 'var(--border)' }}>
+        {result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+      </td>
+      <td className={`p-3 text-[11px] font-black font-mono bg-amber-500/5 ${margin < 15 ? 'text-red-500' : margin < 30 ? 'text-amber-500' : 'text-emerald-500'}`}>
+        {Math.round(margin)}%
+      </td>
+    </tr>
+  );
+});
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -36,6 +170,34 @@ const AdminDashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'tasks'>(() => {
     return (localStorage.getItem('admin_clients_view_mode') as 'grid' | 'list' | 'tasks') || 'grid';
   });
+
+  const [partnerViewMode, setPartnerViewMode] = useState<'grid' | 'list'>(() => {
+    return (localStorage.getItem('admin_partners_view_mode') as 'grid' | 'list') || 'grid';
+  });
+
+  const selectedPartnerId = searchParams.get('partnerId');
+  const partnerSubTab = (searchParams.get('sub') as 'clientes' | 'resumo' | 'info') || 'clientes';
+
+  const setSelectedPartnerId = (id: string | null) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (id) {
+      newParams.set('partnerId', id);
+      if (!newParams.has('sub')) newParams.set('sub', 'clientes');
+    } else {
+      newParams.delete('partnerId');
+      newParams.delete('sub');
+    }
+    setSearchParams(newParams);
+  };
+
+  const setPartnerSubTab = (tab: 'clientes' | 'resumo' | 'info') => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('sub', tab);
+    setSearchParams(newParams);
+  };
+
+  const [showPartnerDetailsId, setShowPartnerDetailsId] = useState<string | null>(null);
+  const [showClientDetailsId, setShowClientDetailsId] = useState<string | null>(null);
 
   const toggleViewMode = (mode: 'grid' | 'list' | 'tasks') => {
     setViewMode(mode);
@@ -129,7 +291,9 @@ const AdminDashboard: React.FC = () => {
     partner: string[];
     client: string[];
     project: string[];
-  }>({ partner: [], client: [], project: [] });
+    startDate: string;
+    endDate: string;
+  }>({ partner: [], client: [], project: [], startDate: '', endDate: '' });
 
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
 
@@ -142,17 +306,43 @@ const AdminDashboard: React.FC = () => {
       if (executiveFilters.client.length > 0 && !executiveFilters.client.includes(clientName)) return false;
       if (executiveFilters.project.length > 0 && !executiveFilters.project.includes(p.name)) return false;
 
+      // Filtro de Data Fim Prevista (P.)
+      if (executiveFilters.startDate && p.estimatedDelivery) {
+        if (p.estimatedDelivery < executiveFilters.startDate) return false;
+      }
+      if (executiveFilters.endDate && p.estimatedDelivery) {
+        if (p.estimatedDelivery > executiveFilters.endDate) return false;
+      }
+
       return true;
     });
   }, [safeProjects, safeClients, executiveFilters]);
 
+  // Valores únicos para os dropdowns de filtro, considerando filtros já aplicados nas OUTRAS colunas
   const uniqueValues = useMemo(() => {
-    return {
-      partner: Array.from(new Set(safeProjects.map(p => safeClients.find(c => c.id === p.partnerId)?.name || 'N/A'))).sort(),
-      client: Array.from(new Set(safeProjects.map(p => safeClients.find(c => c.id === p.clientId)?.name || '-'))).sort(),
-      project: Array.from(new Set(safeProjects.map(p => p.name))).sort(),
+    const getValuesForFilter = (activeFilter: 'partner' | 'client' | 'project') => {
+      const filteredByOthers = safeProjects.filter(p => {
+        const partnerName = safeClients.find(c => c.id === p.partnerId)?.name || 'N/A';
+        const clientName = safeClients.find(c => c.id === p.clientId)?.name || '-';
+
+        if (activeFilter !== 'partner' && executiveFilters.partner.length > 0 && !executiveFilters.partner.includes(partnerName)) return false;
+        if (activeFilter !== 'client' && executiveFilters.client.length > 0 && !executiveFilters.client.includes(clientName)) return false;
+        if (activeFilter !== 'project' && executiveFilters.project.length > 0 && !executiveFilters.project.includes(p.name)) return false;
+
+        return true;
+      });
+
+      if (activeFilter === 'partner') return Array.from(new Set(filteredByOthers.map(p => safeClients.find(c => c.id === p.partnerId)?.name || 'N/A'))).sort();
+      if (activeFilter === 'client') return Array.from(new Set(filteredByOthers.map(p => safeClients.find(c => c.id === p.clientId)?.name || '-'))).sort();
+      return Array.from(new Set(filteredByOthers.map(p => p.name))).sort();
     };
-  }, [safeProjects, safeClients]);
+
+    return {
+      partner: getValuesForFilter('partner'),
+      client: getValuesForFilter('client'),
+      project: getValuesForFilter('project'),
+    };
+  }, [safeProjects, safeClients, executiveFilters.partner, executiveFilters.client, executiveFilters.project]);
 
   const toggleExecutiveFilter = (column: 'partner' | 'client' | 'project', value: string) => {
     setExecutiveFilters(prev => {
@@ -166,6 +356,24 @@ const AdminDashboard: React.FC = () => {
 
   // Cálculos Executivos do Portfólio
   const { timesheetEntries: portfolioTimesheets } = useDataController();
+
+  // Otimização: Agrupar tarefas e timesheets por projeto uma única vez
+  const groupedData = useMemo(() => {
+    const tasksByProj: Record<string, Task[]> = {};
+    const timesByProj: Record<string, typeof portfolioTimesheets> = {};
+
+    safeTasks.forEach(t => {
+      if (!tasksByProj[t.projectId]) tasksByProj[t.projectId] = [];
+      tasksByProj[t.projectId].push(t);
+    });
+
+    (portfolioTimesheets || []).forEach(e => {
+      if (!timesByProj[e.projectId]) timesByProj[e.projectId] = [];
+      timesByProj[e.projectId].push(e);
+    });
+
+    return { tasksByProj, timesByProj };
+  }, [safeTasks, portfolioTimesheets]);
 
   const executiveMetrics = useMemo(() => {
     // Usar PROJETOS FILTRADOS para os cálculos e cards
@@ -184,8 +392,8 @@ const AdminDashboard: React.FC = () => {
     projectsToUse.forEach(project => {
       totalBudgeted += project.valor_total_rs || 0;
 
-      const projectTasks = safeTasks.filter(t => t.projectId === project.id);
-      const pTimesheets = portfolioTimesheets.filter(e => e.projectId === project.id);
+      const projectTasks = groupedData.tasksByProj[project.id] || [];
+      const pTimesheets = groupedData.timesByProj[project.id] || [];
 
       // Custo do Projeto
       const projectCost = pTimesheets.reduce((acc, entry) => {
@@ -194,35 +402,96 @@ const AdminDashboard: React.FC = () => {
       }, 0);
       totalCommitted += projectCost;
 
-      // Progresso Real do Projeto (Média Simples das Tarefas - Regra de Negócio)
+      // Progresso Real do Projeto
       const projectProgress = projectTasks.length > 0
         ? projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0) / projectTasks.length
         : 0;
 
       totalPortfolioWeightedProgress += projectProgress;
 
-      // Previsão para terminar (Simplificado)
+      // Previsão para terminar
       const remainingHours = projectTasks.reduce((acc, t) => acc + ((t.estimatedHours || 0) * (1 - (t.progress || 0) / 100)), 0);
-      totalForecastedFinish += (remainingHours * 150); // Fallback rate
+      totalForecastedFinish += (remainingHours * 150);
     });
 
     const globalProgress = projectsToUse.length > 0
       ? totalPortfolioWeightedProgress / projectsToUse.length
       : 0;
 
+    const totalEstimatedROI = totalBudgeted - (totalCommitted + totalForecastedFinish);
+    const averageMargin = totalBudgeted > 0 ? (totalEstimatedROI / totalBudgeted * 100) : 0;
+
     return {
       totalBudgeted,
       totalCommitted,
-      totalEstimatedROI: totalBudgeted - (totalCommitted + totalForecastedFinish),
+      totalEstimatedROI,
+      averageMargin,
       globalProgress,
       activeProjectsCount: projectsToUse.filter(p => p.status !== 'Concluído').length,
-      delayedTasksCount: safeTasks.filter(t =>
-        projectsToUse.some(p => p.id === t.projectId) &&
-        (t.daysOverdue ?? 0) > 0 &&
-        t.status !== 'Done'
-      ).length
+      delayedTasksCount: (() => {
+        const activeProjIds = new Set(projectsToUse.map(p => p.id));
+        return safeTasks.filter(t =>
+          activeProjIds.has(t.projectId) &&
+          (t.daysOverdue ?? 0) > 0 &&
+          t.status !== 'Done'
+        ).length;
+      })()
     };
   }, [safeProjects, safeTasks, portfolioTimesheets, users, filteredExecutiveProjects]);
+
+  // --- CÁLCULO DE MÉTRICAS DE PARCEIROS ---
+  const partnerMetrics = useMemo(() => {
+    const managers = safeClients.filter(c => c.tipo_cliente === 'parceiro');
+
+    return managers.map(partner => {
+      const partnerClients = safeClients.filter(c => c.partner_id === partner.id);
+      const partnerProjects = safeProjects.filter(p => p.partnerId === partner.id);
+
+      const totalRevenue = partnerProjects.reduce((acc, p) => acc + (p.valor_total_rs || 0), 0);
+
+      const totalHours = (portfolioTimesheets || [])
+        .filter(entry => partnerProjects.some(p => p.id === entry.projectId))
+        .reduce((acc, entry) => acc + Number(entry.totalHours || 0), 0);
+
+      // Calcular tempo de parceria
+      let tenureStr = 'Novo';
+      const startDate = partner.Criado ? new Date(partner.Criado) : null;
+      if (startDate) {
+        const diffTime = Math.abs(new Date().getTime() - startDate.getTime());
+        const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30.44));
+        if (diffMonths === 0) tenureStr = '< 1 mês';
+        else if (diffMonths < 12) tenureStr = `${diffMonths} meses`;
+        else {
+          const years = Math.floor(diffMonths / 12);
+          const months = diffMonths % 12;
+          tenureStr = months === 0 ? `${years} ano(s)` : `${years}a ${months}m`;
+        }
+      }
+
+      const partnerTasksCount = safeTasks.filter(t =>
+        partnerProjects.some(p => p.id === t.projectId)
+      ).length;
+
+      const totalProgress = partnerProjects.length > 0
+        ? partnerProjects.reduce((acc, p) => {
+          const pTasks = safeTasks.filter(t => t.projectId === p.id);
+          const pProg = pTasks.length > 0 ? pTasks.reduce((sum, t) => sum + (t.progress || 0), 0) / pTasks.length : 0;
+          return acc + pProg;
+        }, 0) / partnerProjects.length
+        : 0;
+
+      return {
+        ...partner,
+        clients: partnerClients,
+        projectCount: partnerProjects.length,
+        taskCount: partnerTasksCount,
+        averageProgress: totalProgress,
+        totalRevenue,
+        totalHours,
+        tenure: tenureStr
+      };
+    }).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  }, [safeClients, safeProjects, portfolioTimesheets]);
 
   // --- CONTROLE DE MÊS DA CAPACIDADE ---
   const [capacityMonth, setCapacityMonth] = useState(() => {
@@ -251,7 +520,7 @@ const AdminDashboard: React.FC = () => {
         assigned: Math.round(assignedHours),
         load: (assignedHours / capacity) * 100
       };
-    }).sort((a, b) => b.load - a.load);
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }, [users, portfolioTimesheets, capacityMonth]);
 
   const changeMonth = (delta: number) => {
@@ -262,7 +531,7 @@ const AdminDashboard: React.FC = () => {
   };
 
 
-  const activeTab = (searchParams.get('tab') as 'operacional' | 'executivo' | 'capacidade') || 'operacional';
+  const activeTab = (searchParams.get('tab') as 'operacional' | 'executivo' | 'capacidade' | 'parceiros') || 'operacional';
 
   // Efeito para fechar o sidebar quando entra no modo executivo
   useEffect(() => {
@@ -297,7 +566,7 @@ const AdminDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('operacional')}
             className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'operacional'
-              ? 'bg-slate-800 text-white shadow-sm'
+              ? 'bg-[var(--text)] text-[var(--bg)] shadow-sm'
               : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
               }`}
           >
@@ -305,9 +574,19 @@ const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('parceiros')}
+            className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'parceiros'
+              ? 'bg-[var(--text)] text-[var(--bg)] shadow-sm'
+              : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+              }`}
+          >
+            Parceiros
+          </button>
+
+          <button
             onClick={() => setActiveTab('executivo')}
             className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'executivo'
-              ? 'bg-slate-800 text-white shadow-sm'
+              ? 'bg-[var(--text)] text-[var(--bg)] shadow-sm'
               : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
               }`}
           >
@@ -317,7 +596,7 @@ const AdminDashboard: React.FC = () => {
           <button
             onClick={() => setActiveTab('capacidade')}
             className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'capacidade'
-              ? 'bg-slate-800 text-white shadow-sm'
+              ? 'bg-[var(--text)] text-[var(--bg)] shadow-sm'
               : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
               }`}
           >
@@ -330,53 +609,106 @@ const AdminDashboard: React.FC = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col min-h-0">
           {/* EXECUTIVE KPIs AND FILTERS CONTROL */}
           <div className="bg-[var(--surface-2)] border-b border-[var(--border)] p-4">
-            <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="max-w-[1600px] mx-auto flex flex-col gap-4">
 
-              {/* KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-8 flex-1">
-                <div>
-                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1.5">Vendido Total</p>
-                  <p className="text-xl font-black text-[var(--text)] font-mono">{executiveMetrics.totalBudgeted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1.5">Custo Real (Acum.)</p>
-                  <p className="text-xl font-black text-amber-500 font-mono">{executiveMetrics.totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1.5">Resultado Est.</p>
-                  <p className={`text-xl font-black font-mono ${executiveMetrics.totalEstimatedROI < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                    {executiveMetrics.totalEstimatedROI.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1.5">Progresso Médio</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xl font-black text-blue-500 font-mono">{Math.round(executiveMetrics.globalProgress)}%</p>
-                    <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden hidden lg:block">
-                      <div className="h-full bg-blue-500" style={{ width: `${executiveMetrics.globalProgress}%` }} />
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                {/* KPIs */}
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-6 flex-1">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
+                      Vendido Total
+                      <InfoTooltip title="Vendido Total" content="Soma dos orçamentos (Valor Total R$) de todos os projetos visíveis no filtro atual." />
+                    </p>
+                    <p className="text-xl font-black text-[var(--text)] font-mono">{executiveMetrics.totalBudgeted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
+                      Custo Real
+                      <InfoTooltip title="Custo Operacional" content="Soma das horas apontadas multiplicadas pelo custo/hora de cada colaborador alocado." />
+                    </p>
+                    <p className="text-xl font-black text-amber-500 font-mono">{executiveMetrics.totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
+                      Resultado Est.
+                      <InfoTooltip title="ROI (Previsão)" content="Cálculo do saldo previsto: Valor Vendido (-) Custo Realizado (-) Previsão de custo para finalizar tarefas." />
+                    </p>
+                    <p className={`text-xl font-black font-mono ${executiveMetrics.totalEstimatedROI < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                      {executiveMetrics.totalEstimatedROI.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
+                      Margem Est.
+                      <InfoTooltip title="Margem de Lucro" content="Percentual de lucro previsto sobre o valor total vendido." />
+                    </p>
+                    <p className={`text-xl font-black font-mono ${executiveMetrics.averageMargin < 15 ? 'text-red-500' : executiveMetrics.averageMargin < 30 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                      {Math.round(executiveMetrics.averageMargin)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
+                      Progresso Médio
+                      <InfoTooltip title="Progresso do Portfólio" content="Média aritmética simples da evolução real (input manual) dos projetos." />
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-black text-blue-500 font-mono">{Math.round(executiveMetrics.globalProgress)}%</p>
+                      <div className="w-12 h-1.5 rounded-full overflow-hidden hidden xl:block" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                        <div className="h-full bg-blue-500" style={{ width: `${executiveMetrics.globalProgress}%` }} />
+                      </div>
                     </div>
                   </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
+                      Status Operação
+                      <InfoTooltip title="Saúde do Portfólio" content="Projetos ativos e tarefas com atraso." />
+                    </p>
+                    <p className="text-xl font-black text-[var(--text)]">
+                      {executiveMetrics.activeProjectsCount} <span className="text-[10px] text-slate-400 font-bold">Ativos</span>
+                      {executiveMetrics.delayedTasksCount > 0 && (
+                        <span className="text-red-500 ml-1">/ {executiveMetrics.delayedTasksCount} <span className="text-[10px] font-bold">Atrasos</span></span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1.5">Ativos / Atrasados</p>
-                  <p className="text-xl font-black text-[var(--text)]">
-                    {executiveMetrics.activeProjectsCount} <span className="text-xs text-slate-400 font-bold ml-1">Ativos</span>
-                    {executiveMetrics.delayedTasksCount > 0 && (
-                      <span className="text-red-500 ml-2">/ {executiveMetrics.delayedTasksCount} <span className="text-xs font-bold">Atrasos</span></span>
-                    )}
-                  </p>
-                </div>
+
+                {/* CLEAR FILTERS */}
+                {(executiveFilters.partner.length > 0 || executiveFilters.client.length > 0 || executiveFilters.project.length > 0 || executiveFilters.startDate || executiveFilters.endDate) && (
+                  <button
+                    onClick={() => setExecutiveFilters({ partner: [], client: [], project: [], startDate: '', endDate: '' })}
+                    className="px-4 py-2 bg-purple-600/10 hover:bg-purple-600/20 text-purple-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 border border-purple-600/20"
+                  >
+                    <X size={14} /> Limpar Filtros
+                  </button>
+                )}
               </div>
 
-              {/* CLEAR FILTERS */}
-              {(executiveFilters.partner.length > 0 || executiveFilters.client.length > 0 || executiveFilters.project.length > 0) && (
-                <button
-                  onClick={() => setExecutiveFilters({ partner: [], client: [], project: [] })}
-                  className="px-4 py-2 bg-purple-600/10 hover:bg-purple-600/20 text-purple-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 border border-purple-600/20"
-                >
-                  <X size={14} /> Limpar Filtros
-                </button>
-              )}
+              {/* DATE FILTERS BAR */}
+              <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[var(--muted)]">Prazo Estimado de:</span>
+                  <input
+                    type="date"
+                    value={executiveFilters.startDate}
+                    onChange={(e) => setExecutiveFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1 text-xs font-bold text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                  />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[var(--muted)]">até:</span>
+                  <input
+                    type="date"
+                    value={executiveFilters.endDate}
+                    onChange={(e) => setExecutiveFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1 text-xs font-bold text-[var(--text)] outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                  />
+                </div>
+
+                <div className="h-4 w-px bg-[var(--border)] opacity-20" />
+
+                <div className="flex items-center gap-2">
+                  <Info className="w-3 h-3 text-[var(--primary)] opacity-50" />
+                  <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-tight">Utilize os filtros nos cabeçalhos da tabela para Parceiro e Cliente</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -457,16 +789,25 @@ const AdminDashboard: React.FC = () => {
 
                     {/* SCROLLABLE COLUMNS */}
                     {/* SEÇÃO PREVISTO */}
-                    <th className="p-3 w-[130px] border-r border-white/10 bg-blue-500/5 text-blue-400">Status P.</th>
+                    <th className="p-3 w-[130px] border-r border-white/10 bg-blue-500/5 text-blue-400">
+                      Status P.
+                      <InfoTooltip title="Status de Planejamento" content="Fase teórica baseada no tempo decorrido do cronograma (Entendimento, Análise, Desenvolv., etc)." />
+                    </th>
                     <th className="p-3 w-[100px] bg-blue-500/5 text-blue-400">Início P.</th>
                     <th className="p-3 w-[100px] bg-blue-500/5 text-blue-400 text-center">Fim P.</th>
-                    <th className="p-3 w-[110px] border-r border-white/10 bg-blue-500/5 text-blue-400">Progresso P.</th>
+                    <th className="p-3 w-[110px] border-r border-white/10 bg-blue-500/5 text-blue-400">
+                      Progresso P.
+                      <InfoTooltip title="Evolução Teórica" content="Percentual matemático de onde o projeto deveria estar hoje de acordo com as datas cadastradas." />
+                    </th>
 
                     {/* SEÇÃO REAL */}
                     <th className="p-3 w-[110px] bg-emerald-500/5 text-emerald-400">Status R.</th>
                     <th className="p-3 w-[100px] bg-emerald-500/5 text-emerald-400">Início R.</th>
                     <th className="p-3 w-[100px] bg-emerald-500/5 text-emerald-400">Fim R.</th>
-                    <th className="p-3 w-[110px] border-r border-white/10 bg-emerald-500/5 text-emerald-400">Progresso R.</th>
+                    <th className="p-3 w-[110px] border-r border-white/10 bg-emerald-500/5 text-emerald-400">
+                      Progresso R.
+                      <InfoTooltip title="Evolução Real" content="Média de progresso das tarefas inseridas pelos colaboradores (Input Manual)." />
+                    </th>
 
                     {/* SEÇÃO ANÁLISE */}
                     {/* SEÇÃO TEMPO (NOVAS COLUNAS) */}
@@ -475,172 +816,33 @@ const AdminDashboard: React.FC = () => {
 
                     {/* SEÇÃO ANÁLISE (FINANCEIRO) */}
                     <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400">Vendido</th>
-                    <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400">Custo Real</th>
+                    <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400">
+                      Custo Real
+                      <InfoTooltip title="Custo Operacional" content="Soma das horas apontadas x custo/hora dos colaboradores envolvidos." />
+                    </th>
                     {/* <th className="p-3 w-[140px] bg-amber-500/5 text-amber-400">Custo Proj.</th> */}
-                    <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400 font-black">Resultado</th>
-                    <th className="p-3 w-[70px] border-l bg-amber-500/5 text-amber-400" style={{ borderColor: 'var(--border)' }}>%</th>
+                    <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400 font-black">
+                      Resultado
+                      <InfoTooltip title="Resultado Financeiro" content="Saldo atual da operação (Valor Vendido - Custo Apontado até agora)." />
+                    </th>
+                    <th className="p-3 w-[70px] border-l bg-amber-500/5 text-amber-400" style={{ borderColor: 'var(--border)' }}>
+                      %
+                      <InfoTooltip title="Margem Atual" content="Percentual de lucratividade atual da operação." />
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                  {filteredExecutiveProjects.map((p, idx) => {
-                    const client = safeClients.find(c => c.id === p.clientId);
-                    const partner = safeClients.find(c => c.id === p.partnerId);
-
-                    const projectTasks = safeTasks.filter(t => t.projectId === p.id);
-                    const pTimesheets = portfolioTimesheets.filter(e => e.projectId === p.id);
-
-                    // Custo Real (Hoje)
-                    const costToday = pTimesheets.reduce((acc, e) => {
-                      const u = users.find(user => user.id === e.userId);
-                      return acc + (e.totalHours * (u?.hourlyCost || 0));
-                    }, 0);
-
-                    // Avanço Real (Média do progresso das tarefas)
-                    const activeTasks = projectTasks.filter(t => t.status !== 'Done' || t.progress === 100);
-                    // REGRA DE NEGÓCIO: O cliente pediu explicitamente que seja o que os colaboradores alteram
-                    // Portanto, vamos fazer uma média simples do campo 'progress' de todas as tarefas do projeto
-                    // Independente de estimativa de horas, para refletir puramente o input manual.
-                    const sumProgress = projectTasks.reduce((acc, t) => acc + (t.progress || 0), 0);
-                    const progress = projectTasks.length > 0 ? sumProgress / projectTasks.length : 0;
-
-                    // Custo para Terminar
-                    const costToFinish = projectTasks.reduce((acc, t) => {
-                      const remainingHours = (t.estimatedHours || 0) * (1 - (t.progress || 0) / 100);
-                      const dev = users.find(u => u.id === t.developerId);
-                      const rate = dev?.hourlyCost || 150;
-                      return acc + (remainingHours * rate);
-                    }, 0);
-
-                    const hoursSold = p.horas_vendidas || p.budget || 0;
-                    const hoursReal = pTimesheets.reduce((acc, e) => acc + (Number(e.totalHours) || 0), 0);
-
-                    const sold = p.valor_total_rs || 0;
-                    // Resultado = Vendido - Custo Real (Saldo)
-                    const result = sold - costToday;
-                    // Margem agora é baseada no saldo atual em relação ao vendido
-                    const margin = sold > 0 ? (result / sold * 100) : 0;
-
-                    // Cálculo de Progresso Planejado (Ideal baseado no tempo)
-                    const now = new Date();
-                    const startP = p.startDate ? new Date(p.startDate) : null;
-                    const endP = p.estimatedDelivery ? new Date(p.estimatedDelivery) : null;
-                    let plannedProgress = 0;
-                    if (startP && endP && startP < endP) {
-                      if (now > endP) plannedProgress = 100;
-                      else if (now > startP) {
-                        const total = endP.getTime() - startP.getTime();
-                        const elapsed = now.getTime() - startP.getTime();
-                        plannedProgress = (elapsed / total) * 100;
-                      }
-                    }
-
-                    // Lógica de Fases (Status P.) baseada na imagem de pesos
-                    const getPlannedStatus = (prog: number, complexity?: string) => {
-                      const c = (complexity || 'Média') as 'Alta' | 'Média' | 'Baixa';
-                      if (prog >= 100) return 'Concluído';
-                      if (prog <= 0) return 'A Iniciar';
-
-                      const thresholds = {
-                        'Alta': [10, 20, 50],
-                        'Média': [10, 20, 55],
-                        'Baixa': [10, 20, 60]
-                      };
-
-                      const [t1, t2, t3] = thresholds[c];
-                      if (prog <= t1) return 'Entendimento';
-                      if (prog <= t2) return 'Análise';
-                      if (prog <= t3) return 'Arquitetura';
-                      return 'Desenvolvimento';
-                    };
-
-                    const statusP = getPlannedStatus(plannedProgress, (p as any).complexidade);
-
-                    const formatDate = (dateStr?: string) => {
-                      if (!dateStr || dateStr === "") return <span className="opacity-10">--/--/--</span>;
-                      try {
-                        return new Date(dateStr).toLocaleDateString('pt-BR');
-                      } catch {
-                        return <span className="text-red-400">!!</span>;
-                      }
-                    };
-
-                    const isEven = idx % 2 === 0;
-                    const rowBg = isEven ? 'var(--surface)' : 'var(--surface-2)';
-
-                    return (
-                      <tr key={p.id} className={`group hover:bg-[var(--surface-hover)] transition-all cursor-default relative border-b border-[var(--border)] ${isEven ? 'bg-[var(--surface)]' : 'bg-[var(--surface-2)] shadow-inner'}`}>
-                        {/* CHECKBOX GMAIL STYLE */}
-                        <td className="p-3 sticky left-0 z-30 shadow-[1px_0_3px_rgba(0,0,0,0.05)] text-center group-hover:bg-[var(--surface-hover)] transition-colors border-r border-white/5" style={{ backgroundColor: rowBg }}>
-                          <input type="checkbox" className="rounded border-slate-300 text-slate-800 focus:ring-slate-800 opacity-20 group-hover:opacity-100 transition-opacity" />
-                        </td>
-
-                        {/* FIXED */}
-                        <td className="p-3 sticky left-10 z-10 font-bold text-[9px] group-hover:bg-[var(--surface-hover)] shadow-[1px_0_5px_rgba(0,0,0,0.05)] uppercase tracking-wider truncate border-r border-white/5" style={{ backgroundColor: rowBg, color: 'var(--muted)' }}>
-                          {partner?.name || <span className="opacity-25 px-1 bg-white/5 rounded">N/A</span>}
-                        </td>
-                        <td className="p-3 sticky left-[150px] z-10 font-black text-[10px] group-hover:bg-[var(--surface-hover)] shadow-[1px_0_5px_rgba(0,0,0,0.05)] truncate border-r border-white/5" style={{ backgroundColor: rowBg, color: 'var(--text)' }}>
-                          {client?.name || "-"}
-                        </td>
-                        <td className="p-3 sticky left-[290px] z-10 font-black text-xs group-hover:bg-[var(--surface-hover)] shadow-[2px_0_8px_rgba(0,0,0,0.05)] truncate border-r border-white/5" style={{ backgroundColor: rowBg, color: 'var(--text)' }}>
-                          {p.name}
-                        </td>
-
-                        <td className="p-3 border-r border-white/5 bg-blue-500/[0.02]">
-                          <span className="text-[10px] text-blue-400 whitespace-nowrap">
-                            {statusP}
-                          </span>
-                        </td>
-                        <td className="p-3 text-[10px] font-mono bg-blue-500/[0.02]" style={{ color: 'var(--text-2)' }}>{formatDate(p.startDate)}</td>
-                        <td className="p-3 text-[10px] font-mono font-bold bg-blue-500/[0.02]" style={{ color: 'var(--text)' }}>{formatDate(p.estimatedDelivery)}</td>
-                        <td className="p-3 border-r border-white/5 bg-blue-500/[0.02]">
-                          <div className="flex items-center gap-1.5 opacity-60">
-                            <div className="w-12 h-1 bg-[var(--surface-2)] rounded-full overflow-hidden border border-[var(--border)]">
-                              <div className="h-full bg-blue-400" style={{ width: `${plannedProgress}%` }} />
-                            </div>
-                            <span className="text-[10px] font-bold" style={{ color: 'var(--text-2)' }}>{Math.round(plannedProgress)}%</span>
-                          </div>
-                        </td>
-
-                        {/* SEÇÃO REAL */}
-                        <td className="p-3 bg-emerald-500/[0.02]">
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 w-fit ${p.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                            <div className={`w-1 h-1 rounded-full ${p.status === 'Concluído' ? 'bg-emerald-500' : 'bg-slate-500'}`} />
-                            {p.status || 'Ativo'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-[10px] font-mono bg-emerald-500/[0.02]" style={{ color: 'var(--text-2)' }}>{formatDate(p.startDateReal)}</td>
-                        <td className="p-3 text-[10px] font-mono bg-emerald-500/[0.02]" style={{ color: 'var(--text-2)' }}>{formatDate(p.endDateReal)}</td>
-                        <td className="p-3 border-r border-white/5 bg-emerald-500/[0.02]">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-12 h-1 bg-emerald-500/10 rounded-full overflow-hidden border border-emerald-500/20">
-                              <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
-                            </div>
-                            <span className="text-[10px] font-black" style={{ color: 'var(--text)' }}>{Math.round(progress)}%</span>
-                          </div>
-                        </td>
-
-                        {/* SEÇÃO ANÁLISE (FINANCEIRO) */}
-                        {/* SEÇÃO TEMPO (VACANCY FOR NEW COLUMNS) */}
-                        <td className="p-3 border-l border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02]" style={{ color: 'var(--text-2)' }}>{Math.round(hoursSold)}h</td>
-                        <td className={`p-3 border-r border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02] ${hoursReal > hoursSold ? 'text-red-400' : 'text-emerald-400'}`}>
-                          {Math.round(hoursReal)}h
-                        </td>
-
-                        {/* SEÇÃO ANÁLISE (FINANCEIRO) */}
-                        <td className="p-3 border-r border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02]" style={{ color: 'var(--text)' }}>{sold.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        <td className="p-3 border-r border-white/5 text-[11px] font-bold font-mono bg-amber-500/[0.02]" style={{ color: 'var(--text-2)' }}>{costToday.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        {/* <td className="p-3 border-r border-white/5 text-[11px] font-bold font-mono italic opacity-40 bg-amber-500/[0.02]">
-                          {costToFinish.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </td> */}
-                        <td className={`p-3 text-[11px] font-black font-mono border-l bg-amber-500/5 ${result < 0 ? 'text-red-500' : 'text-emerald-500'}`} style={{ borderColor: 'var(--border)' }}>
-                          {result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </td>
-                        <td className={`p-3 text-[11px] font-black font-mono bg-amber-500/5 ${margin < 15 ? 'text-red-500' : margin < 30 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                          {Math.round(margin)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {filteredExecutiveProjects.map((p, idx) => (
+                    <ExecutiveRow
+                      key={p.id}
+                      p={p}
+                      idx={idx}
+                      safeClients={safeClients}
+                      users={users}
+                      groupedData={groupedData}
+                      navigate={navigate}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -691,7 +893,15 @@ const AdminDashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
               {resourceMetrics.map(res => (
-                <div key={res.id} className="px-5 py-4 rounded-xl border transition-all hover:shadow-lg group flex flex-col justify-between h-[96px]" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                <div
+                  key={res.id}
+                  onClick={() => {
+                    const [year, month] = capacityMonth.split('-');
+                    navigate(`/timesheet?userId=${res.id}&month=${Number(month) - 1}&year=${year}`);
+                  }}
+                  className="px-5 py-4 rounded-xl border transition-all hover:shadow-lg group flex flex-col justify-between h-[96px] cursor-pointer"
+                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                >
                   <div className="flex justify-between items-start">
                     <div className="min-w-0 flex-1 pr-2">
                       <h4 className="font-bold text-sm truncate leading-tight mb-0.5" style={{ color: 'var(--text)' }}>{res.name}</h4>
@@ -703,12 +913,18 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div className="space-y-2 mt-auto">
-                    <div className="w-full h-2 rounded-full overflow-hidden bg-[var(--surface)] border border-white/5">
+                    <div className="w-full h-2 rounded-full overflow-hidden border border-white/5" style={{ backgroundColor: 'var(--surface-2)' }}>
                       <div className={`h-full transition-all duration-1000 ${res.load > 100 ? 'bg-red-500' : res.load > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(res.load, 100)}%` }} />
                     </div>
                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider items-center" style={{ color: 'var(--muted)' }}>
-                      <span>ALOCADO: <span className="text-[var(--text-2)]">{res.assigned}H</span></span>
-                      <span>BASE: <span className="text-[var(--text-2)]">{res.capacity}H</span></span>
+                      <span className="flex items-center">
+                        ALOCADO: <span className="text-[var(--text-2)] ml-0.5">{res.assigned}H</span>
+                        <InfoTooltip title="Horas Alocadas" content="Soma das horas apontadas pelo colaborador no mês selecionado." />
+                      </span>
+                      <span className="flex items-center">
+                        BASE: <span className="text-[var(--text-2)] ml-0.5">{res.capacity}H</span>
+                        <InfoTooltip title="Capacidade Mensal" content="Carga horária padrão definida no perfil do colaborador (ex: 160h/mês)." />
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -720,16 +936,353 @@ const AdminDashboard: React.FC = () => {
 
 
 
+
+      {activeTab === 'parceiros' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-8 pb-10 flex flex-col h-full">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 rounded-xl border text-emerald-600" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                <Handshake className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-black tracking-tight flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                  {selectedPartnerId ? (
+                    <button
+                      onClick={() => setSelectedPartnerId(null)}
+                      className="flex items-center gap-2 hover:text-emerald-500 transition-colors"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                      {partnerMetrics.find(p => p.id === selectedPartnerId)?.name}
+                    </button>
+                  ) : partnerViewMode === 'grid' ? (
+                    'Ecossistema de Parceiros'
+                  ) : (
+                    'Portfólio de Canais'
+                  )}
+                  <InfoTooltip title="Gestão de Canais" content="Gerencie seus parceiros comerciais e acompanhe o sucesso de cada canal de venda." />
+                </h1>
+                <p className="text-xs font-bold uppercase tracking-widest mt-0.5" style={{ color: 'var(--muted)' }}>
+                  {!selectedPartnerId
+                    ? `${partnerMetrics.length} Parceiros • ${partnerMetrics.reduce((acc, p) => acc + p.clients.length, 0)} Clientes Vinculados`
+                    : 'Visão Detalhada do Parceiro'
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {!selectedPartnerId && (
+                <div className="flex p-1 rounded-xl border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                  <button
+                    onClick={() => { setPartnerViewMode('grid'); localStorage.setItem('admin_partners_view_mode', 'grid'); }}
+                    className="p-2 px-3 rounded-lg transition-all flex items-center gap-2"
+                    style={{
+                      backgroundColor: partnerViewMode === 'grid' ? 'var(--text)' : 'transparent',
+                      color: partnerViewMode === 'grid' ? 'var(--bg)' : 'var(--muted)'
+                    }}
+                    title="Visão em Cards"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setPartnerViewMode('list'); localStorage.setItem('admin_partners_view_mode', 'list'); }}
+                    className="p-2 px-3 rounded-lg transition-all flex items-center gap-2"
+                    style={{
+                      backgroundColor: partnerViewMode === 'list' ? 'var(--text)' : 'transparent',
+                      color: partnerViewMode === 'list' ? 'var(--bg)' : 'var(--muted)'
+                    }}
+                    title="Visão em Lista"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={() => navigate('/admin/clients/new?tipo=parceiro')}
+                className="ml-2 px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all font-bold text-xs bg-[var(--text)] text-[var(--bg)] hover:opacity-90 active:scale-95"
+              >
+                <Plus size={16} />
+                Novo Parceiro
+              </button>
+            </div>
+          </div>
+
+          {/* CONTEÚDO PARCEIROS */}
+          <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+            {selectedPartnerId ? (
+              /* VIEW DRILL-DOWN DO PARCEIRO (3 TABS) */
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {(() => {
+                  const partner = partnerMetrics.find(p => p.id === selectedPartnerId);
+                  if (!partner) return <div className="p-10 text-center">Parceiro não encontrado.</div>;
+
+                  const internalResp = users.find(u => u.id === partner.responsavel_interno_id);
+
+                  return (
+                    <div className="space-y-8">
+                      {/* SUB-MENU DE NAVEGAÇÃO INTERNA */}
+                      <div className="flex border-b border-[var(--border)] gap-8">
+                        <button
+                          onClick={() => setPartnerSubTab('clientes')}
+                          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${partnerSubTab === 'clientes' ? 'text-purple-600' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
+                        >
+                          1. Clientes
+                          {partnerSubTab === 'clientes' && <motion.div layoutId="partner-tab" className="absolute bottom-0 left-0 right-0 h-1 bg-purple-600 rounded-t-full" />}
+                        </button>
+                        <button
+                          onClick={() => setPartnerSubTab('resumo')}
+                          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${partnerSubTab === 'resumo' ? 'text-purple-600' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
+                        >
+                          2. Dados e Resumo
+                          {partnerSubTab === 'resumo' && <motion.div layoutId="partner-tab" className="absolute bottom-0 left-0 right-0 h-1 bg-purple-600 rounded-t-full" />}
+                        </button>
+                        <button
+                          onClick={() => setPartnerSubTab('info')}
+                          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${partnerSubTab === 'info' ? 'text-purple-600' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
+                        >
+                          3. Informações
+                          {partnerSubTab === 'info' && <motion.div layoutId="partner-tab" className="absolute bottom-0 left-0 right-0 h-1 bg-purple-600 rounded-t-full" />}
+                        </button>
+                      </div>
+
+                      {/* CONTEÚDO DA SUB-TAB */}
+                      <div className="min-h-[400px]">
+                        {partnerSubTab === 'clientes' && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 animate-in fade-in duration-300">
+                            {partner.clients.map(client => {
+                              const clientProjects = safeProjects.filter(p => p.clientId === client.id);
+                              return (
+                                <div
+                                  key={client.id}
+                                  onClick={() => setShowClientDetailsId(client.id)}
+                                  className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer flex flex-col h-[220px]"
+                                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                >
+                                  <div className="flex-1 bg-white p-6 flex items-center justify-center border-b border-[var(--border)]">
+                                    <img src={client.logoUrl} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt={client.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/100x100?text=${client.name.charAt(0)}`; }} />
+                                  </div>
+                                  <div className="px-4 py-3 flex flex-col justify-center text-center bg-slate-50 dark:bg-slate-900/20 shadow-inner">
+                                    <h4 className="text-[11px] font-black uppercase tracking-tight truncate mb-0.5" style={{ color: 'var(--text)' }}>{client.name}</h4>
+                                    <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest">
+                                      {clientProjects.length} {clientProjects.length === 1 ? 'PROJETO' : 'PROJETOS'}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            <button
+                              onClick={() => navigate(`/admin/clients/new?tipo=cliente_final&partnerId=${partner.id}`)}
+                              className="border-2 border-dashed border-[var(--border)] rounded-xl flex flex-col items-center justify-center p-6 text-[var(--muted)] hover:text-purple-600 hover:border-purple-600/50 hover:bg-purple-600/5 transition-all group h-[220px]"
+                            >
+                              <Plus className="w-8 h-8 mb-2 opacity-30 group-hover:scale-110 transition-transform" />
+                              <span className="text-[9px] font-black uppercase tracking-widest">Novo Cliente</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {partnerSubTab === 'resumo' && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-in fade-in duration-300">
+                            {/* Coluna de Métricas */}
+                            <div className="md:col-span-2 space-y-6">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="p-6 rounded-[2rem] border border-emerald-100 bg-emerald-50/30">
+                                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Faturamento Total</p>
+                                  <p className="text-2xl font-black text-[var(--textTitle)] font-mono">
+                                    {partner.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                                  </p>
+                                </div>
+                                <div className="p-6 rounded-[2rem] border border-blue-100 bg-blue-50/30">
+                                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Carga Horária</p>
+                                  <p className="text-2xl font-black text-[var(--textTitle)] font-mono">
+                                    {Math.round(partner.totalHours)}<span className="text-xs ml-0.5 opacity-50 uppercase">h</span>
+                                  </p>
+                                </div>
+                                <div className="p-6 rounded-[2rem] border border-purple-100 bg-purple-50/30">
+                                  <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1">SLA / Entregabilidade</p>
+                                  <p className="text-2xl font-black text-[var(--textTitle)] font-mono">{Math.round(partner.averageProgress)}%</p>
+                                </div>
+                                <div className="p-6 rounded-[2rem] border border-amber-100 bg-amber-50/30">
+                                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Volume de Tarefas</p>
+                                  <p className="text-2xl font-black text-[var(--textTitle)] font-mono">{partner.taskCount}</p>
+                                </div>
+                              </div>
+
+                              <div className="p-8 rounded-[2.5rem] bg-slate-50 border border-[var(--border)]">
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--muted)] mb-6 flex items-center gap-2">
+                                  <TrendingUp size={14} className="text-purple-500" /> Histórico de Performance
+                                </h4>
+                                <div className="h-40 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                  Gráfico de Crescimento (Em breve)
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Coluna de Contato Rápido */}
+                            <div className="space-y-6">
+                              <div className="p-6 rounded-[2.5rem] bg-white border border-[var(--border)] shadow-sm">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 pb-2 border-b border-slate-100">Gestão do Relacionamento</h4>
+                                <div className="space-y-8">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-500/20">
+                                      {internalResp?.name?.charAt(0) || 'N'}
+                                    </div>
+                                    <div>
+                                      <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest mb-0.5">Gestor Interno</p>
+                                      <p className="text-sm font-black text-[var(--textTitle)]">{internalResp?.name || 'Não atribuído'}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-4 pt-4 border-t border-slate-50">
+                                    <div>
+                                      <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest mb-3">Ponto Focal Parceiro</p>
+                                      <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 rounded-lg bg-slate-50 text-slate-400"><User size={16} /></div>
+                                        <p className="text-[13px] font-black text-[var(--textTitle)]">{partner.responsavel_externo || 'Não informado'}</p>
+                                      </div>
+                                      <div className="flex flex-col gap-2 pl-11">
+                                        {partner.email_contato && (
+                                          <span className="flex items-center gap-2 text-[11px] font-bold text-blue-600"><Mail size={12} /> {partner.email_contato}</span>
+                                        )}
+                                        {partner.telefone && (
+                                          <span className="flex items-center gap-2 text-[11px] font-bold text-[var(--text-2)]"><Phone size={12} /> {partner.telefone}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {partnerSubTab === 'info' && (
+                          <div className="max-w-4xl animate-in fade-in duration-300">
+                            <div className="p-10 rounded-[2.5rem] bg-white border border-[var(--border)] shadow-sm space-y-10">
+                              <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                  <h4 className="text-xl font-black text-[var(--textTitle)]">Detalhes do Registro</h4>
+                                  <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">Informações cadastrais completas do parceiro</p>
+                                </div>
+                                <button
+                                  onClick={() => navigate(`/admin/clients/${partner.id}`)}
+                                  className="px-6 py-2.5 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-700 transition-all flex items-center gap-2 shadow-lg shadow-purple-500/20"
+                                >
+                                  <Edit2 size={12} /> Editar
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome do Parceiro</p>
+                                  <p className="text-sm font-bold text-[var(--textTitle)] border-b border-slate-50 pb-2">{partner.name}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">CNPJ</p>
+                                  <p className="text-sm font-mono font-bold text-[var(--textTitle)] border-b border-slate-50 pb-2">{partner.cnpj || '---'}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Email Principal</p>
+                                  <p className="text-sm font-bold text-[var(--textTitle)] border-b border-slate-50 pb-2">{partner.email_contato || '---'}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Telefone</p>
+                                  <p className="text-sm font-bold text-[var(--textTitle)] border-b border-slate-50 pb-2">{partner.telefone || '---'}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Responsável Externo</p>
+                                  <p className="text-sm font-bold text-[var(--textTitle)] border-b border-slate-50 pb-2">{partner.responsavel_externo || '---'}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Gestor da Conta (Interno)</p>
+                                  <p className="text-sm font-bold text-[var(--textTitle)] border-b border-slate-50 pb-2">{internalResp?.name || '---'}</p>
+                                </div>
+                              </div>
+
+                              <div className="pt-6">
+                                <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4">Identidade Visual</p>
+                                <div className="w-32 h-32 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-4 flex items-center justify-center">
+                                  <img src={partner.logoUrl} className="max-w-full max-h-full object-contain mix-blend-multiply" alt="Logo" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              /* VIEW LISTAGEM GERAL DE PARCEIROS */
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {partnerViewMode === 'grid' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+                    {partnerMetrics.map(partner => (
+                      <div
+                        key={partner.id}
+                        onClick={() => setSelectedPartnerId(partner.id)}
+                        className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer flex flex-col h-[220px]"
+                        style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                      >
+                        <div className="flex-1 bg-white p-6 flex items-center justify-center border-b border-[var(--border)]">
+                          <img src={partner.logoUrl} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt={partner.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }} />
+                        </div>
+                        <div className="px-4 py-3 flex flex-col justify-center text-center bg-slate-50 dark:bg-slate-900/20 shadow-inner">
+                          <h3 className="text-[11px] font-black truncate uppercase tracking-tight mb-0.5" style={{ color: 'var(--text)' }}>{partner.name}</h3>
+                          <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.projectCount} {partner.projectCount === 1 ? 'PROJETO' : 'PROJETOS'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {partnerMetrics.map(partner => (
+                      <div
+                        key={partner.id}
+                        onClick={() => setSelectedPartnerId(partner.id)}
+                        className="flex items-center justify-between p-5 bg-white border border-[var(--border)] rounded-[2rem] hover:shadow-lg transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-6">
+                          <div className="w-14 h-14 bg-slate-50 rounded-2xl p-2 border border-slate-100 flex items-center justify-center overflow-hidden">
+                            <img src={partner.logoUrl} className="w-full h-full object-contain" alt={partner.name} />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-[var(--textTitle)] uppercase tracking-[0.05em]">{partner.name}</h3>
+                            <div className="flex items-center gap-3 mt-1 underline-offset-4">
+                              <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.projectCount} Contas Ativas</span>
+                              <span className="text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-50 px-2 py-0.5 rounded-full">{partner.tenure}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button className="px-8 py-3 bg-[var(--surface-2)] text-[var(--text)] rounded-xl font-black text-[10px] uppercase tracking-widest border border-[var(--border)] hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all shadow-sm flex items-center gap-2">
+                          Ver Detalhes
+                          <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-all -ml-2 group-hover:ml-0" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {activeTab === 'operacional' && (
         <div className="px-8 pb-10">
           {/* NEW COMPACT HEADER */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div className="flex items-center gap-4">
-              <div className="p-2.5 rounded-xl bg-slate-800/10 border border-slate-200">
+              <div className="p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
                 <Briefcase className="w-5 h-5 text-slate-600" />
               </div>
               <div>
-                <h1 className="text-xl font-black tracking-tight" style={{ color: 'var(--text)' }}>Portfólio de Operações</h1>
+                <h1 className="text-xl font-black tracking-tight flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                  {viewMode === 'grid' ? 'Clientes' : viewMode === 'list' ? 'Clientes -> Projetos' : 'Projetos -> Tarefas'}
+                  <InfoTooltip title="Visão de Gestão" content="Espaço dedicado ao acompanhamento operacional. Alterne entre as visualizações de Clientes, Projetos ou Tarefas nos ícones à direita." />
+                </h1>
                 <p className="text-xs font-bold uppercase tracking-widest mt-0.5" style={{ color: 'var(--muted)' }}>
                   {activeClients.length} Clientes Ativos • {safeProjects.length} Projetos
                 </p>
@@ -843,7 +1396,7 @@ const AdminDashboard: React.FC = () => {
 
               <button
                 onClick={() => navigate('/admin/clients/new')}
-                className="ml-2 bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all font-bold text-xs"
+                className="ml-2 px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all font-bold text-xs bg-[var(--text)] text-[var(--bg)] hover:opacity-90 active:scale-95"
               >
                 <Plus size={16} />
                 Novo Cliente
@@ -877,35 +1430,44 @@ const AdminDashboard: React.FC = () => {
               onScroll={handleScroll}
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 overflow-y-auto custom-scrollbar"
             >
-              {filteredSortedClients.map((client) => (
-                <div
-                  key={client.id}
-                  className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer flex flex-col h-[220px]"
-                  style={{
-                    backgroundColor: 'var(--surface)',
-                    borderColor: 'var(--border)',
-                  }}
-                  onClick={() => navigate(`/admin/clients/${client.id}`)}
-                >
-                  <div className="w-full flex-1 bg-white p-3 flex items-center justify-center transition-all overflow-hidden">
-                    <img
-                      src={client.logoUrl}
-                      alt={client.name}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                      onError={(e) => (e.currentTarget.src = "https://placehold.co/200x200?text=Logo")}
-                    />
-                  </div>
+              {filteredSortedClients.map((client) => {
+                return (
+                  <div
+                    key={client.id}
+                    className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer flex flex-col h-[220px]"
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--border)',
+                    }}
+                    onClick={() => {
+                      if (client.tipo_cliente === 'parceiro') {
+                        setSelectedPartnerId(client.id);
+                        setActiveTab('parceiros');
+                      } else {
+                        navigate(`/admin/clients/${client.id}`);
+                      }
+                    }}
+                  >
+                    <div className="w-full flex-1 bg-white dark:bg-white/95 p-3 flex items-center justify-center transition-all overflow-hidden border-b border-[var(--border)]">
+                      <img
+                        src={client.logoUrl}
+                        alt={client.name}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => (e.currentTarget.src = "https://placehold.co/200x200?text=Logo")}
+                      />
+                    </div>
 
-                  <div className="px-4 py-3 flex flex-col justify-center text-center border-t" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    <h2 className="text-[12px] font-black uppercase tracking-tight line-clamp-1 mb-0.5" style={{ color: 'var(--text)' }}>
-                      {client.name}
-                    </h2>
-                    <div className="text-[10px] font-bold opacity-50 uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
-                      {safeProjects.filter((p) => p.clientId === client.id).length} {safeProjects.filter((p) => p.clientId === client.id).length === 1 ? 'PROJETO' : 'PROJETOS'}
+                    <div className="px-4 py-3 flex flex-col justify-center text-center border-t" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                      <h2 className="text-[12px] font-black uppercase tracking-tight line-clamp-1 mb-0.5" style={{ color: 'var(--text)' }}>
+                        {client.name}
+                      </h2>
+                      <div className="text-[10px] font-bold opacity-50 uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+                        {safeProjects.filter((p) => p.clientId === client.id).length} {safeProjects.filter((p) => p.clientId === client.id).length === 1 ? 'PROJETO' : 'PROJETOS'}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             /* LIST VIEW IMPROVED (USER REQUEST) */
@@ -920,13 +1482,24 @@ const AdminDashboard: React.FC = () => {
 
                 return (
                   <div key={client.id} className="space-y-4">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-5 rounded-2xl border group transition-all"
-                      style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-5 rounded-2xl border group transition-all shadow-lg relative overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)', // Gradiente Roxo
+                        borderColor: '#7C3AED'
+                      }}
                     >
-                      <div className="flex items-center gap-5 cursor-pointer" onClick={() => navigate(`/admin/clients/${client.id}`)}>
-                        <div className="w-16 h-16 rounded-xl border p-2 flex items-center justify-center shadow-lg" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                      <div
+                        className="flex items-center gap-5 cursor-pointer flex-1"
+                        onClick={() => {
+                          if (client.tipo_cliente === 'parceiro') {
+                            setSelectedPartnerId(client.id);
+                            setActiveTab('parceiros');
+                          } else {
+                            navigate(`/admin/clients/${client.id}`);
+                          }
+                        }}
+                      >
+                        <div className="w-16 h-16 rounded-xl border p-2 flex items-center justify-center shadow-lg bg-white border-white/20">
                           <img
                             src={client.logoUrl}
                             alt={client.name}
@@ -935,28 +1508,36 @@ const AdminDashboard: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <h2 className="text-xl font-black tracking-tight" style={{ color: 'var(--text)' }}>{client.name}</h2>
-                          <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--muted)' }}>
+                          <h2 className="text-xl font-black tracking-tight text-white mb-1">{client.name}</h2>
+                          <div className="flex items-center gap-2 text-sm font-medium text-white/80 uppercase tracking-widest text-[10px]">
                             <span>{clientProjects.length} {clientProjects.length === 1 ? 'projeto' : 'projetos'}</span>
-                            <span className="text-slate-600">•</span>
+                            <span className="text-white/40">•</span>
                             <span>{clientTasks.length} {clientTasks.length === 1 ? 'tarefa' : 'tarefas'}</span>
+                            {client.tipo_cliente === 'parceiro' && (
+                              <>
+                                <span className="text-white/40">•</span>
+                                <span className="bg-white/20 px-2 py-0.5 rounded-full border border-white/10">Parceiro</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3 mt-4 md:mt-0">
                         <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/admin/clients/${client.id}`); }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-bold text-xs border"
-                          style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)', borderColor: 'var(--border)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (client.tipo_cliente === 'parceiro') {
+                              setSelectedPartnerId(client.id);
+                              setActiveTab('parceiros');
+                            } else {
+                              navigate(`/admin/clients/${client.id}`);
+                            }
+                          }}
+                          className="flex items-center gap-2 px-6 py-2.5 bg-white text-purple-700 hover:bg-purple-50 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest shadow-xl group"
                         >
-                          <Edit2 className="w-3.5 h-3.5" /> Editar
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/admin/clients/${client.id}/projects/new`); }}
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all font-bold text-xs shadow-sm"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Novo Projeto
+                          Ver Detalhes
+                          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                         </button>
                       </div>
                     </div>
@@ -976,16 +1557,21 @@ const AdminDashboard: React.FC = () => {
                                 whileHover={{ y: -4 }}
                                 key={project.id}
                                 onClick={() => navigate(`/admin/projects/${project.id}`)}
-                                className="min-w-[280px] max-w-[280px] border rounded-2xl p-5 cursor-pointer transition-all group/card shadow-lg relative"
-                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                                className="min-w-[280px] max-w-[280px] border rounded-2xl p-5 cursor-pointer transition-all group/card shadow-sm hover:shadow-md relative overflow-hidden"
+                                style={{
+                                  backgroundColor: 'var(--surface)',
+                                  borderColor: 'var(--border)'
+                                }}
                               >
+                                {/* Accent line at the top to keep the premium purple identity */}
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-70" />
                                 {isAdmin && (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setProjectToDelete(project.id);
                                     }}
-                                    className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all z-10 opacity-0 group-hover/card:opacity-100"
+                                    className="absolute top-3 right-3 p-1.5 text-purple-400 hover:text-red-500 hover:bg-white rounded-lg transition-all z-10 opacity-0 group-hover/card:opacity-100"
                                     title="Excluir Projeto"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -994,26 +1580,28 @@ const AdminDashboard: React.FC = () => {
                                 <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider" style={{ color: 'var(--text)' }}>{project.name}</h4>
 
                                 <div className="space-y-4">
-                                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+                                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-purple-800/60">
                                     <span>Evolução Física</span>
-                                    <span style={{ color: 'var(--brand)' }}>{progress}%</span>
+                                    <span className="text-purple-700">{progress}%</span>
                                   </div>
-                                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
                                     <div
-                                      className="h-full bg-gradient-to-r from-[var(--brand)] to-[var(--primary-hover)] transition-all duration-1000"
+                                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-1000"
                                       style={{ width: `${progress}%` }}
                                     />
                                   </div>
 
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                                      <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
+                                      <CheckSquare className="w-3.5 h-3.5 text-purple-500" />
                                       <span>{doneTasks}/{projectTasks.length}</span>
                                     </div>
-                                    <div className={`p-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border flex items-center gap-1 ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                    <div className={`p-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border flex items-center gap-1 shadow-sm ${project.status === 'Concluído' || project.status === 'Done' ? 'text-emerald-600 border-emerald-200 bg-emerald-500/5' : 'text-blue-600 border-blue-200 bg-blue-500/5'
                                       }`}>
-                                      <div className={`w-1 h-1 rounded-full ${project.status === 'Concluído' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                                      {project.status || 'Ativo'}
+                                      <div className={`w-1 h-1 rounded-full ${project.status === 'Concluído' || project.status === 'Done' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                      {project.status === 'Done' ? 'CONCLUÍDO' :
+                                        project.status === 'In Progress' ? 'EM ANDAMENTO' :
+                                          String(project.status || 'ATIVO').toUpperCase()}
                                     </div>
                                   </div>
 
@@ -1068,21 +1656,26 @@ const AdminDashboard: React.FC = () => {
 
                             return (
                               <div key={project.id} className="space-y-3">
-                                {/* Project Banner Bar */}
-                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 rounded-2xl border transition-all"
-                                  style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                {/* Project Banner Bar - Adaptive Standard Surface */}
+                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 p-4 rounded-2xl border transition-all relative overflow-hidden" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
 
-                                  <div className="flex items-center gap-4 flex-1">
-                                    <div className="w-1.5 h-10 rounded-full bg-gradient-to-b from-blue-500 to-purple-600 shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
+                                  {/* Accent Line Left */}
+                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 dark:bg-purple-600" />
+
+                                  <div className="flex items-center gap-4 flex-1 pl-2">
+                                    {/* Removed redundant inner bar, using border accent instead */}
                                     <div className="flex flex-col">
                                       <h4 className="font-black text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text)' }}>
                                         {project.name}
                                       </h4>
                                       <div className="flex items-center gap-3">
-                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${project.status === 'Concluído' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-                                          {project.status || 'Ativo'}
+                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${project.status === 'Concluído' || project.status === 'Done' ? 'text-emerald-500 border-emerald-200 bg-emerald-500/5' : 'text-blue-500 border-blue-200 bg-blue-500/5'
+                                          }`}>
+                                          {project.status === 'Done' ? 'CONCLUÍDO' :
+                                            project.status === 'In Progress' ? 'EM ANDAMENTO' :
+                                              String(project.status || 'ATIVO').toUpperCase()}
                                         </div>
-                                        <span className="text-[10px] font-bold opacity-30" style={{ color: 'var(--text)' }}>•</span>
+                                        <span className="text-[10px] font-bold opacity-30 text-purple-900 dark:text-purple-300">•</span>
                                         <span className="text-[10px] font-bold" style={{ color: 'var(--muted)' }}>
                                           {projectTasks.length} {projectTasks.length === 1 ? 'Tarefa' : 'Tarefas'}
                                         </span>
@@ -1090,32 +1683,38 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center justify-between md:justify-end gap-6 px-4 border-t md:border-t-0 md:border-l pt-4 md:pt-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                  <div className="flex items-center justify-between md:justify-end gap-6 px-4 border-t md:border-t-0 md:border-l pt-4 md:pt-0 border-purple-200/50 dark:border-white/5">
                                     {/* Evolution Stats */}
                                     <div className="flex flex-col min-w-[90px]">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Evolução Média</span>
+                                      <div className="flex items-center gap-1 mb-1 opacity-50">
+                                        <span className="text-[8px] font-black uppercase tracking-tighter" style={{ color: 'var(--muted)' }}>Evolução Média</span>
+                                        <InfoTooltip title="Média de Evolução" content="Média aritmética do progresso manual inserido pelos colaboradores em todas as tarefas deste projeto." />
+                                      </div>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-sm font-black" style={{ color: 'var(--brand)' }}>{avgProgress}%</span>
-                                        <div className="flex-1 h-1 w-12 bg-white/5 rounded-full overflow-hidden">
-                                          <div className="h-full bg-[var(--brand)]" style={{ width: `${avgProgress}%` }} />
+                                        <span className="text-sm font-black" style={{ color: 'var(--primary)' }}>{avgProgress}%</span>
+                                        <div className="flex-1 h-1 w-12 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
+                                          <div className="h-full" style={{ width: `${avgProgress}%`, backgroundColor: 'var(--primary)' }} />
                                         </div>
                                       </div>
                                     </div>
 
                                     {/* Completion Stats */}
                                     <div className="flex flex-col">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Conclusão</span>
+                                      <div className="flex items-center gap-1 mb-1 opacity-50">
+                                        <span className="text-[8px] font-black uppercase tracking-tighter" style={{ color: 'var(--muted)' }}>Conclusão</span>
+                                        <InfoTooltip title="Status de Entrega" content="Quantidade de tarefas com status 'Done' em relação ao total de tarefas criadas." />
+                                      </div>
                                       <div className="flex items-center gap-2">
-                                        <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
+                                        <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--primary)' }} />
                                         <span className="text-sm font-black" style={{ color: 'var(--text)' }}>{doneTasks}/{projectTasks.length}</span>
                                       </div>
                                     </div>
 
                                     <button
                                       onClick={() => navigate(`/admin/projects/${project.id}`)}
-                                      className="p-2 hover:bg-white/5 rounded-xl transition-all border border-white/5 group"
+                                      className="p-2 hover:bg-white/40 dark:hover:bg-white/10 rounded-xl transition-all border border-purple-200 dark:border-purple-700/50 text-purple-400 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-200 group"
                                     >
-                                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" style={{ color: 'var(--muted)' }} />
+                                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                                     </button>
                                   </div>
                                 </div>
@@ -1139,11 +1738,15 @@ const AdminDashboard: React.FC = () => {
                                               {task.title}
                                             </h5>
                                             <div className="mt-1 flex items-center gap-2">
-                                              <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-md border ${task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                                task.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                                  'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                              <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-md border ${task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                                task.status === 'Review' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                                                  task.status === 'In Progress' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                                    'bg-slate-500/10 text-slate-500 border-slate-500/20'
                                                 }`}>
-                                                {task.status}
+                                                {task.status === 'Done' ? 'CONCLUÍDO' :
+                                                  task.status === 'Review' ? 'EM TESTE' :
+                                                    task.status === 'In Progress' ? 'EM ANDAMENTO' :
+                                                      'PENDENTE'}
                                               </span>
                                             </div>
                                           </div>
@@ -1152,7 +1755,17 @@ const AdminDashboard: React.FC = () => {
                                             {task.developerId && (
                                               <div className="w-7 h-7 rounded-lg border p-0.5 shadow-sm" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
                                                 {users.find(u => u.id === task.developerId)?.avatarUrl ? (
-                                                  <img src={users.find(u => u.id === task.developerId)?.avatarUrl} className="w-full h-full object-cover rounded" alt="Dev" />
+                                                  <img
+                                                    src={users.find(u => u.id === task.developerId)?.avatarUrl}
+                                                    className="w-full h-full object-cover rounded"
+                                                    alt="Dev"
+                                                    onError={(e) => {
+                                                      const target = e.target as HTMLImageElement;
+                                                      target.onerror = null;
+                                                      const name = users.find(u => u.id === task.developerId)?.name || 'Dev';
+                                                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f8fafc&color=475569`;
+                                                    }}
+                                                  />
                                                 ) : (
                                                   <div className="w-full h-full flex items-center justify-center font-bold text-[8px] uppercase" style={{ color: 'var(--muted)' }}>
                                                     {(task.developer || '??').substring(0, 2)}
@@ -1188,7 +1801,8 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      )
+      }
 
       {/* FLOAT SCROLL TO TOP */}
       <AnimatePresence>
@@ -1202,6 +1816,322 @@ const AdminDashboard: React.FC = () => {
           >
             <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* PAINEL DE DETALHES DO PARCEIRO (SIDEBAR) */}
+      <AnimatePresence>
+        {showPartnerDetailsId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowPartnerDetailsId(null)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[100]"
+            />
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--surface)] shadow-2xl z-[101] flex flex-col border-l border-[var(--border)]"
+            >
+              {(() => {
+                const partner = partnerMetrics.find(p => p.id === showPartnerDetailsId);
+                const internalResp = users?.find(u => u.id === partner?.responsavel_interno_id);
+                if (!partner) return null;
+
+                return (
+                  <>
+                    {/* Header do Painel */}
+                    <div className="p-8 border-b border-[var(--border)] bg-gradient-to-br from-purple-500/10 to-transparent relative">
+                      <button onClick={() => setShowPartnerDetailsId(null)} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <X size={20} className="text-[var(--text)]" />
+                      </button>
+                      <div className="flex items-center gap-5 mt-4">
+                        <div className="w-20 h-20 bg-white rounded-3xl p-3 shadow-xl border border-[var(--border)]">
+                          <img
+                            src={partner.logoUrl}
+                            className="w-full h-full object-contain"
+                            alt={partner.name}
+                            onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }}
+                          />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-black text-[var(--textTitle)] leading-tight">{partner.name}</h2>
+                          <p className="text-xs font-bold text-purple-600 uppercase tracking-widest mt-1">Informações do Canal</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar pr-6">
+                      {/* Sessão 1: Identificação Básica */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-slate-100 border border-slate-200">
+                            <Building2 size={16} className="text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Documentação</p>
+                            <p className="text-sm font-mono font-bold text-[var(--text)]">{partner.cnpj || 'CNPJ Não informado'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-slate-100 border border-slate-200">
+                            <Calendar size={16} className="text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Tempo de Parceria</p>
+                            <p className="text-sm font-bold text-[var(--text)]">{partner.tenure}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sessão de Contato */}
+                      <div className="space-y-4">
+                        <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                          <Handshake size={12} className="text-purple-500" /> Contatos e Responsáveis
+                        </h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-100">
+                            <p className="text-[9px] font-black text-purple-600 uppercase mb-3">Gestão Nic-Labs (Interno)</p>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-purple-500/20">
+                                {internalResp?.name?.charAt(0) || 'N'}
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-[var(--text)]">{internalResp?.name || 'Não atribuído'}</p>
+                                <p className="text-[11px] text-[var(--muted)] font-bold">{internalResp?.email || '-'}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-5 rounded-2xl bg-white border border-[var(--border)] shadow-sm">
+                            <p className="text-[9px] font-black text-[var(--muted)] uppercase mb-3">Ponto de Contato (Parceiro)</p>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <User size={14} className="text-slate-400" />
+                                <p className="text-sm font-black text-[var(--text)]">{partner.responsavel_externo || 'Não informado'}</p>
+                              </div>
+                              <div className="flex flex-col gap-2 pl-6">
+                                {partner.email_contato && (
+                                  <a href={`mailto:${partner.email_contato}`} className="flex items-center gap-2 text-[11px] font-bold text-blue-600 hover:underline">
+                                    <Mail size={12} /> {partner.email_contato}
+                                  </a>
+                                )}
+                                {partner.telefone && (
+                                  <span className="flex items-center gap-2 text-[11px] font-bold text-[var(--text-2)]">
+                                    <Phone size={12} /> {partner.telefone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sessão Financeira e Métricas */}
+                      <div className="space-y-4">
+                        <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                          <Target size={12} className="text-emerald-500" /> Saúde do Canal
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-5 rounded-2xl border border-emerald-100 bg-emerald-50/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <p className="text-[9px] font-black text-emerald-600 uppercase">Faturamento</p>
+                            </div>
+                            <p className="text-lg font-black text-[var(--textTitle)] font-mono">
+                              {partner.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                            </p>
+                          </div>
+                          <div className="p-5 rounded-2xl border border-blue-100 bg-blue-50/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                              <p className="text-[9px] font-black text-blue-600 uppercase">Esforço (Horas)</p>
+                            </div>
+                            <p className="text-lg font-black text-[var(--textTitle)] font-mono">
+                              {Math.round(partner.totalHours)}<span className="text-xs ml-0.5 opacity-50 uppercase">h</span>
+                            </p>
+                          </div>
+                          <div className="p-5 rounded-2xl border border-purple-100 bg-purple-50/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                              <p className="text-[9px] font-black text-purple-600 uppercase">Contas Ativas</p>
+                            </div>
+                            <p className="text-lg font-black text-[var(--textTitle)] font-mono">
+                              {partner.projectCount}
+                            </p>
+                          </div>
+                          <div className="p-5 rounded-2xl border border-amber-100 bg-amber-50/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <p className="text-[9px] font-black text-amber-600 uppercase">Progresso Médio</p>
+                            </div>
+                            <p className="text-lg font-black text-[var(--textTitle)] font-mono">
+                              {Math.round(partner.averageProgress)}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Links e Ações */}
+                      <div className="pt-6">
+                        <button
+                          onClick={() => { navigate(`/admin/clients/${partner.id}`); setShowPartnerDetailsId(null); }}
+                          className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-purple-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-purple-500/20 active:scale-[0.98]"
+                        >
+                          <Edit2 size={16} /> Detalhes do Cadastro Completo
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* PAINEL DE DETALHES DO CLIENTE (SIDEBAR) */}
+      <AnimatePresence>
+        {showClientDetailsId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowClientDetailsId(null)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[100]"
+            />
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--surface)] shadow-2xl z-[101] flex flex-col border-l border-[var(--border)]"
+            >
+              {(() => {
+                const client = safeClients.find(c => c.id === showClientDetailsId);
+                const clientProjects = safeProjects.filter(p => p.clientId === showClientDetailsId);
+                const partner = client?.partner_id ? safeClients.find(c => c.id === client.partner_id) : null;
+                if (!client) return null;
+
+                return (
+                  <>
+                    {/* Header do Painel */}
+                    <div className="p-8 border-b border-[var(--border)] bg-gradient-to-br from-blue-500/10 to-transparent relative">
+                      <button onClick={() => setShowClientDetailsId(null)} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <X size={20} className="text-[var(--text)]" />
+                      </button>
+                      <div className="flex items-center gap-5 mt-4">
+                        <div className="w-20 h-20 bg-white rounded-3xl p-3 shadow-xl border border-[var(--border)]">
+                          <img
+                            src={client.logoUrl}
+                            className="w-full h-full object-contain"
+                            alt={client.name}
+                            onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${client.name.charAt(0)}`; }}
+                          />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-black text-[var(--textTitle)] leading-tight">{client.name}</h2>
+                          <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">Informações do Cliente</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar pr-6">
+                      {/* Sessão 1: Identificação Básica */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            <Building2 size={16} className="text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Documentação</p>
+                            <p className="text-sm font-mono font-bold text-[var(--text)]">{client.cnpj || 'CNPJ Não informado'}</p>
+                          </div>
+                        </div>
+                        {partner && (
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                              <Handshake size={16} className="text-slate-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Parceiro</p>
+                              <p className="text-sm font-bold text-[var(--text)]">{partner.name}</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            <Briefcase size={16} className="text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Projetos Ativos</p>
+                            <p className="text-sm font-bold text-[var(--text)]">{clientProjects.length} {clientProjects.length === 1 ? 'projeto' : 'projetos'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sessão de Contato */}
+                      {(client.contato_principal || client.email_contato || client.telefone) && (
+                        <div className="space-y-4">
+                          <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                            <User size={12} className="text-blue-500" /> Contatos
+                          </h3>
+                          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/20 border border-[var(--border)] shadow-sm">
+                            <div className="space-y-3">
+                              {client.contato_principal && (
+                                <div className="flex items-center gap-2">
+                                  <User size={14} className="text-slate-400" />
+                                  <p className="text-sm font-black text-[var(--text)]">{client.contato_principal}</p>
+                                </div>
+                              )}
+                              <div className="flex flex-col gap-2 pl-6">
+                                {client.email_contato && (
+                                  <a href={`mailto:${client.email_contato}`} className="flex items-center gap-2 text-[11px] font-bold text-blue-600 hover:underline">
+                                    <Mail size={12} /> {client.email_contato}
+                                  </a>
+                                )}
+                                {client.telefone && (
+                                  <span className="flex items-center gap-2 text-[11px] font-bold text-[var(--text-2)]">
+                                    <Phone size={12} /> {client.telefone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Projetos do Cliente */}
+                      {clientProjects.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2 border-b border-[var(--border)] pb-2">
+                            <Briefcase size={12} className="text-blue-500" /> Projetos
+                          </h3>
+                          <div className="space-y-3">
+                            {clientProjects.map(project => (
+                              <div key={project.id} className="p-4 rounded-xl bg-blue-50/30 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/20 hover:border-blue-300 dark:hover:border-blue-500/40 transition-all cursor-pointer" onClick={() => { navigate(`/admin/projects/${project.id}`); setShowClientDetailsId(null); }}>
+                                <p className="text-sm font-black text-[var(--text)] mb-1">{project.name}</p>
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--muted)]">
+                                  <span>{project.status || 'Ativo'}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Botão para ver detalhes completos */}
+                      <div className="pt-6">
+                        <button
+                          onClick={() => { navigate(`/admin/clients/${client.id}`); setShowClientDetailsId(null); }}
+                          className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 active:scale-[0.98]"
+                        >
+                          <Edit2 size={16} /> Detalhes do Cadastro Completo
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -1222,7 +2152,7 @@ const AdminDashboard: React.FC = () => {
         }}
         onCancel={() => setProjectToDelete(null)}
       />
-    </div>
+    </div >
   );
 };
 

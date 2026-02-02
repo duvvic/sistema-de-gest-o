@@ -202,7 +202,15 @@ const AdminMonitoringView: React.FC = () => {
                         <div className="flex items-center gap-4">
                             <div className="flex -space-x-2">
                                 <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-white">
-                                    <img src={dev?.avatarUrl || `https://ui-avatars.com/api/?name=${dev?.name || 'Dev'}`} className="w-full h-full object-cover" />
+                                    <img
+                                        src={dev?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(dev?.name || 'Dev')}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.onerror = null;
+                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(dev?.name || 'Dev')}&background=f8fafc&color=475569`;
+                                        }}
+                                    />
                                 </div>
                             </div>
                             <div className="flex flex-col">
@@ -288,7 +296,15 @@ const AdminMonitoringView: React.FC = () => {
                             <div className="flex -space-x-3">
                                 {members.slice(0, 4).map(m => (
                                     <div key={m.id} className="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-800 overflow-hidden shadow-lg">
-                                        <img src={m.avatarUrl || `https://ui-avatars.com/api/?name=${m.name}`} className="w-full h-full object-cover" />
+                                        <img
+                                            src={m.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.onerror = null;
+                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=f8fafc&color=475569`;
+                                            }}
+                                        />
                                     </div>
                                 ))}
                                 {members.length > 4 && (
@@ -644,6 +660,7 @@ const AdminMonitoringView: React.FC = () => {
 
                                         const finalStatusLabel = delayed ? `Atrasado` : isDueToday ? 'Entrega Hoje' : statusLabel;
                                         const extraCollaborators = (task.collaboratorIds || [])
+                                            .filter(id => id !== task.developerId) // Evitar duplicar o dono
                                             .map(id => userMap.get(id))
                                             .filter(Boolean) as User[];
 
@@ -655,6 +672,11 @@ const AdminMonitoringView: React.FC = () => {
                                                         <img
                                                             src={client?.logoUrl || 'https://placehold.co/100x100?text=Logo'}
                                                             className="w-full h-full object-contain"
+                                                            onError={(e) => {
+                                                                const target = e.target as HTMLImageElement;
+                                                                target.onerror = null;
+                                                                target.src = 'https://placehold.co/100x100?text=Logo';
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>
@@ -673,10 +695,18 @@ const AdminMonitoringView: React.FC = () => {
                                                         <span className="text-[12px] font-bold text-purple-700 uppercase truncate">
                                                             Proj: {project?.name || 'N/A'}
                                                         </span>
-                                                        {task.status !== 'Done' && task.estimatedDelivery && (
-                                                            <span className={`text-[12px] font-black uppercase flex items-center gap-1 mt-1 ${isDueToday ? 'text-sky-600' : 'text-purple-600'}`}>
-                                                                📅 {formattedDate}{countdownText ? ` • ${countdownText}` : ''}
-                                                            </span>
+                                                        {task.status === 'Done' ? (
+                                                            task.actualDelivery && (
+                                                                <span className="text-[12px] font-black uppercase flex items-center gap-1 mt-1 text-emerald-600">
+                                                                    ✅ Entregue em {new Date(task.actualDelivery + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                                </span>
+                                                            )
+                                                        ) : (
+                                                            task.estimatedDelivery && (
+                                                                <span className={`text-[12px] font-black uppercase flex items-center gap-1 mt-1 ${isDueToday ? 'text-sky-600' : 'text-purple-600'}`}>
+                                                                    📅 {formattedDate}{countdownText ? ` • ${countdownText}` : ''}
+                                                                </span>
+                                                            )
                                                         )}
                                                     </div>
                                                 </div>
@@ -696,8 +726,13 @@ const AdminMonitoringView: React.FC = () => {
                                                         <div className="flex -space-x-1.5">
                                                             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-purple-200 shadow-sm shrink-0 z-10 bg-white">
                                                                 <img
-                                                                    src={dev?.avatarUrl || `https://ui-avatars.com/api/?name=${task.developer}&background=f8fafc&color=475569`}
+                                                                    src={dev?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(task.developer)}&background=f8fafc&color=475569`}
                                                                     className="w-full h-full object-cover"
+                                                                    onError={(e) => {
+                                                                        const target = e.target as HTMLImageElement;
+                                                                        target.onerror = null;
+                                                                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(task.developer)}&background=f8fafc&color=475569`;
+                                                                    }}
                                                                 />
                                                             </div>
                                                             {(extraCollaborators || []).slice(0, 3).map((collab) => (
@@ -792,7 +827,24 @@ const AdminMonitoringView: React.FC = () => {
                                                 <div className="flex items-center gap-5 min-w-0">
                                                     <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center border border-slate-100 group-hover:border-blue-200 transition-all overflow-hidden p-1.5 shadow-sm">
                                                         {client?.logoUrl ? (
-                                                            <img src={client.logoUrl} alt={client.name} className="w-full h-full object-contain" />
+                                                            <img
+                                                                src={client.logoUrl}
+                                                                alt={client.name}
+                                                                className="w-full h-full object-contain"
+                                                                onError={(e) => {
+                                                                    const target = e.target as HTMLImageElement;
+                                                                    target.onerror = null;
+                                                                    target.style.display = 'none';
+                                                                    // Fallback to icon
+                                                                    const parent = target.parentElement;
+                                                                    if (parent) {
+                                                                        const icon = document.createElement('div');
+                                                                        icon.className = "flex items-center justify-center w-full h-full text-slate-300";
+                                                                        icon.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-box'><path d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/><path d='m3.3 7 8.7 5 8.7-5'/><path d='M12 22V12'/></svg>";
+                                                                        parent.appendChild(icon);
+                                                                    }
+                                                                }}
+                                                            />
                                                         ) : (
                                                             <ProjIcon className="w-6 h-6 text-slate-300 group-hover:text-blue-500 transition-colors" />
                                                         )}
@@ -918,8 +970,8 @@ const AdminMonitoringView: React.FC = () => {
                     }
                 `}</style>
 
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

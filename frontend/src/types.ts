@@ -36,6 +36,9 @@ export interface Client {
   telefone?: string;
   tipo_cliente?: 'parceiro' | 'cliente_final';
   partner_id?: string;
+  responsavel_interno_id?: string;
+  responsavel_externo?: string;
+  email_contato?: string;
 }
 
 export interface Project {

@@ -7,12 +7,14 @@ interface TimePickerProps {
     value: string;
     onChange: (value: string) => void;
     icon?: React.ReactNode;
+    disabledHours?: string[]; // Array of hours to disable (e.g., ['08', '09', '10'])
+    disabledRanges?: { start: string; end: string }[]; // Array of time ranges to disable
 }
 
 const ITEM_HEIGHT = 40;
 const WHEEL_HEIGHT = 200;
 
-const TimePicker: React.FC<TimePickerProps> = ({ label, value, onChange, icon }) => {
+const TimePicker: React.FC<TimePickerProps> = ({ label, value, onChange, icon, disabledHours = [], disabledRanges = [] }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [activeColumn, setActiveColumn] = useState<'hours' | 'minutes'>('hours');
     const containerRef = useRef<HTMLDivElement>(null);
@@ -27,7 +29,7 @@ const TimePicker: React.FC<TimePickerProps> = ({ label, value, onChange, icon })
     const bufferTimeout = useRef<NodeJS.Timeout>(null);
 
     // Arrays
-    const hours = useMemo(() => Array.from({ length: 13 }, (_, i) => (i + 7).toString().padStart(2, '0')), []);
+    const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')), []);
     const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')), []);
 
     // Snap to valid interval on load/change
@@ -85,6 +87,8 @@ const TimePicker: React.FC<TimePickerProps> = ({ label, value, onChange, icon })
     };
 
     const updateTime = (h: string, m: string) => {
+        // Check if hour is disabled
+        if (disabledHours.includes(h)) return;
         onChange(`${h}:${m}`);
     };
 
@@ -99,8 +103,8 @@ const TimePicker: React.FC<TimePickerProps> = ({ label, value, onChange, icon })
         const num = parseInt(newBuffer, 10);
 
         if (activeColumn === 'hours') {
-            if (newBuffer.length === 2 || num > 1) { // >1 because 2 forces 20 which is >19 (invalid) or valid 07-19
-                let val = Math.max(7, Math.min(19, num)).toString().padStart(2, '0');
+            if (newBuffer.length === 2 || num > 2) {
+                let val = Math.max(0, Math.min(23, num)).toString().padStart(2, '0');
                 // Better logic: if user types '0', wait. '07' ok. '6' -> wait? '8' -> '08'.
                 // Simple approach: strict clamp
                 updateTime(val, minutesStr);
@@ -262,17 +266,27 @@ const TimePicker: React.FC<TimePickerProps> = ({ label, value, onChange, icon })
                                         onClick={() => setActiveColumn('hours')}
                                     >
                                         <div className="h-[80px]" />
-                                        {hours.map(h => (
-                                            <div
-                                                key={h}
-                                                data-value={h}
-                                                onClick={(e) => { e.stopPropagation(); updateTime(h, minutesStr); setActiveColumn('hours'); }}
-                                                className={`h-[40px] flex items-center justify-center snap-center font-bold text-xl transition-all
-                                                ${hoursStr === h ? 'text-[var(--primary)] scale-110' : 'opacity-40 hover:opacity-70'}`}
-                                            >
-                                                {h}
-                                            </div>
-                                        ))}
+                                        {hours.map(h => {
+                                            const isDisabled = disabledHours.includes(h);
+                                            return (
+                                                <div
+                                                    key={h}
+                                                    data-value={h}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!isDisabled) {
+                                                            updateTime(h, minutesStr);
+                                                            setActiveColumn('hours');
+                                                        }
+                                                    }}
+                                                    className={`h-[40px] flex items-center justify-center snap-center font-bold text-xl transition-all
+                                                ${isDisabled ? 'opacity-20 cursor-not-allowed line-through text-red-400' :
+                                                            hoursStr === h ? 'text-[var(--primary)] scale-110' : 'opacity-40 hover:opacity-70 cursor-pointer'}`}
+                                                >
+                                                    {h}
+                                                </div>
+                                            );
+                                        })}
                                         <div className="h-[80px]" />
                                     </div>
 

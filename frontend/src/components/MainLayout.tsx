@@ -39,7 +39,7 @@ const MainLayout: React.FC = () => {
     // Definição dos menus (movido para cima para ser usado na lógica de animação do menu)
     const adminMenuItems = [
         { path: '/admin/monitoring', icon: Activity, label: 'Monitoramento' },
-        { path: '/admin/clients', icon: Briefcase, label: 'Portfólio' },
+        { path: '/admin/clients', icon: Briefcase, label: 'Gestão' },
         { path: '/tasks', icon: CheckSquare, label: 'Tarefas' },
         { path: '/admin/team', icon: Users, label: 'Colaboradores' },
         { path: '/admin/rh', icon: Palmtree, label: 'Gestão RH' },
@@ -67,7 +67,7 @@ const MainLayout: React.FC = () => {
         : developerMenuItems;
 
     // Listamos as rotas "raiz" do menu para forçar a animação
-    const MAIN_PATHS = menuItems.map(m => m.path).concat(['/profile']);
+    const MAIN_PATHS = React.useMemo(() => menuItems.map(m => m.path).concat(['/profile']), [menuItems]);
 
     // Fechar sidebar automaticamente em telas específicas (ex: Executive Insights)
     React.useEffect(() => {
@@ -91,54 +91,38 @@ const MainLayout: React.FC = () => {
     const prevPathRef = React.useRef(location.pathname);
     const [direction, setDirection] = useState<'root' | 'forward' | 'back' | 'menu-down' | 'menu-up'>('root');
 
-    // UseLayoutEffect roda antes da pintura browser, evitando "flash"
-    React.useLayoutEffect(() => {
-        const prevPath = prevPathRef.current;
-        const currentPath = location.pathname;
-
-        if (prevPath === currentPath) return;
-
-        // Normaliza paths removendo barras finais para comparação segura
-        const prev = prevPath.endsWith('/') && prevPath !== '/' ? prevPath.slice(0, -1) : prevPath;
-        const curr = currentPath.endsWith('/') && currentPath !== '/' ? currentPath.slice(0, -1) : currentPath;
+    // Sincronizar direção imediatamente ao detectar mudança de path
+    if (prevPathRef.current !== location.pathname) {
+        const prev = prevPathRef.current.endsWith('/') && prevPathRef.current !== '/' ? prevPathRef.current.slice(0, -1) : prevPathRef.current;
+        const curr = location.pathname.endsWith('/') && location.pathname !== '/' ? location.pathname.slice(0, -1) : location.pathname;
 
         const isPrevMain = MAIN_PATHS.some(p => prev === p);
         const isCurrentMain = MAIN_PATHS.some(p => curr === p);
 
         let newDir: 'root' | 'forward' | 'back' | 'menu-down' | 'menu-up' = 'root';
 
-        // Prioridade 1: Navegação Hierárquica Explícita (Detalhes)
         if (curr.startsWith(prev + '/')) {
             newDir = 'forward';
         } else if (prev.startsWith(curr + '/')) {
             newDir = 'back';
-        }
-        // Prioridade 2: Navegação entre Menus Principais
-        else if (isPrevMain && isCurrentMain) {
+        } else if (isPrevMain && isCurrentMain) {
             const prevIndex = menuItems.findIndex(m => m.path === prev);
             const currIndex = menuItems.findIndex(m => m.path === curr);
-
             if (prevIndex !== -1 && currIndex !== -1) {
-                if (currIndex > prevIndex) newDir = 'menu-down'; // Clicou em item abaixo -> Vem de cima
-                else newDir = 'menu-up';   // Clicou em item acima -> Vem de baixo
+                newDir = currIndex > prevIndex ? 'menu-down' : 'menu-up';
             } else {
-                newDir = 'root'; // Caso de fallback (ex: profile)
+                newDir = 'root';
             }
-        }
-        // Prioridade 3: Fallback usando NavigationType (POP geralmente é voltar)
-        else if (navType === 'POP') {
+        } else if (navType === 'POP') {
             newDir = 'back';
-        }
-        // Fallback final
-        else {
+        } else {
             newDir = 'root';
         }
 
-        setDirection(newDir);
-        prevPathRef.current = currentPath;
-    }, [location.pathname, menuItems, navType]);
+        if (direction !== newDir) setDirection(newDir);
+        prevPathRef.current = location.pathname;
+    }
 
-    // Variantes de animação refinadas
     // Variantes de animação premium estilo iOS Stacking (Impilhamento)
     const variants = {
         initial: (dir: string) => {
@@ -147,25 +131,19 @@ const MainLayout: React.FC = () => {
                 opacity: 1,
                 scale: 1,
                 zIndex: 50,
-                boxShadow: '20px 0 30px rgba(0,0,0,0.3)',
-                position: 'absolute' as const,
-                width: '100%',
-                height: '100%'
+                boxShadow: '-10px 0 30px rgba(0,0,0,0.1)', // Sombra no lado esquerdo do que está entrando
             };
             if (dir === 'back') return {
-                x: '-25%',
+                x: '-10%', // Efeito de profundidade sutil
                 opacity: 0.9,
-                scale: 0.94,
+                scale: 0.98,
                 zIndex: 0,
-                position: 'absolute' as const,
-                width: '100%',
-                height: '100%'
             };
 
-            if (dir === 'menu-down') return { y: '-10%', opacity: 0, scale: 0.98, position: 'absolute' as const, width: '100%', height: '100%', zIndex: 10 };
-            if (dir === 'menu-up') return { y: '10%', opacity: 0, scale: 0.98, position: 'absolute' as const, width: '100%', height: '100%', zIndex: 10 };
+            if (dir === 'menu-down') return { y: '5%', opacity: 0, scale: 0.98 };
+            if (dir === 'menu-up') return { y: '-5%', opacity: 0, scale: 0.98 };
 
-            return { opacity: 0, scale: 0.98, position: 'absolute' as const, width: '100%', height: '100%', zIndex: 10 };
+            return { opacity: 0, scale: 0.99 };
         },
         animate: {
             x: 0,
@@ -174,37 +152,33 @@ const MainLayout: React.FC = () => {
             scale: 1,
             zIndex: 10,
             transition: {
-                duration: 0.45,
+                duration: 0.4,
                 ease: [0.32, 0.72, 0, 1] as [number, number, number, number]
             }
         },
         exit: (dir: string) => {
             if (dir === 'forward') return {
-                x: '-25%',
+                x: '-10%',
                 opacity: 0.8,
-                scale: 0.94,
+                scale: 0.98,
                 zIndex: 0,
                 pointerEvents: 'none' as const,
-                position: 'absolute' as const,
-                width: '100%',
-                height: '100%'
+                transition: { duration: 0.4, ease: [0.32, 0.72, 0, 1] as [number, number, number, number] }
             };
             if (dir === 'back') return {
                 x: '100%',
                 opacity: 1,
                 scale: 1,
                 zIndex: 50,
-                boxShadow: '20px 0 30px rgba(0,0,0,0.3)',
+                boxShadow: '-10px 0 30px rgba(0,0,0,0.1)',
                 pointerEvents: 'none' as const,
-                position: 'absolute' as const,
-                width: '100%',
-                height: '100%'
+                transition: { duration: 0.4, ease: [0.32, 0.72, 0, 1] as [number, number, number, number] }
             };
 
-            if (dir === 'menu-down') return { y: '10%', opacity: 0, scale: 0.98, position: 'absolute' as const, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' as const };
-            if (dir === 'menu-up') return { y: '-10%', opacity: 0, scale: 0.98, position: 'absolute' as const, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' as const };
+            if (dir === 'menu-down') return { y: '-5%', opacity: 0, scale: 0.98, pointerEvents: 'none' as const, transition: { duration: 0.3, ease: [0.32, 0.72, 0, 1] as [number, number, number, number] } };
+            if (dir === 'menu-up') return { y: '5%', opacity: 0, scale: 0.98, pointerEvents: 'none' as const, transition: { duration: 0.3, ease: [0.32, 0.72, 0, 1] as [number, number, number, number] } };
 
-            return { opacity: 0, scale: 0.98, position: 'absolute' as const, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' as const };
+            return { opacity: 0, scale: 0.99, pointerEvents: 'none' as const, transition: { duration: 0.3 } };
         }
     };
 
@@ -360,7 +334,7 @@ const MainLayout: React.FC = () => {
             <div className="flex-1 overflow-hidden relative" style={{ background: 'var(--bg)' }}>
                 <div className="h-full w-full relative overflow-hidden"
                     style={{ backgroundColor: 'var(--bg)' }}>
-                    <AnimatePresence custom={direction} mode="popLayout">
+                    <AnimatePresence custom={direction}>
                         <motion.div
                             key={location.pathname}
                             custom={direction}
@@ -368,7 +342,7 @@ const MainLayout: React.FC = () => {
                             initial="initial"
                             animate="animate"
                             exit="exit"
-                            className="h-full w-full overflow-auto absolute inset-0 forced-solid-bg"
+                            className="h-full w-full overflow-auto absolute inset-0"
                             style={{ backgroundColor: 'var(--bg)' }}
                         >
                             <Outlet />

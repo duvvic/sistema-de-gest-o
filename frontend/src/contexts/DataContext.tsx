@@ -102,15 +102,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 3. Tarefas (Com Normalização)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'fato_tarefas' }, (payload) => {
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const userMap = new Map((usersRef.current).map(u => [u.id, u]));
+                    const userMap = new Map((usersRef.current || []).map(u => [u.id, u]));
                     const task = mapDbTaskToTask(payload.new, userMap);
                     setTasks(prev => {
                         const exists = prev.find(t => t.id === task.id);
-                        if (exists) return prev.map(t => t.id === task.id ? { ...t, ...task } : t);
+                        if (exists) return prev.map(t => t.id === task.id ? { ...t, ...task, collaboratorIds: t.collaboratorIds } : t);
                         return [task, ...prev];
                     });
                 } else if (payload.eventType === 'DELETE') {
                     setTasks(prev => prev.filter(t => t.id !== String(payload.old.id_tarefa_novo)));
+                }
+            })
+            // 3.1 Vínculos de Colaboradores (tarefa_colaboradores)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefa_colaboradores' }, (payload) => {
+                const taskId = String((payload.new as any)?.id_tarefa || (payload.old as any)?.id_tarefa);
+                const userId = String((payload.new as any)?.id_colaborador || (payload.old as any)?.id_colaborador);
+
+                if (payload.eventType === 'INSERT') {
+                    setTasks(prev => prev.map(t => t.id === taskId
+                        ? { ...t, collaboratorIds: [...(t.collaboratorIds || []).filter(id => id !== userId), userId] }
+                        : t
+                    ));
+                } else if (payload.eventType === 'DELETE') {
+                    setTasks(prev => prev.map(t => t.id === taskId
+                        ? { ...t, collaboratorIds: (t.collaboratorIds || []).filter(id => id !== userId) }
+                        : t
+                    ));
                 }
             })
             // 4. Colaboradores

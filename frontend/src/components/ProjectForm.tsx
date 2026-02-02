@@ -75,12 +75,12 @@ const ProjectForm: React.FC = () => {
       setCriticalDate(project.criticalDate || '');
       setDocLink(project.docLink || '');
       setGapsIssues(project.gapsIssues || '');
-      setImportantConsiderations(project.importantConsiderations || (project as any).important_considerations || '');
-      setWeeklyStatusReport(project.weeklyStatusReport || (project as any).weekly_status_report || '');
-      setComplexity((project as any).complexidade || 'Média');
-      setValorTotalRs((project as any).valor_total_rs || 0);
-      setHorasVendidas((project as any).horas_vendidas || 0);
-      setTorre((project as any).torre || '');
+      setImportantConsiderations(project.importantConsiderations || '');
+      setWeeklyStatusReport(project.weeklyStatusReport || '');
+      setComplexity(project.complexidade || 'Média');
+      setValorTotalRs(project.valor_total_rs || 0);
+      setHorasVendidas(project.horas_vendidas || 0);
+      setTorre(project.torre || '');
     }
   }, [project]);
 

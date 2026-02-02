@@ -161,7 +161,16 @@ const KanbanCard = ({
               )}
             </div>
             {client?.logoUrl && (
-              <img src={client.logoUrl} className="w-4 h-4 rounded-sm object-contain" alt="" />
+              <img
+                src={client.logoUrl}
+                className="w-4 h-4 rounded-sm object-contain"
+                alt=""
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.style.display = 'none';
+                }}
+              />
             )}
             <span className="text-[10px] uppercase font-bold truncate" style={{ color: 'var(--muted)' }}>
               {client?.name || 'Sem Empresa'}
@@ -224,7 +233,16 @@ const KanbanCard = ({
                   title={`Responsável: ${dev?.name || task.developer || 'N/A'}`}
                 >
                   {dev?.avatarUrl ? (
-                    <img src={dev.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={dev.avatarUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(dev?.name || task.developer || 'Dev')}&background=f8fafc&color=475569`;
+                      }}
+                    />
                   ) : (
                     <UserIcon size={12} />
                   )}
@@ -233,25 +251,36 @@ const KanbanCard = ({
             })()}
 
             {/* Colaboradores Extras */}
-            {(task.collaboratorIds || []).slice(0, 3).map(uid => {
-              const u = users.find(user => user.id === uid);
-              return (
-                <button
-                  key={uid}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); navigate(`/admin/team/${uid}`); }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center border hover:z-10 transition-all cursor-pointer bg-slate-50 overflow-hidden active:scale-95"
-                  style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
-                  title={`Colaborador: ${u?.name || uid}`}
-                >
-                  {u?.avatarUrl ? (
-                    <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon size={12} />
-                  )}
-                </button>
-              );
-            })}
+            {(task.collaboratorIds || [])
+              .filter(uid => uid !== task.developerId) // Evitar duplicar o dono se ele estiver no array
+              .slice(0, 3).map(uid => {
+                const u = users.find(user => user.id === uid);
+                return (
+                  <button
+                    key={uid}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/team/${uid}`); }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center border hover:z-10 transition-all cursor-pointer bg-slate-50 overflow-hidden active:scale-95"
+                    style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                    title={`Colaborador: ${u?.name || uid}`}
+                  >
+                    {u?.avatarUrl ? (
+                      <img
+                        src={u.avatarUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u?.name || uid)}&background=f8fafc&color=475569`;
+                        }}
+                      />
+                    ) : (
+                      <UserIcon size={12} />
+                    )}
+                  </button>
+                );
+              })}
 
             {(task.collaboratorIds?.length || 0) > 3 && (
               <div
@@ -271,7 +300,13 @@ const KanbanCard = ({
             <Calendar size={10} />
             <span>
               {(() => {
-                if (task.status === 'Done') return '-';
+                if (task.status === 'Done') {
+                  if (!task.actualDelivery) return 'Concluído';
+                  const parts = task.actualDelivery.split('-');
+                  if (parts.length !== 3) return 'Concluído';
+                  return `Entregue ${parts[2]}/${parts[1]}`;
+                }
+
                 if (!task.estimatedDelivery) return '-';
 
                 const parts = task.estimatedDelivery.split('-');
@@ -443,7 +478,7 @@ const KanbanColumn = ({
 export const KanbanBoard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, isAdmin } = useAuth();
   const { tasks, clients, projects, users, updateTask, deleteTask, loading } = useDataController();
 
@@ -747,7 +782,17 @@ export const KanbanBoard = () => {
                   <div className="w-6 h-6 rounded-full bg-purple-600/20 border border-purple-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {selectedDeveloperId ? (
                       users.find(u => u.id === selectedDeveloperId)?.avatarUrl ? (
-                        <img src={users.find(u => u.id === selectedDeveloperId)?.avatarUrl} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={users.find(u => u.id === selectedDeveloperId)?.avatarUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            const name = users.find(u => u.id === selectedDeveloperId)?.name || 'Dev';
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f8fafc&color=475569`;
+                          }}
+                        />
                       ) : (
                         <span className="text-[10px] font-black text-purple-400">
                           {users.find(u => u.id === selectedDeveloperId)?.name.charAt(0).toUpperCase()}
@@ -811,15 +856,17 @@ export const KanbanBoard = () => {
                             .map(user => (
                               <button
                                 key={user.id}
-                                type="button"
                                 onClick={() => {
+                                  // Update URL with selected developer
+                                  const newParams = new URLSearchParams(searchParams);
                                   if (selectedDeveloperId === user.id) {
-                                    // Deselect if clicking on already selected user
                                     setSelectedDeveloperId('');
+                                    newParams.delete('developerId');
                                   } else {
-                                    // Select the user
                                     setSelectedDeveloperId(user.id);
+                                    newParams.set('developerId', user.id);
                                   }
+                                  setSearchParams(newParams);
                                   setShowDevMenu(false);
                                   setSearchTerm('');
                                 }}
@@ -828,7 +875,16 @@ export const KanbanBoard = () => {
                                 <div className="flex items-center gap-3 truncate">
                                   <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                                     {user.avatarUrl ? (
-                                      <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                      <img
+                                        src={user.avatarUrl}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.onerror = null;
+                                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=f8fafc&color=475569`;
+                                        }}
+                                      />
                                     ) : (
                                       <span className="text-[10px] uppercase font-black">{user.name.charAt(0)}</span>
                                     )}
@@ -924,7 +980,16 @@ export const KanbanBoard = () => {
                     }`}>
                     <div className="w-full h-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
                       {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=f8fafc&color=475569`;
+                          }}
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-red-600 to-amber-600">
                           {user.name.charAt(0)}
@@ -947,92 +1012,94 @@ export const KanbanBoard = () => {
       </AnimatePresence>
 
       {/* Kanban Area */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--primary)' }}></div>
-            <p className="animate-pulse" style={{ color: 'var(--muted)' }}>Carregando quadro de tarefas...</p>
+      {
+        loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--primary)' }}></div>
+              <p className="animate-pulse" style={{ color: 'var(--muted)' }}>Carregando quadro de tarefas...</p>
+            </div>
           </div>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-        >
-          <div className="flex-1 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 px-2 custom-scrollbar h-full">
-            {STATUS_COLUMNS
-              .filter(col => !showOnlyDelayed || col.id !== 'Done')
-              .map((col) => {
-                let columnTasks = filteredTasks.filter(t => t.status === col.id);
-                const isDone = col.id === 'Done';
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+          >
+            <div className="flex-1 flex gap-4 overflow-x-auto overflow-y-hidden pb-4 px-2 custom-scrollbar h-full">
+              {STATUS_COLUMNS
+                .filter(col => !showOnlyDelayed || col.id !== 'Done')
+                .map((col) => {
+                  let columnTasks = filteredTasks.filter(t => t.status === col.id);
+                  const isDone = col.id === 'Done';
 
-                // Aplicar filtro de cliente para tarefas concluídas
-                if (isDone && selectedClientFilter) {
-                  columnTasks = columnTasks.filter(t => t.clientId === selectedClientFilter);
-                }
+                  // Aplicar filtro de cliente para tarefas concluídas
+                  if (isDone && selectedClientFilter) {
+                    columnTasks = columnTasks.filter(t => t.clientId === selectedClientFilter);
+                  }
 
-                const displayedTasks = isDone
-                  ? columnTasks
-                    .sort((a, b) => {
-                      const dateA = a.actualDelivery ? new Date(a.actualDelivery).getTime() : 0;
-                      const dateB = b.actualDelivery ? new Date(b.actualDelivery).getTime() : 0;
-                      return dateB - dateA;
-                    })
-                    .slice(0, doneLimit)
-                  : columnTasks;
+                  const displayedTasks = isDone
+                    ? columnTasks
+                      .sort((a, b) => {
+                        const dateA = a.actualDelivery ? new Date(a.actualDelivery).getTime() : 0;
+                        const dateB = b.actualDelivery ? new Date(b.actualDelivery).getTime() : 0;
+                        return dateB - dateA;
+                      })
+                      .slice(0, doneLimit)
+                    : columnTasks;
 
-                return (
-                  <KanbanColumn
-                    key={col.id}
-                    col={col}
-                    tasks={displayedTasks}
-                    totalCount={isDone ? columnTasks.length : undefined}
-                    clients={clients}
-                    projects={projects}
-                    onTaskClick={(id) => {
-                      if (id.startsWith('__NAVIGATE__:')) {
-                        navigate(id.replace('__NAVIGATE__:', ''));
-                      } else {
-                        navigate(`/tasks/${id}`);
-                      }
-                    }}
-                    onDelete={handleDeleteClick}
-                    isAdmin={isAdmin}
-                    highlightedTaskId={highlightedTaskId}
+                  return (
+                    <KanbanColumn
+                      key={col.id}
+                      col={col}
+                      tasks={displayedTasks}
+                      totalCount={isDone ? columnTasks.length : undefined}
+                      clients={clients}
+                      projects={projects}
+                      onTaskClick={(id) => {
+                        if (id.startsWith('__NAVIGATE__:')) {
+                          navigate(id.replace('__NAVIGATE__:', ''));
+                        } else {
+                          navigate(`/tasks/${id}`);
+                        }
+                      }}
+                      onDelete={handleDeleteClick}
+                      isAdmin={isAdmin}
+                      highlightedTaskId={highlightedTaskId}
+                      users={users}
+                      currentUserId={currentUser?.id}
+                      onLoadMore={isDone ? () => setDoneLimit(prev => prev + 10) : undefined}
+                      hasMore={isDone ? displayedTasks.length < columnTasks.length : false}
+                      onClientFilterChange={isDone ? setSelectedClientFilter : undefined}
+                      selectedClientFilter={isDone ? selectedClientFilter : undefined}
+                      availableClients={isDone ? availableClientsForDoneFilter : undefined}
+                    />
+                  );
+                })}
+            </div>
+
+            <DragOverlay dropAnimation={{
+              sideEffects: defaultDropAnimationSideEffects({
+                styles: { active: { opacity: '0.5' } },
+              }),
+            }}>
+              {activeTask ? (
+                <div className="w-[280px]">
+                  <KanbanCard
+                    task={activeTask}
+                    client={clients.find(c => c.id === activeTask.clientId)}
+                    project={projects.find(p => p.id === activeTask.projectId)}
+                    onTaskClick={() => { }}
+                    isAdmin={false}
                     users={users}
-                    currentUserId={currentUser?.id}
-                    onLoadMore={isDone ? () => setDoneLimit(prev => prev + 10) : undefined}
-                    hasMore={isDone ? displayedTasks.length < columnTasks.length : false}
-                    onClientFilterChange={isDone ? setSelectedClientFilter : undefined}
-                    selectedClientFilter={isDone ? selectedClientFilter : undefined}
-                    availableClients={isDone ? availableClientsForDoneFilter : undefined}
                   />
-                );
-              })}
-          </div>
-
-          <DragOverlay dropAnimation={{
-            sideEffects: defaultDropAnimationSideEffects({
-              styles: { active: { opacity: '0.5' } },
-            }),
-          }}>
-            {activeTask ? (
-              <div className="w-[280px]">
-                <KanbanCard
-                  task={activeTask}
-                  client={clients.find(c => c.id === activeTask.clientId)}
-                  project={projects.find(p => p.id === activeTask.projectId)}
-                  onTaskClick={() => { }}
-                  isAdmin={false}
-                  users={users}
-                />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )
+      }
 
       <ConfirmationModal
         isOpen={deleteModalOpen}
@@ -1041,7 +1108,7 @@ export const KanbanBoard = () => {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteModalOpen(false)}
       />
-    </div>
+    </div >
   );
 };
 

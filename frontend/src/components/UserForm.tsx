@@ -145,7 +145,16 @@ const UserForm: React.FC = () => {
             <div className="flex justify-center mb-6">
               <div className="w-24 h-24 rounded-full bg-[var(--bgApp)] flex items-center justify-center border-4 border-[var(--surface)] overflow-hidden text-3xl font-bold text-[var(--textMuted)]">
                 {formData.avatarUrl ? (
-                  <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <img
+                    src={formData.avatarUrl}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || 'User')}&background=f8fafc&color=475569`;
+                    }}
+                  />
                 ) : (
                   formData.name ? formData.name.substring(0, 2).toUpperCase() : <UserIcon className="w-10 h-10" />
                 )}
