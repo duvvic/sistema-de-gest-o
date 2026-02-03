@@ -4,6 +4,7 @@ import { Task, Status, Priority, Impact, TimesheetEntry, Client, Project, User, 
 export function normalizeStatus(raw: string | null): Status {
     if (!raw) return "Todo";
     const s = raw.toLowerCase().trim();
+    if (s.includes("não iniciado")) return "Todo";
     if (s.includes("conclu") || s.includes("done") || s.includes("finaliz")) return "Done";
     if (s.includes("trabalhando") || s.includes("andamento") || s.includes("progresso") || s.includes("progress") || s.includes("execu") || s.includes("iniciado")) return "In Progress";
     if (s.includes("teste") || s.includes("revis") || s.includes("review") || s.includes("valida") || s.includes("pendente")) return "Review";

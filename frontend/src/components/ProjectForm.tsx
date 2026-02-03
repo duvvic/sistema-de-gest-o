@@ -259,7 +259,7 @@ const ProjectForm: React.FC = () => {
                     <option value="Não Iniciado">Não Iniciado</option>
                     <option value="Iniciado">Iniciado</option>
                     <option value="Pendente">Pendente</option>
-                    <option value="Conclusão">Conclusão</option>
+                    <option value="Concluído">Concluído</option>
                     <option value="Em Pausa">Em Pausa</option>
                     <option value="Cancelado">Cancelado</option>
                   </select>

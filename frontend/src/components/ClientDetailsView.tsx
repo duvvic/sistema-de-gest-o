@@ -535,7 +535,7 @@ const ClientDetailsView: React.FC = () => {
 
                               {/* Completion Stats */}
                               <div className="flex flex-col">
-                                <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Conclusão</span>
+                                <span className="text-[8px] font-black uppercase tracking-tighter mb-1 opacity-50" style={{ color: 'var(--text)' }}>Concluído</span>
                                 <div className="flex items-center gap-2">
                                   <CheckSquare className="w-3.5 h-3.5" style={{ color: 'var(--brand)' }} />
                                   <span className="text-sm font-black" style={{ color: 'var(--text)' }}>

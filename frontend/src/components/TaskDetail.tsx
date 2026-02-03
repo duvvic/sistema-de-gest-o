@@ -444,7 +444,7 @@ const TaskDetail: React.FC = () => {
                   <option value="Todo">Não Iniciado</option>
                   <option value="In Progress">Iniciado</option>
                   <option value="Review">Pendente</option>
-                  <option value="Done">Conclusão</option>
+                  <option value="Done">Concluído</option>
                 </select>
               </div>
 
@@ -682,7 +682,7 @@ const TaskDetail: React.FC = () => {
                       style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)' }}
                       disabled
                       readOnly
-                      title="Preenchido automaticamente quando a tarefa muda para 'Conclusão'"
+                      title="Preenchido automaticamente quando a tarefa muda para 'Concluído'"
                     />
                     <p className="text-[8px] text-slate-400 mt-1 italic">Auto: ao concluir tarefa</p>
                   </div>

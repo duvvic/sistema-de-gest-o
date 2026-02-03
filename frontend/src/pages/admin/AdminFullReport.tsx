@@ -725,7 +725,7 @@ const AdminFullReport: React.FC = () => {
                                                         { id: 'Não Iniciado', label: 'Não Iniciado' },
                                                         { id: 'Iniciado', label: 'Iniciado' },
                                                         { id: 'Pendente', label: 'Pendente' },
-                                                        { id: 'Conclusão', label: 'Conclusão' },
+                                                        { id: 'Concluído', label: 'Concluído' },
                                                         { id: 'Atrasado', label: 'Atrasados' },
                                                     ].map(st => (
                                                         <div

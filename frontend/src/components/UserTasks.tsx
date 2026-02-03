@@ -126,7 +126,7 @@ const UserTasks: React.FC<UserTasksProps> = ({
         <div className="p-5 rounded-2xl border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Conclusão</div>
+              <div className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Concluído</div>
               <div className="text-3xl font-black mt-2 text-emerald-600">✅ {tasksByStatus.Concluded.length}</div>
             </div>
             <TrendingUp className="w-8 h-8 text-emerald-300" />
@@ -176,7 +176,7 @@ const UserTasks: React.FC<UserTasksProps> = ({
               />
 
               <TaskColumn
-                title="Conclusão"
+                title="Concluído"
                 tasks={tasksByStatus.Concluded}
                 clients={clients}
                 projects={projects}
@@ -193,7 +193,7 @@ const UserTasks: React.FC<UserTasksProps> = ({
           {viewFilter === 'concluded' && (
             <div className="grid grid-cols-1 gap-4">
               <div className="rounded-2xl border p-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                <h3 className="font-bold mb-3" style={{ color: 'var(--text)' }}>Conclusão</h3>
+                <h3 className="font-bold mb-3" style={{ color: 'var(--text)' }}>Concluído</h3>
                 <div className="space-y-3">
                   {tasksByStatus.Concluded.map(t => (
                     <button key={t.id} onClick={() => onTaskClick(t.id)} className="w-full text-left transition border rounded-xl p-4 shadow-sm"
@@ -297,7 +297,7 @@ const TaskColumn: React.FC<{
                     const deadline = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
                     const formattedDate = deadline.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-                    // Se for review (teste), apenas mostra a data
+                    // Se for review (pendente), apenas mostra a data
                     if (task.status === 'Review') return formattedDate;
 
                     const now = new Date();

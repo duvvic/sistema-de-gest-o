@@ -108,8 +108,8 @@ const SystemDocs: React.FC = () => {
                     text: 'Na tela de criação (imagem em destaque), defina o Contexto do Projeto, o responsável, colaboradores extras e prazos de entrega.'
                 },
                 {
-                    title: 'Regras de Atraso (Status TESTE)',
-                    text: 'Dica importante: Tarefas movidas para a coluna "TESTE" param de contar como atraso para o colaborador, indicando que a entrega depende agora de validação externa.'
+                    title: 'Regras de Atraso (Status PENDENTE)',
+                    text: 'Dica importante: Tarefas movidas para a coluna "PENDENTE" param de contar como atraso para o colaborador, indicando que a entrega depende agora de validação externa.'
                 },
                 {
                     title: 'Interação e Apontamento',

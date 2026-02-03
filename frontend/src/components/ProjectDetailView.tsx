@@ -509,7 +509,7 @@ const ProjectDetailView: React.FC = () => {
                         { label: 'Não Iniciado', value: 'Todo' },
                         { label: 'Iniciado', value: 'In Progress' },
                         { label: 'Pendente', value: 'Review' },
-                        { label: 'Conclusão', value: 'Done' }
+                        { label: 'Concluído', value: 'Done' }
                       ].map(item => (
                         <button
                           key={item.value}
@@ -582,7 +582,7 @@ const ProjectTaskCard: React.FC<{ task: any, users: any[], timesheetEntries: any
     'Todo': { label: 'Não Iniciado', color: 'text-slate-500', bg: 'bg-slate-500/10' },
     'In Progress': { label: 'Iniciado', color: 'text-blue-500', bg: 'bg-blue-500/10' },
     'Review': { label: 'Pendente', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    'Done': { label: 'Conclusão', color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+    'Done': { label: 'Concluído', color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
   };
 
   const statusInfo = statusMap[task.status] || { label: task.status, color: 'text-slate-400', bg: 'bg-slate-400/10' };

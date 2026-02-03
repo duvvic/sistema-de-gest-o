@@ -47,7 +47,7 @@ const STATUS_COLUMNS: { id: Status; title: string; color: string; bg: string; ba
   { id: 'Todo', title: 'Não Iniciado', color: 'var(--text)', bg: 'var(--status-todo)', badgeColor: 'var(--muted)' },
   { id: 'In Progress', title: 'Iniciado', color: 'var(--info-text)', bg: 'var(--status-progress)', badgeColor: 'var(--info)' },
   { id: 'Review', title: 'Pendente', color: 'var(--warning-text)', bg: 'var(--status-review)', badgeColor: 'var(--warning-text)' },
-  { id: 'Done', title: 'Conclusão', color: 'var(--success-text)', bg: 'var(--status-done)', badgeColor: 'var(--success)' },
+  { id: 'Done', title: 'Concluído', color: 'var(--success-text)', bg: 'var(--status-done)', badgeColor: 'var(--success)' },
 ];
 
 /* ================== CARD ================== */
@@ -301,7 +301,7 @@ const KanbanCard = ({
             <span>
               {(() => {
                 if (task.status === 'Done') {
-                  if (!task.actualDelivery) return 'Conclusão';
+                  if (!task.actualDelivery) return 'Concluído';
                   const parts = task.actualDelivery.split('-');
                   if (parts.length !== 3) return 'Concluído';
                   return `Entregue ${parts[2]}/${parts[1]}`;

@@ -28,8 +28,8 @@ const Badge = ({ children, status, className = "" }: { children: React.ReactNode
     const colors: any = {
         'iniciado': 'bg-purple-50 text-purple-600 border-purple-100',
         'pendente': 'bg-amber-50 text-amber-600 border-amber-100',
-        'não iniciado': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-        'conclusão': 'bg-green-50 text-green-600 border-green-100',
+        'nao iniciado': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+        'concluido': 'bg-green-50 text-green-600 border-green-100',
         'atraso': 'bg-red-50 text-red-600 border-red-100',
         // Fallbacks keys if needed
         'execucao': 'bg-purple-50 text-purple-600 border-purple-100',
@@ -460,7 +460,7 @@ const AdminMonitoringView: React.FC = () => {
                 (t.collaboratorIds && t.collaboratorIds.includes(user.id))
             );
 
-            // Tarefas ativas: Não Iniciado (Todo) ou Trabalhando (In Progress)
+            // Tarefas ativas: Não Iniciado (Todo) ou Iniciado (In Progress)
             const activeTasks = userTasks.filter(t => {
                 const s = (t.status || '').toLowerCase();
                 return s === 'todo' || s === 'in progress';
@@ -481,7 +481,7 @@ const AdminMonitoringView: React.FC = () => {
 
             let status: 'LIVRE' | 'ESTUDANDO' | 'INICIADO' | 'APONTADO' | 'ATRASADO' = 'LIVRE';
 
-            // Hierarquia: Atrasado > Apontado (após 16h) > Trabalhando > Estudando > Livre
+            // Hierarquia: Atrasado > Apontado (após 16h) > Iniciado > Estudando > Livre
             if (delayedTasksForStatus.length > 0) {
                 status = 'ATRASADO';
             } else if (isAfter16h && hasTimesheetToday) {
@@ -649,7 +649,7 @@ const AdminMonitoringView: React.FC = () => {
 
                                         const statusLabel = task.status === 'In Progress' ? 'Iniciado' :
                                             task.status === 'Review' ? 'Pendente' :
-                                                (task.status as any) === 'Todo' ? 'Não Iniciado' : 'Conclusão';
+                                                (task.status as any) === 'Todo' ? 'Não Iniciado' : 'Concluído';
 
                                         const shadowClass = delayed
                                             ? 'shadow-[0_0_20px_rgba(239,68,68,0.3)] border-red-500 border-2'
@@ -812,11 +812,11 @@ const AdminMonitoringView: React.FC = () => {
                                             statusColor = 'text-red-500';
                                             dotColor = 'bg-red-500';
                                         } else if (hasReview) {
-                                            statusLabel = 'EM TESTE';
+                                            statusLabel = 'PENDENTE';
                                             statusColor = 'text-amber-500';
                                             dotColor = 'bg-amber-500';
                                         } else if (hasInProgress) {
-                                            statusLabel = 'ATIVO';
+                                            statusLabel = 'INICIADO';
                                             statusColor = 'text-blue-500';
                                             dotColor = 'bg-blue-500';
                                         }
@@ -859,13 +859,13 @@ const AdminMonitoringView: React.FC = () => {
                                                             {hasInProgress && (
                                                                 <div className="flex items-center gap-1 shrink-0">
                                                                     <div className="w-1 h-1 rounded-full bg-blue-500" />
-                                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">{projTasks.filter(t => t.status === 'In Progress').length} em andamento</span>
+                                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">{projTasks.filter(t => t.status === 'In Progress').length} iniciado</span>
                                                                 </div>
                                                             )}
                                                             {hasReview && (
                                                                 <div className="flex items-center gap-1 shrink-0">
                                                                     <div className="w-1 h-1 rounded-full bg-amber-500" />
-                                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">{projTasks.filter(t => t.status === 'Review').length} em teste</span>
+                                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">{projTasks.filter(t => t.status === 'Review').length} pendente</span>
                                                                 </div>
                                                             )}
                                                             {hasDelay && (
@@ -897,14 +897,14 @@ const AdminMonitoringView: React.FC = () => {
                                 {[...teamStatus, ...teamStatus, ...teamStatus].map((member, idx) => { // Triplicated for infinite loop
                                     const colors: any = {
                                         'LIVRE': 'text-emerald-500 border-emerald-500 bg-emerald-50',
-                                        'TRABALHANDO': 'text-purple-500 border-purple-500 bg-purple-50',
+                                        'INICIADO': 'text-purple-500 border-purple-500 bg-purple-50',
                                         'ESTUDANDO': 'text-blue-500 border-blue-500 bg-blue-50',
                                         'ATRASADO': 'text-red-500 border-red-500 bg-red-50',
                                         'APONTADO': 'text-indigo-600 border-indigo-400 bg-indigo-50'
                                     };
                                     const dotColors: any = {
                                         'LIVRE': 'bg-emerald-500',
-                                        'TRABALHANDO': 'bg-purple-500',
+                                        'INICIADO': 'bg-purple-500',
                                         'ESTUDANDO': 'bg-blue-500',
                                         'ATRASADO': 'bg-red-500',
                                         'APONTADO': 'bg-indigo-600'
