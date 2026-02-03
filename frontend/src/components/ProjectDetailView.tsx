@@ -68,11 +68,11 @@ const ProjectDetailView: React.FC = () => {
         description: project.description || '',
         managerClient: project.managerClient || '',
         responsibleNicLabsId: project.responsibleNicLabsId || '',
-        startDate: project.startDate || '',
-        estimatedDelivery: project.estimatedDelivery || '',
-        startDateReal: project.startDateReal || '',
-        endDateReal: project.endDateReal || '',
-        criticalDate: project.criticalDate || '',
+        startDate: (project.startDate || '').split('T')[0],
+        estimatedDelivery: (project.estimatedDelivery || '').split('T')[0],
+        startDateReal: (project.startDateReal || '').split('T')[0],
+        endDateReal: (project.endDateReal || '').split('T')[0],
+        criticalDate: (project.criticalDate || '').split('T')[0],
         docLink: project.docLink || '',
         gapsIssues: project.gapsIssues || '',
         importantConsiderations: project.importantConsiderations || '',
@@ -144,7 +144,19 @@ const ProjectDetailView: React.FC = () => {
       else if (now < start) plannedProgress = 0;
       else plannedProgress = ((now - start) / (end - start)) * 100;
     }
-    return { committedCost, weightedProgress, totalEstimated, plannedProgress };
+
+    let projection = null;
+    if (project.startDate && weightedProgress > 0 && weightedProgress < 100) {
+      const start = new Date(project.startDate).getTime();
+      const now = Date.now();
+      const elapsed = now - start;
+      if (elapsed > 0) {
+        const totalDuration = elapsed * (100 / weightedProgress);
+        projection = new Date(start + totalDuration);
+      }
+    }
+
+    return { committedCost, weightedProgress, totalEstimated, plannedProgress, projection };
   }, [project, projectTasks, timesheetEntries, users, projectId]);
 
   if (!project) return <div className="p-20 text-center font-bold" style={{ color: 'var(--muted)' }}>Projeto não encontrado</div>;
@@ -239,7 +251,30 @@ const ProjectDetailView: React.FC = () => {
                   </div>
 
                   {/* Progresso vs Plano */}
-                  <div className="p-8 rounded-[32px] border shadow-sm transition-all hover:shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                  <div className="p-8 rounded-[32px] border shadow-sm relative transition-all hover:shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                    <div className="absolute top-4 right-6 flex items-center gap-2">
+                      {isAdmin && (
+                        <>
+                          <span className="text-[9px] font-black uppercase" style={{ color: 'var(--muted)' }}>Complexidade</span>
+                          {isEditing ? (
+                            <select
+                              value={formData.complexidade}
+                              onChange={e => setFormData({ ...formData, complexidade: e.target.value as any })}
+                              className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase border-none outline-none"
+                              style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+                            >
+                              <option value="Baixa">Baixa</option>
+                              <option value="Média">Média</option>
+                              <option value="Alta">Alta</option>
+                            </select>
+                          ) : (
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${project.complexidade === 'Alta' ? 'bg-red-500/10 text-red-500' : project.complexidade === 'Baixa' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                              {project.complexidade || 'Média'}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                     <h4 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>Progresso vs Plano</h4>
                     <div className="space-y-4">
                       <div>
@@ -266,40 +301,40 @@ const ProjectDetailView: React.FC = () => {
                   {/* Finanças (Visible only to Admin) */}
                   {isAdmin && (
                     <div className="p-8 rounded-[32px] border shadow-sm relative transition-all hover:shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                      <div className="absolute top-4 right-6">
-                        {isEditing ? (
-                          <select
-                            value={formData.complexidade}
-                            onChange={e => setFormData({ ...formData, complexidade: e.target.value as any })}
-                            className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase border-none outline-none"
-                            style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
-                          >
-                            <option value="Baixa">Baixa</option>
-                            <option value="Média">Média</option>
-                            <option value="Alta">Alta</option>
-                          </select>
-                        ) : (
-                          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${project.complexidade === 'Alta' ? 'bg-red-500/10 text-red-500' : project.complexidade === 'Baixa' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                            {project.complexidade || 'Média'}
-                          </span>
-                        )}
-                      </div>
+
                       <h4 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>Finanças</h4>
                       {isEditing ? (
-                        <div className="space-y-3">
-                          <input type="number" value={formData.valor_total_rs} onChange={e => setFormData({ ...formData, valor_total_rs: Number(e.target.value) })} className="text-xl font-black w-full rounded p-1 outline-none" style={{ backgroundColor: 'var(--bg)', color: 'var(--success)' }} />
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted)' }}>Horas:</span>
-                            <input type="number" value={formData.horas_vendidas} onChange={e => setFormData({ ...formData, horas_vendidas: Number(e.target.value) })} className="w-16 text-xs font-bold outline-none border-b" style={{ backgroundColor: 'transparent', borderColor: 'var(--border)', color: 'var(--text)' }} />
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Valor do Projeto (R$)</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-emerald-500">R$</span>
+                              <input type="number" value={formData.valor_total_rs} onChange={e => setFormData({ ...formData, valor_total_rs: Number(e.target.value) })} className="text-xl font-black w-full rounded p-1 outline-none" style={{ backgroundColor: 'var(--bg)', color: 'var(--success)' }} placeholder="0,00" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Horas Vendidas (Orçamento)</p>
+                            <input type="number" value={formData.horas_vendidas} onChange={e => setFormData({ ...formData, horas_vendidas: Number(e.target.value) })} className="w-full text-sm font-bold p-2 rounded outline-none border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="0" />
                           </div>
                         </div>
                       ) : (
                         <>
-                          <p className="text-2xl font-black" style={{ color: 'var(--success)' }}>{(project.valor_total_rs || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                          <div className="flex flex-col mt-2 gap-1">
-                            <p className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted)' }}>Consumido: {performance?.committedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                            <div className="h-1 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+                          <div className="mb-4">
+                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Valor Total Venda</p>
+                            <p className="text-2xl font-black" style={{ color: 'var(--success)' }}>{(project.valor_total_rs || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-end">
+                              <p className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted)' }}>Consumido (Custo)</p>
+                              <p className="text-[10px] font-bold" style={{ color: 'var(--text)' }}>{performance?.committedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            </div>
+                            <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
                               <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, ((performance?.committedCost || 0) / (project.valor_total_rs || 1)) * 100)}%` }} />
+                            </div>
+                            <div className="flex justify-between text-[8px]" style={{ color: 'var(--muted)' }}>
+                              <span>0%</span>
+                              <span>{project.horas_vendidas || 0}h Vendidas</span>
                             </div>
                           </div>
                         </>
@@ -311,14 +346,42 @@ const ProjectDetailView: React.FC = () => {
                   <div className="p-8 rounded-[32px] border shadow-sm relative transition-all hover:shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                     <h4 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>Timeline</h4>
                     {isEditing ? (
-                      <div className="space-y-1">
-                        <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="text-[10px] p-1 rounded w-full" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }} />
-                        <input type="date" value={formData.estimatedDelivery} onChange={e => setFormData({ ...formData, estimatedDelivery: e.target.value })} className="text-[10px] p-1 rounded w-full font-bold" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }} />
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[9px] font-bold uppercase mb-1 block" style={{ color: 'var(--muted)' }}>Data de Início</label>
+                          <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="text-xs p-2 rounded w-full border outline-none" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase mb-1 block" style={{ color: 'var(--muted)' }}>Prazo de Entrega (Meta)</label>
+                          <input type="date" value={formData.estimatedDelivery} onChange={e => setFormData({ ...formData, estimatedDelivery: e.target.value })} className="text-xs p-2 rounded w-full border outline-none font-bold" style={{ backgroundColor: 'var(--primary-soft)', borderColor: 'var(--primary)', color: 'var(--primary)' }} />
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col">
-                        <span className="text-xl font-black" style={{ color: 'var(--text)' }}>{project.estimatedDelivery ? new Date(project.estimatedDelivery).toLocaleDateString() : '?'}</span>
-                        <span className="text-[9px] font-bold uppercase mt-1" style={{ color: 'var(--muted)' }}>Previsão de Entrega</span>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Início do Projeto</p>
+                          <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+                            {project.startDate ? project.startDate.split('T')[0].split('-').reverse().join('/') : '--'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Prazo de Entrega (Meta)</p>
+                          <p className="text-xl font-black" style={{ color: 'var(--primary)' }}>
+                            {project.estimatedDelivery ? project.estimatedDelivery.split('T')[0].split('-').reverse().join('/') : '?'}
+                          </p>
+                        </div>
+
+                        {performance?.projection && (
+                          <div className="pt-3 mt-3 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Projeção Real (Ritmo Atual)</p>
+                            <div className="flex items-end gap-2">
+                              <p className={`text-sm font-black ${performance.projection.getTime() > new Date(project.estimatedDelivery || '2100-01-01').getTime() ? 'text-red-500' : 'text-emerald-500'}`}>
+                                {performance.projection.toLocaleDateString()}
+                              </p>
+                              <p className="text-[8px] mb-0.5 opacity-60">*Automático</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -353,28 +416,28 @@ const ProjectDetailView: React.FC = () => {
                             </div>
                           </div>
                           <div>
-                            <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Ponto Focal Nic-Labs</p>
+                            <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Gestor Interno (Nic-Labs)</p>
                             {isEditing ? <select value={formData.responsibleNicLabsId} onChange={e => setFormData({ ...formData, responsibleNicLabsId: e.target.value })} className="w-full p-2 rounded text-xs" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>{users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</select> : <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>{users.find(u => u.id === project.responsibleNicLabsId)?.name || '--'}</p>}
                           </div>
                           <div>
-                            <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Stakeholder Cliente</p>
+                            <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Responsável no Cliente</p>
                             {isEditing ? <input value={formData.managerClient} onChange={e => setFormData({ ...formData, managerClient: e.target.value })} className="w-full p-2 rounded text-xs" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }} /> : <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>{project.managerClient || '--'}</p>}
                           </div>
                         </div>
                         {isAdmin && (
                           <div className="p-6 rounded-2xl border space-y-4" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
-                            <p className="text-[10px] font-black uppercase" style={{ color: 'var(--muted)' }}>Track record Real</p>
+                            <p className="text-[10px] font-black uppercase" style={{ color: 'var(--muted)' }}>Registro de Execução</p>
                             <div className="flex justify-between items-center text-xs">
                               <span className="font-medium" style={{ color: 'var(--text-2)' }}>Início Real:</span>
-                              {isEditing ? <input type="date" value={formData.startDateReal} onChange={e => setFormData({ ...formData, startDateReal: e.target.value })} className="bg-transparent border-b outline-none text-right font-bold w-24" style={{ borderColor: 'var(--border)' }} /> : <span className="font-bold">{project.startDateReal ? new Date(project.startDateReal).toLocaleDateString() : 'Awaiting...'}</span>}
+                              {isEditing ? <input type="date" value={formData.startDateReal} onChange={e => setFormData({ ...formData, startDateReal: e.target.value })} className="bg-transparent border-b outline-none text-right font-bold w-24" style={{ borderColor: 'var(--border)' }} /> : <span className="font-bold">{project.startDateReal ? project.startDateReal.split('T')[0].split('-').reverse().join('/') : 'Aguardando...'}</span>}
                             </div>
                             <div className="flex justify-between items-center text-xs">
                               <span className="font-medium" style={{ color: 'var(--text-2)' }}>Fim do Projeto:</span>
-                              {isEditing ? <input type="date" value={formData.endDateReal} onChange={e => setFormData({ ...formData, endDateReal: e.target.value })} className="bg-transparent border-b outline-none text-right font-bold w-24" style={{ borderColor: 'var(--border)' }} /> : <span className="font-bold" style={{ color: 'var(--success)' }}>{project.endDateReal ? new Date(project.endDateReal).toLocaleDateString() : 'Ativo'}</span>}
+                              {isEditing ? <input type="date" value={formData.endDateReal} onChange={e => setFormData({ ...formData, endDateReal: e.target.value })} className="bg-transparent border-b outline-none text-right font-bold w-24" style={{ borderColor: 'var(--border)' }} /> : <span className="font-bold" style={{ color: 'var(--success)' }}>{project.endDateReal ? project.endDateReal.split('T')[0].split('-').reverse().join('/') : 'Ativo'}</span>}
                             </div>
                             <div className="pt-2 border-t mt-2 flex justify-between items-center" style={{ borderColor: 'var(--border)' }}>
-                              <span className="font-black uppercase text-[9px]" style={{ color: 'var(--danger)' }}>Data Crítica:</span>
-                              {isEditing ? <input type="date" value={formData.criticalDate} onChange={e => setFormData({ ...formData, criticalDate: e.target.value })} className="border rounded p-1 outline-none text-right font-bold w-24" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--danger-soft)', color: 'var(--danger)' }} /> : <span className="font-black underline text-xs" style={{ color: 'var(--danger)' }}>{project.criticalDate ? new Date(project.criticalDate).toLocaleDateString() : '--'}</span>}
+                              <span className="font-black uppercase text-[9px]" style={{ color: 'var(--danger)' }}>Data Limite (Risco):</span>
+                              {isEditing ? <input type="date" value={formData.criticalDate} onChange={e => setFormData({ ...formData, criticalDate: e.target.value })} className="border rounded p-1 outline-none text-right font-bold w-24" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--danger-soft)', color: 'var(--danger)' }} /> : <span className="font-black underline text-xs" style={{ color: 'var(--danger)' }}>{project.criticalDate ? project.criticalDate.split('T')[0].split('-').reverse().join('/') : '--'}</span>}
                             </div>
                           </div>
                         )}
@@ -395,16 +458,16 @@ const ProjectDetailView: React.FC = () => {
                   <div className="space-y-6">
                     {/* SAÚDE QUALITATIVA */}
                     <div className="p-6 rounded-[32px] border shadow-sm space-y-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                      <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text)' }}><StickyNote size={16} className="text-amber-500" /> Saúde & Status</h3>
+                      <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text)' }}><StickyNote size={16} className="text-amber-500" /> Status e Andamento</h3>
                       <div className="space-y-4">
                         <div>
-                          <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Status Report Semanal</p>
+                          <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Resumo da Semana</p>
                           {isEditing ? (
                             <textarea value={formData.weeklyStatusReport} onChange={e => setFormData({ ...formData, weeklyStatusReport: e.target.value })} className="w-full h-20 p-2 rounded text-xs border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="O que aconteceu esta semana?" />
                           ) : <p className="text-xs border-l-2 pl-3 py-1 rounded-r-lg" style={{ borderColor: 'var(--warning)', backgroundColor: 'var(--bg)', color: 'var(--text-2)' }}>{project.weeklyStatusReport || 'Sem reporte recente.'}</p>}
                         </div>
                         <div>
-                          <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Gaps & Impedimentos</p>
+                          <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Problemas e Bloqueios</p>
                           {isEditing ? (
                             <textarea value={formData.gapsIssues} onChange={e => setFormData({ ...formData, gapsIssues: e.target.value })} className="w-full h-20 p-2 rounded text-xs border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="Ex: Acesso bloqueado, falta de doc..." />
                           ) : <p className="text-xs font-medium" style={{ color: 'var(--danger)' }}>{project.gapsIssues || 'Nenhum impedimento listado.'}</p>}

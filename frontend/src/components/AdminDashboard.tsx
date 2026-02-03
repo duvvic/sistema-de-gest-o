@@ -1394,13 +1394,22 @@ const AdminDashboard: React.FC = () => {
                 </button>
               </div>
 
-              <button
-                onClick={() => navigate('/admin/clients/new')}
-                className="ml-2 px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all font-bold text-xs bg-[var(--text)] text-[var(--bg)] hover:opacity-90 active:scale-95"
-              >
-                <Plus size={16} />
-                Novo Cliente
-              </button>
+              <div className="flex items-center gap-2 ml-2">
+                <button
+                  onClick={() => navigate('/admin/clients/new?tipo=parceiro')}
+                  className="px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all font-bold text-xs bg-[var(--surface-2)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-hover)] active:scale-95"
+                >
+                  <Handshake size={16} className="text-purple-600" />
+                  Novo Parceiro
+                </button>
+                <button
+                  onClick={() => navigate('/admin/clients/new?tipo=cliente_final')}
+                  className="px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all font-bold text-xs bg-[var(--text)] text-[var(--bg)] hover:opacity-90 active:scale-95"
+                >
+                  <Plus size={16} />
+                  Novo Cliente
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1577,12 +1586,12 @@ const AdminDashboard: React.FC = () => {
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 )}
-                                <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider" style={{ color: 'var(--text)' }}>{project.name}</h4>
+                                <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider text-[var(--text)] dark:text-white">{project.name}</h4>
 
                                 <div className="space-y-4">
-                                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-purple-800/60">
+                                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-purple-800/60 dark:text-purple-300/80">
                                     <span>Evolução Física</span>
-                                    <span className="text-purple-700">{progress}%</span>
+                                    <span className="text-purple-700 dark:text-purple-400">{progress}%</span>
                                   </div>
                                   <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
                                     <div
@@ -1594,9 +1603,11 @@ const AdminDashboard: React.FC = () => {
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--muted)' }}>
                                       <CheckSquare className="w-3.5 h-3.5 text-purple-500" />
-                                      <span>{doneTasks}/{projectTasks.length}</span>
+                                      <span className="dark:text-slate-400">{doneTasks}/{projectTasks.length}</span>
                                     </div>
-                                    <div className={`p-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border flex items-center gap-1 shadow-sm ${project.status === 'Concluído' || project.status === 'Done' ? 'text-emerald-600 border-emerald-200 bg-emerald-500/5' : 'text-blue-600 border-blue-200 bg-blue-500/5'
+                                    <div className={`p-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border flex items-center gap-1 shadow-sm ${project.status === 'Concluído' || project.status === 'Done'
+                                      ? 'text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 bg-emerald-500/5 dark:bg-emerald-500/10'
+                                      : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 bg-blue-500/5 dark:bg-blue-500/10'
                                       }`}>
                                       <div className={`w-1 h-1 rounded-full ${project.status === 'Concluído' || project.status === 'Done' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                                       {project.status === 'Done' || project.status === 'Concluído' ? 'CONCLUÍDO' :

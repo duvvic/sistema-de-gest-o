@@ -116,21 +116,54 @@ export async function deleteProject(projectId: string): Promise<void> {
 
   const API_BASE = getApiBase();
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-
-  const res = await fetch(`${API_BASE}/admin/projects/${projectId}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+  const performDelete = async (tokenProp?: string) => {
+    let token = tokenProp;
+    if (!token) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      token = sessionData.session?.access_token;
     }
-  });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Erro ao excluir projeto (${res.status})`);
+    const res = await fetch(`${API_BASE}/admin/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      }
+    });
+
+    if (res.status === 404) {
+      console.warn(`[deleteProject] Projeto ${projectId} já não existe (404). Considerando excluído.`);
+      return;
+    }
+
+    if (res.status === 401) {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erro ao excluir projeto (${res.status})`);
+    }
+  };
+
+  try {
+    await performDelete();
+  } catch (err: any) {
+    if (err.message === "UNAUTHORIZED") {
+      console.warn("Got 401 on delete, attempting to refresh session and retry...");
+      // Tentar refresh
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
+
+      // Retry com novo token
+      await performDelete(refreshData.session.access_token);
+    } else {
+      throw err;
+    }
   }
 }
 

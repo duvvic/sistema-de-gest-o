@@ -370,7 +370,7 @@ const ProjectForm: React.FC = () => {
                     style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   >
                     <option value="">Selecione o responsável interno</option>
-                    {users.filter(u => u.active !== false).map(u => (
+                    {users.filter(u => u.active !== false && u.torre !== 'N/A').map(u => (
                       <option key={u.id} value={u.id}>{u.name} ({u.cargo || u.role})</option>
                     ))}
                   </select>
@@ -380,7 +380,7 @@ const ProjectForm: React.FC = () => {
                   <label className="block text-[10px] font-black uppercase tracking-widest mb-2 opacity-70" style={{ color: 'var(--text)' }}>Colaboradores do Projeto</label>
                   <div className="border rounded-xl p-4 max-h-[340px] overflow-y-auto grid grid-cols-1 gap-2 custom-scrollbar shadow-inner"
                     style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    {users.filter(u => u.active !== false).sort((a, b) => a.name.localeCompare(b.name)).map(user => (
+                    {users.filter(u => u.active !== false && u.torre !== 'N/A').sort((a, b) => a.name.localeCompare(b.name)).map(user => (
                       <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2.5 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent opacity-70'}`}>
                         <input
                           type="checkbox"

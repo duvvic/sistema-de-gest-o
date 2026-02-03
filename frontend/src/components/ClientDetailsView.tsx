@@ -214,7 +214,9 @@ const ClientDetailsView: React.FC = () => {
                       <div>
                         <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Nome da Empresa</label>
                         <div className="relative group">
-                          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          {isEditing && (
+                            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          )}
                           <input
                             type="text"
                             value={formData.name}
@@ -228,7 +230,9 @@ const ClientDetailsView: React.FC = () => {
                       <div>
                         <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">CNPJ / Identificação</label>
                         <div className="relative group">
-                          <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          {isEditing && (
+                            <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          )}
                           <input
                             type="text"
                             value={formData.cnpj}
@@ -241,7 +245,9 @@ const ClientDetailsView: React.FC = () => {
                       <div>
                         <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">País de Atuação</label>
                         <div className="relative group">
-                          <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          {isEditing && (
+                            <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          )}
                           <input
                             type="text"
                             value={formData.pais}
@@ -254,7 +260,9 @@ const ClientDetailsView: React.FC = () => {
                       <div>
                         <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Telefone Comercial</label>
                         <div className="relative group">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          {isEditing && (
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" size={18} />
+                          )}
                           <input
                             type="text"
                             value={formData.telefone}
@@ -633,8 +641,10 @@ const ClientDetailsView: React.FC = () => {
               await handleDeleteClient();
             } else if (itemToDelete.type === 'project') {
               await deleteProject(itemToDelete.id);
+              alert('Projeto excluído com sucesso!');
             } else {
               await deleteTask(itemToDelete.id);
+              alert('Tarefa excluída com sucesso!');
             }
             setItemToDelete(null);
           } catch (err) {

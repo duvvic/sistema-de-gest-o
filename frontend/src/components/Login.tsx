@@ -97,8 +97,8 @@ export default function Login() {
     const [showNewPass, setShowNewPass] = useState(false);
     const [showConfirmPass, setShowConfirmPass] = useState(false);
 
-    const showAlert = (message: string, title: string = 'Aviso') => {
-        setAlertConfig({ show: true, message, title });
+    const showAlert = (message: string, title?: string) => {
+        setAlertConfig({ show: true, message, title: title || 'Aviso' });
     };
 
     const closeAlert = () => {
@@ -139,7 +139,13 @@ export default function Login() {
             return;
         }
 
-        if (mode === 'login') await handleLogin();
+        if (mode === 'login') {
+            if (showFirstAccess) {
+                await handleSendOtp();
+            } else {
+                await handleLogin();
+            }
+        }
         else if (mode === 'first-access') await handleSendOtp();
         else if (mode === 'otp-verification') await handleVerifyOtp();
         else await handleCreatePassword();
@@ -149,8 +155,8 @@ export default function Login() {
         let val = email.trim().toLowerCase();
         if (!val) return;
 
-        // Auto-correção (.com -> .com.br)
-        if (val.endsWith('.com') && !val.includes('.com.br')) {
+        // Auto-correção específica para o domínio da empresa (.com -> .com.br)
+        if (val.endsWith('@nic-labs.com')) {
             val = val + '.br';
             setEmail(val);
         }
@@ -186,45 +192,9 @@ export default function Login() {
                 .maybeSingle();
 
             if (!cred) {
-                // Se não tem senha, dispara AUTOMATICAMENTE o primeiro acesso
-                setIsCheckingEmail(true);
-                setLoading(true);
-                try {
-                    // Envia OTP via Supabase
-                    const { error: otpErr } = await supabase.auth.signInWithOtp({
-                        email: val,
-                        options: { shouldCreateUser: true }
-                    });
-
-                    if (otpErr) throw otpErr;
-
-                    const papelStr = String(colab.role || '').toLowerCase();
-                    const isAdminRole = papelStr.includes('admin') ||
-                        papelStr.includes('gestor') ||
-                        papelStr.includes('diretoria') ||
-                        papelStr.includes('pmo') ||
-                        papelStr.includes('financeiro') ||
-                        papelStr.includes('tech_lead') ||
-                        papelStr.includes('system_admin') ||
-                        papelStr.includes('ceo') ||
-                        papelStr.includes('executive');
-
-                    setSelectedUser({
-                        id: String(colab.ID_Colaborador),
-                        name: colab.NomeColaborador,
-                        email: colab.email,
-                        role: isAdminRole ? 'admin' : 'developer' // Temporário até normalizar
-                    } as User);
-
-                    // Vai direto para verificação
-                    setMode('otp-verification');
-                    showAlert('Identificamos que este é seu primeiro acesso! Enviamos um código de segurança para seu e-mail.', 'Primeiro Acesso');
-                } catch (otpError: any) {
-                    console.error('Erro ao auto-enviar OTP:', otpError);
-                    setShowFirstAccess(true); // Fallback para botão manual se falhar
-                } finally {
-                    setLoading(false);
-                }
+                // Se não tem senha, prepara o UI para primeiro acesso mas NÃO envia auto-OTP (evita 429)
+                setShowFirstAccess(true);
+                setShowPasswordInput(false);
             } else {
                 // Se tem senha, exibe o campo e foca
                 setShowPasswordInput(true);
@@ -248,8 +218,13 @@ export default function Login() {
             });
 
             if (error) {
-                setShowForgot(true);
-                throw new Error(error.message === 'Invalid login credentials' ? 'Senha incorreta.' : error.message);
+                // setShowForgot(true); // Button is now always visible
+                let msg = error.message;
+                if (msg === 'Invalid login credentials') msg = 'Senha incorreta.';
+                else if (msg.includes('Email not confirmed')) msg = 'E-mail não confirmado. Verifique sua caixa de entrada.';
+                else if (msg.includes('security purposes')) msg = 'Muitas tentativas. Aguarde um momento.';
+
+                throw new Error(msg);
             }
 
             localStorage.setItem('remembered_email', normalizedEmail);
@@ -271,11 +246,19 @@ export default function Login() {
             });
 
             if (error) {
-                // Tenta outros tipos de OTP caso o padrão falhe (recovery/signup)
-                const { error: err2 } = await supabase.auth.verifyOtp({ email: normalizedEmail, token: otpToken.trim(), type: 'recovery' });
-                if (err2) {
-                    const { error: err3 } = await supabase.auth.verifyOtp({ email: normalizedEmail, token: otpToken.trim(), type: 'signup' });
-                    if (err3) throw new Error('Token inválido ou expirado.');
+                console.warn("OTP 'email' type failed:", error.message);
+
+                // Se o erro for explicitamente de token inválido, podemos tentar os fallbacks.
+                // Erros de rate-limit ("security purposes") não devem tentar fallback.
+                if (error.message.includes("Token is invalid") || error.message.includes("expired")) {
+                    // Tenta outros tipos de OTP caso o padrão falhe (recovery/signup)
+                    const { error: err2 } = await supabase.auth.verifyOtp({ email: normalizedEmail, token: otpToken.trim(), type: 'recovery' });
+                    if (err2) {
+                        const { error: err3 } = await supabase.auth.verifyOtp({ email: normalizedEmail, token: otpToken.trim(), type: 'signup' });
+                        if (err3) throw new Error('Token inválido ou expirado.');
+                    }
+                } else {
+                    throw error;
                 }
             }
 
@@ -317,6 +300,13 @@ export default function Login() {
 
             // 3. Define flag para redirecionamento após fechar o alerta
             setPendingRedirect(true);
+
+            // Tenta fazer login automático se já não estiver
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session && selectedUser) {
+                loginWithSession(selectedUser, sessionData.session);
+            }
+
             showAlert('Sua senha foi definida com sucesso! Entrando no sistema...', 'Sucesso!');
         } catch (err: any) {
             showAlert('Erro ao definir senha: ' + err.message, 'Erro');
@@ -666,15 +656,13 @@ export default function Login() {
 
                     {mode === 'login' && (
                         <div className="flex flex-col gap-3 text-center">
-                            {showForgot && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleFindUser('forgot')}
-                                    className="text-sm font-bold text-purple-700 hover:underline animate-in fade-in slide-in-from-top-2 duration-300"
-                                >
-                                    Esqueci minha senha
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                onClick={() => handleFindUser('forgot')}
+                                className="text-sm font-bold text-purple-700 hover:underline animate-in fade-in slide-in-from-top-2 duration-300"
+                            >
+                                Esqueci minha senha
+                            </button>
 
                         </div>
                     )}

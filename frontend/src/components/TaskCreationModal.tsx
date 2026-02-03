@@ -95,7 +95,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
 
 
     const filteredUsers = projectId
-        ? users.filter(u => u.active !== false && projectMembers.some(pm => pm.projectId === projectId && pm.userId === u.id))
+        ? users.filter(u => u.active !== false && u.torre !== 'N/A' && projectMembers.some(pm => pm.projectId === projectId && pm.userId === u.id))
         : [];
 
 

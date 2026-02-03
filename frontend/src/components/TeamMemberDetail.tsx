@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { Task, Role } from '@/types';
-import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer, Trash2, Palmtree, Save, User as UserIcon, Mail, Shield, Zap, Edit } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Clock, Briefcase, AlertCircle, Timer, Trash2, Palmtree, Save, User as UserIcon, Mail, Shield, Zap, Edit, Calculator } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { getRoleDisplayName } from '@/utils/normalizers';
 import { supabase } from '@/services/supabaseClient';
@@ -17,7 +17,7 @@ type ViewTab = 'details' | 'projects' | 'tasks' | 'delayed' | 'ponto' | 'absence
 const TeamMemberDetail: React.FC = () => {
    const { userId } = useParams<{ userId: string }>();
    const navigate = useNavigate();
-   const { users, tasks, projects, projectMembers, timesheetEntries, deleteUser } = useDataController();
+   const { users, tasks, projects, projectMembers, timesheetEntries, deleteUser, absences } = useDataController();
 
    const [activeTab, setActiveTab] = useState<ViewTab>('details');
    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -54,7 +54,7 @@ const TeamMemberDetail: React.FC = () => {
             role: user.role,
             active: user.active !== false,
             avatarUrl: user.avatarUrl || '',
-            torre: user.torre || '',
+            torre: user.torre || (['desenvolvedor', 'infraestrutura de ti', 'ceo'].includes((user.cargo || '').toLowerCase()) ? '' : 'N/A'),
             hourlyCost: user.hourlyCost || 0,
             dailyAvailableHours: user.dailyAvailableHours || 8,
             monthlyAvailableHours: user.monthlyAvailableHours || 160
@@ -80,19 +80,19 @@ const TeamMemberDetail: React.FC = () => {
             email: formData.email,
             Cargo: formData.cargo,
             nivel: formData.nivel,
-            role: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
+            role: formData.role, // Mantém lowercase conforme definido nos tipos
             ativo: formData.active,
             avatar_url: formData.avatarUrl,
             torre: formData.torre,
-            custo_hora: formData.hourlyCost,
-            horas_disponiveis_dia: formData.dailyAvailableHours,
-            horas_disponiveis_mes: formData.monthlyAvailableHours
+            custo_hora: Number(String(formData.hourlyCost).replace(',', '.')),
+            horas_disponiveis_dia: Number(String(formData.dailyAvailableHours).replace(',', '.')),
+            horas_disponiveis_mes: Number(String(formData.monthlyAvailableHours).replace(',', '.'))
          };
 
          const { error } = await supabase
             .from('dim_colaboradores')
             .update(payload)
-            .eq('ID_Colaborador', userId);
+            .eq('ID_Colaborador', Number(userId));
 
          if (error) throw error;
          alert('Dados atualizados com sucesso!');
@@ -137,6 +137,60 @@ const TeamMemberDetail: React.FC = () => {
       }
       return missingCount;
    }, [user, timesheetEntries]);
+
+   // Helper de Feriados (Espelhado do TimesheetCalendar)
+   const getHoliday = (d: number, m: number, y: number) => {
+      const dates: { [key: string]: boolean } = {
+         "1-0": true, "21-3": true, "1-4": true, "7-8": true, "12-9": true, "2-10": true, "15-10": true, "20-10": true, "25-11": true
+      };
+      if (y === 2026) {
+         if (d === 3 && m === 3) return true; // Sexta-feira Santa
+         if (d === 5 && m === 3) return true; // Páscoa
+         if (d === 4 && m === 5) return true; // Corpus Christi
+      }
+      return dates[`${d}-${m}`];
+   };
+
+   const currentWorkingDays = useMemo(() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      let count = 0;
+
+      for (let i = 1; i <= daysInMonth; i++) {
+         const date = new Date(year, month, i);
+         const day = date.getDay();
+         const isWeekend = day === 0 || day === 6;
+         const isHoliday = getHoliday(i, month, year);
+
+         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+         const isAbsent = user ? absences.some(a => a.userId === user.id && dateStr >= a.startDate && dateStr <= a.endDate && a.status === 'aprovada_gestao') : false;
+
+         if (!isWeekend && !isHoliday && !isAbsent) count++;
+      }
+      return count;
+   }, [user, absences]);
+
+   // Helper paraInputs Numéricos (permite digitação livre de , e .)
+   const handleNumberChange = (field: keyof typeof formData, value: string) => {
+      // Permite apenas números, ponto e vírgula
+      const cleanValue = value.replace(/[^0-9.,]/g, '');
+
+      setFormData(prev => {
+         const newData = { ...prev, [field]: cleanValue };
+
+         // Se alterou a jornada diária, recalcula a mensal automaticamente
+         if (field === 'dailyAvailableHours') {
+            const dailyVal = cleanValue.replace(',', '.');
+            const daily = parseFloat(dailyVal) || 0;
+            // Usa o currentWorkingDays calculado com feriados/ausências
+            newData.monthlyAvailableHours = Number((currentWorkingDays * daily).toFixed(2));
+         }
+
+         return newData;
+      });
+   };
 
    const handleDeleteUser = async () => {
       if (user && deleteUser) {
@@ -322,35 +376,92 @@ const TeamMemberDetail: React.FC = () => {
                                  <h4 className="text-sm font-black uppercase text-slate-400 mb-6 tracking-widest flex items-center gap-2"><Shield className="w-4 h-4" /> Controle Administrativo</h4>
                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div>
-                                       <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Custo Hora (R$)</label>
-                                       <input type="number" step="0.01" value={formData.hourlyCost} onChange={(e) => setFormData({ ...formData, hourlyCost: Number(e.target.value) })} className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-purple-500 rounded-lg text-lg text-slate-800 font-bold disabled:bg-transparent disabled:px-0" />
+                                       <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Custo Hora (R$) (Interno)</label>
+                                       <input type="text" value={formData.hourlyCost || ''} onChange={(e) => handleNumberChange('hourlyCost', e.target.value)} placeholder="0,00" className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-purple-500 rounded-lg text-lg text-slate-800 font-bold disabled:bg-transparent disabled:px-0" />
                                     </div>
                                     <div>
-                                       <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Horas/Dia</label>
-                                       <input type="number" value={formData.dailyAvailableHours} onChange={(e) => setFormData({ ...formData, dailyAvailableHours: Number(e.target.value) })} className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-purple-500 rounded-lg text-lg text-slate-800 font-bold disabled:bg-transparent disabled:px-0" />
+                                       <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jornada Diária (Meta)</label>
+                                       <input type="text" value={formData.dailyAvailableHours || ''} onChange={(e) => handleNumberChange('dailyAvailableHours', e.target.value)} placeholder="0" className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-purple-500 rounded-lg text-lg text-slate-800 font-bold disabled:bg-transparent disabled:px-0" />
                                     </div>
                                     <div>
-                                       <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Horas/Mês</label>
-                                       <input type="number" value={formData.monthlyAvailableHours} onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: Number(e.target.value) })} className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-purple-500 rounded-lg text-lg text-slate-800 font-bold disabled:bg-transparent disabled:px-0" />
+                                       <div className="flex justify-between items-center mb-2">
+                                          <label className="block text-xs font-bold text-slate-400 uppercase">Meta Mensal (Horas)</label>
+                                          <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100 uppercase tracking-wide">
+                                             Mês Atual: {currentWorkingDays} Dias Úteis
+                                          </span>
+                                       </div>
+                                       <input type="text" value={formData.monthlyAvailableHours || ''} onChange={(e) => handleNumberChange('monthlyAvailableHours', e.target.value)} placeholder="0" className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-purple-500 rounded-lg text-lg text-slate-800 font-bold disabled:bg-transparent disabled:px-0" />
                                     </div>
                                  </div>
                               </div>
 
-                              <div className="border-t border-slate-100 pt-6 flex items-center justify-between">
-                                 <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors">
-                                    <input type="checkbox" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-5 h-5 rounded text-purple-600 focus:ring-purple-600 border-slate-300" disabled={!isEditing} />
-                                    <span className={`text-sm font-bold ${formData.active ? 'text-emerald-600' : 'text-slate-400'}`}>Colaborador Ativo no Sistema</span>
-                                 </label>
+                              <div className="border-t border-slate-100 pt-6 flex flex-col gap-6">
+                                 {/* Controle de Fluxo / Monitoramento */}
+                                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <label className="flex items-center gap-4 cursor-pointer">
+                                       <div className="relative">
+                                          <input
+                                             type="checkbox"
+                                             checked={formData.torre !== 'N/A'}
+                                             onChange={(e) => {
+                                                const isChecked = e.target.checked;
+                                                setFormData({
+                                                   ...formData,
+                                                   torre: isChecked ? (users.find(u => u.id === userId)?.torre || 'Desenvolvimento') : 'N/A'
+                                                });
+                                             }}
+                                             className="sr-only peer"
+                                             disabled={!isEditing}
+                                          />
+                                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                       </div>
+                                       <div className="flex-1">
+                                          <span className="block text-sm font-bold text-slate-700">Participa do Fluxo (Monitoramento)</span>
+                                          <span className="text-xs text-slate-500">Se desmarcado, o colaborador será classificado como <strong className="text-slate-700">N/A</strong> e ocultado das atividades e métricas, mas manterá acesso ao sistema.</span>
+                                       </div>
+                                    </label>
+                                 </div>
 
-                                 {isEditing && (
-                                    <div className="flex items-center gap-4">
-                                       <button type="button" onClick={() => setDeleteModalOpen(true)} className="px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-bold text-sm transition-colors">Excluir</button>
-                                       <button type="submit" className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all flex items-center gap-2">
-                                          <Save className="w-4 h-4" /> Salvar Alterações
-                                       </button>
+                                 {/* Controle de Acesso / Desligamento */}
+                                 <div className="flex items-center justify-between px-2">
+                                    <div className="flex items-center gap-3">
+                                       <div className={`w-3 h-3 rounded-full animate-pulse ${formData.active ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                       <div className="flex flex-col">
+                                          <span className="text-xs font-black uppercase tracking-widest text-slate-400">Status da Conta</span>
+                                          <span className={`text-sm font-bold ${formData.active ? 'text-emerald-600' : 'text-red-600'}`}>
+                                             {formData.active ? 'ATIVO (ACESSO PERMITIDO)' : 'DESLIGADO (ACESSO BLOQUEADO)'}
+                                          </span>
+                                       </div>
                                     </div>
-                                 )}
+
+                                    {isEditing && (
+                                       <button
+                                          type="button"
+                                          onClick={() => {
+                                             if (window.confirm(formData.active ? 'Tem certeza que deseja REALIZAR O DESLIGAMENTO deste colaborador? O acesso ao sistema será bloqueado.' : 'Deseja REATIVAR a conta deste colaborador?')) {
+                                                setFormData({ ...formData, active: !formData.active });
+                                             }
+                                          }}
+                                          className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all border ${formData.active
+                                             ? 'bg-white border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300'
+                                             : 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'
+                                             }`}
+                                       >
+                                          {formData.active ? 'Realizar Desligamento' : 'Reativar Acesso'}
+                                       </button>
+                                    )}
+                                 </div>
                               </div>
+
+                              {isEditing && (
+                                 <div className="flex items-center gap-4 border-t border-slate-100 pt-6">
+                                    <button type="button" onClick={() => setDeleteModalOpen(true)} className="px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-bold text-sm transition-colors">Excluir</button>
+                                    <button type="submit" className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all flex items-center gap-2">
+                                       <Save className="w-4 h-4" /> Salvar Alterações
+                                    </button>
+                                 </div>
+                              )}
+
                            </fieldset>
                         </form>
                      </div>
@@ -411,7 +522,7 @@ const TeamMemberDetail: React.FC = () => {
             onConfirm={handleDeleteUser}
             onCancel={() => setDeleteModalOpen(false)}
          />
-      </div>
+      </div >
    );
 };
 

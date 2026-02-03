@@ -72,7 +72,7 @@ const UserForm: React.FC = () => {
         email: formData.email,
         Cargo: formData.cargo,
         nivel: formData.nivel,
-        role: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
+        role: formData.role, // Mantém lowercase conforme definido nos tipos
         ativo: formData.active,
         avatar_url: formData.avatarUrl,
         torre: formData.torre,
@@ -353,6 +353,7 @@ const UserForm: React.FC = () => {
                 className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text)]"
               >
                 <option value="">Selecione a torre...</option>
+                <option value="N/A">Não participa do fluxo (N/A)</option>
                 <option value="ABAP">ABAP</option>
                 <option value="Fiori">Fiori / UI5</option>
                 <option value="GP">Gerência de Projetos (GP)</option>
@@ -424,17 +425,19 @@ const UserForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Active Checkbox */}
-            <div className="flex items-center gap-3 pt-4 border-t border-[var(--border)]">
-              <input
-                type="checkbox"
-                id="activeUser"
-                checked={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                className="w-5 h-5 text-[var(--brand)] rounded focus:ring-[var(--brand)]"
-              />
-              <label htmlFor="activeUser" className="text-sm font-medium text-[var(--text)]">Colaborador Ativo</label>
-            </div>
+            {/* Active Checkbox - Apenas para edição */}
+            {!isNew && (
+              <div className="flex items-center gap-3 pt-4 border-t border-[var(--border)]">
+                <input
+                  type="checkbox"
+                  id="activeUser"
+                  checked={formData.active}
+                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                  className="w-5 h-5 text-[var(--brand)] rounded focus:ring-[var(--brand)]"
+                />
+                <label htmlFor="activeUser" className="text-sm font-medium text-[var(--text)]">Colaborador Ativo</label>
+              </div>
+            )}
 
           </form>
         </div>

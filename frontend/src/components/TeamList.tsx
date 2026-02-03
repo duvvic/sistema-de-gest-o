@@ -371,7 +371,7 @@ const TeamList: React.FC = () => {
                     const hasInProgress = userActiveTasks.some(t => t.status === 'In Progress');
 
                     const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
-                    const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
+                    const isSystemCollaborator = user.torre ? user.torre !== 'N/A' : activeCargos.includes(user.cargo?.toLowerCase() || '');
 
                     if (!isSystemCollaborator) return 'indisponível';
                     if (hasDelayed) return 'atrasado';
@@ -413,7 +413,7 @@ const TeamList: React.FC = () => {
                     let textColor = '#047857'; // Verde Escuro para texto
 
                     const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
-                    const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
+                    const isSystemCollaborator = user.torre ? user.torre !== 'N/A' : activeCargos.includes(user.cargo?.toLowerCase() || '');
 
                     if (!isSystemCollaborator) {
                       statusType = 'indisponível';

@@ -88,28 +88,33 @@ html.dark {
   /* DARK MODE - Mantendo paleta definida */
 
   /* Backgrounds */
-  --bg: #151025;
-  --surface: #2C283B;
-  --surface-2: #252236;
-  --surface-hover: #3A354E;
+  --bg: #0F0B18;
+  /* Darker bg */
+  --surface: #1E1B2E;
+  /* Darker surface */
+  --surface-2: #161320;
+  /* Even darker nested */
+  --surface-hover: #2D283E;
 
   /* Sidebar */
-  --sidebar-bg: #252236;
-  --sidebar-bg-2: #1E1B2E;
+  --sidebar-bg: #1A1625;
+  --sidebar-bg-2: #13101C;
 
   /* Primary Colors */
-  --primary: #6D28D9;
-  --primary-hover: #7C3AED;
-  --primary-soft: rgba(109, 40, 217, 0.18);
+  --primary: #7C3AED;
+  --primary-hover: #8B5CF6;
+  --primary-soft: rgba(124, 58, 237, 0.15);
 
   /* Text */
-  --text: #E8E7F0;
-  --text-2: #C5C2D9;
-  --muted: #9A9AA8;
+  --text: #F1F5F9;
+  /* Very white text */
+  --text-2: #94A3B8;
+  /* Slate-400 */
+  --muted: #64748B;
 
   /* Borders & Effects */
-  --border: #3E385C;
-  --ring: rgba(196, 181, 253, 0.25);
+  --border: #2D283E;
+  --ring: rgba(139, 92, 246, 0.3);
 
   /* Shadows - mais fortes no dark */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
