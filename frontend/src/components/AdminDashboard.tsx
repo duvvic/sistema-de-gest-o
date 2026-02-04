@@ -7,6 +7,7 @@ import { Plus, Building2, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, Check
 import ConfirmationModal from "./ConfirmationModal";
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from "framer-motion";
+import * as CapacityUtils from '@/utils/capacity';
 
 type SortOption = 'recent' | 'alphabetical' | 'creation';
 
@@ -147,7 +148,7 @@ const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navi
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { clients, projects, tasks, error, loading, users, deleteProject, projectMembers } = useDataController();
+  const { clients, projects, tasks, error, loading, users, deleteProject, projectMembers, timesheetEntries } = useDataController();
   const { currentUser, isAdmin } = useAuth();
   const [sortBy, setSortBy] = useState<SortOption>(() => (localStorage.getItem('admin_clients_sort_by') as SortOption) || 'alphabetical');
   const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | 'late' | 'ongoing' | 'done'>('all');
@@ -355,7 +356,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   // Cálculos Executivos do Portfólio
-  const { timesheetEntries: portfolioTimesheets } = useDataController();
+  const portfolioTimesheets = timesheetEntries || [];
 
   // Otimização: Agrupar tarefas e timesheets por projeto uma única vez
   const groupedData = useMemo(() => {
@@ -502,26 +503,30 @@ const AdminDashboard: React.FC = () => {
   const resourceMetrics = useMemo(() => {
     if (!users || !portfolioTimesheets) return [];
 
-    return users.filter(u => u.active !== false).map(u => {
-      // Cálculo: Alocado = Soma das horas apontadas no mês SELECIONADO
+    const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead', 'developer'];
+    return users.filter(u => u.active !== false && (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || ''))).map(u => {
+      // 1. Apontado (Realizado - Timesheet)
       const userMonthEntries = portfolioTimesheets.filter(entry =>
         entry.userId === u.id &&
         entry.date.startsWith(capacityMonth)
       );
+      const performedHours = userMonthEntries.reduce((acc, entry) => acc + Number(entry.totalHours || 0), 0);
 
-      const assignedHours = userMonthEntries.reduce((acc, entry) => acc + Number(entry.totalHours || 0), 0);
-      const capacity = u.monthlyAvailableHours || 160;
+      // 2. Alocado (Previsto - Tarefas)
+      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeTasks);
 
       return {
         id: u.id,
         name: u.name,
         torre: u.torre,
-        capacity: capacity,
-        assigned: Math.round(assignedHours),
-        load: (assignedHours / capacity) * 100
+        capacity: capData.capacity,
+        assigned: capData.allocated, // Horas planejadas
+        performed: Math.round(performedHours), // Horas já trabalhadas
+        available: capData.available,
+        load: (capData.allocated / capData.capacity) * 100
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [users, portfolioTimesheets, capacityMonth]);
+  }, [users, portfolioTimesheets, capacityMonth, safeTasks]);
 
   const changeMonth = (delta: number) => {
     const [year, month] = capacityMonth.split('-').map(Number);
@@ -916,15 +921,26 @@ const AdminDashboard: React.FC = () => {
                     <div className="w-full h-2 rounded-full overflow-hidden border border-white/5" style={{ backgroundColor: 'var(--surface-2)' }}>
                       <div className={`h-full transition-all duration-1000 ${res.load > 100 ? 'bg-red-500' : res.load > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(res.load, 100)}%` }} />
                     </div>
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider items-center" style={{ color: 'var(--muted)' }}>
-                      <span className="flex items-center">
-                        ALOCADO: <span className="text-[var(--text-2)] ml-0.5">{res.assigned}H</span>
-                        <InfoTooltip title="Horas Alocadas" content="Soma das horas apontadas pelo colaborador no mês selecionado." />
-                      </span>
-                      <span className="flex items-center">
-                        BASE: <span className="text-[var(--text-2)] ml-0.5">{res.capacity}H</span>
-                        <InfoTooltip title="Capacidade Mensal" content="Carga horária padrão definida no perfil do colaborador (ex: 160h/mês)." />
-                      </span>
+                    <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter items-center mt-1" style={{ color: 'var(--muted)' }}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="flex items-center gap-1">
+                          ALOCADO: <span className="text-[var(--text)] font-black">{res.assigned}H</span>
+                          <InfoTooltip title="Carga Planejada" content="Total de horas das tarefas (não concluídas) distribuídas para este mês." />
+                        </span>
+                        <span className="flex items-center gap-1">
+                          REALIZADO: <span className="text-blue-500 font-black">{res.performed}H</span>
+                          <InfoTooltip title="Horas Trabalhadas" content="Soma das horas já apontadas no timesheet para este mês." />
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 border-l border-[var(--border)] pl-2">
+                        <span className="flex items-center gap-1">
+                          DISP: <span className={`${res.available < 0 ? 'text-red-500' : 'text-emerald-500'} font-black text-[10px]`}>{res.available}H</span>
+                          <InfoTooltip title="Balanço Mensal" content="Horas que ainda podem ser demandadas (Capacidade total - Alocação planejada)." />
+                        </span>
+                        <span className="flex items-center gap-1 opacity-50">
+                          BASE: <span className="text-[var(--text-2)]">{res.capacity}H</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

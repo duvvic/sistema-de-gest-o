@@ -11,6 +11,8 @@ import {
 import ConfirmationModal from './ConfirmationModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getUserStatus } from '@/utils/userStatus';
+import * as CapacityUtils from '@/utils/capacity';
 
 const ProjectDetailView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -480,7 +482,7 @@ const ProjectDetailView: React.FC = () => {
                       <div className="space-y-3">
                         {isEditing ? (
                           <div className="border rounded-2xl p-4 max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar shadow-inner" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
-                            {users.filter(u => u.active !== false).sort((a, b) => a.name.localeCompare(b.name)).map(user => (
+                            {users.filter(u => u.active !== false && u.torre !== 'N/A').sort((a, b) => a.name.localeCompare(b.name)).map(user => (
                               <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-purple-500/30 bg-purple-500/5' : 'border-transparent opacity-60'}`}>
                                 <input
                                   type="checkbox"
@@ -500,7 +502,25 @@ const ProjectDetailView: React.FC = () => {
                                   </div>
                                   <div>
                                     <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>{user.name}</p>
-                                    <p className="text-[8px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-[8px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
+                                      {(() => {
+                                        const status = getUserStatus(user, tasks, projects, clients);
+                                        const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), tasks);
+                                        return (
+                                          <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1">
+                                              <div className="w-1 h-1 rounded-full" style={{ backgroundColor: status.color }} />
+                                              <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
+                                            </div>
+                                            <span className="text-[var(--muted)] opacity-20 text-[7px]">•</span>
+                                            <span className={`text-[8px] font-black tracking-tighter ${availability.available < 20 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                              DISP: {availability.available}H
+                                            </span>
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
                                   </div>
                                 </div>
                               </label>
@@ -516,7 +536,25 @@ const ProjectDetailView: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
-                                  <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--primary)' }}>{u.torre || 'Consultor'}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--primary)' }}>{u.cargo || 'Consultor'}</p>
+                                    {(() => {
+                                      const status = getUserStatus(u, tasks, projects, clients);
+                                      const availability = CapacityUtils.getUserMonthlyAvailability(u, new Date().toISOString().slice(0, 7), tasks);
+                                      return (
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-1">
+                                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: status.color }} />
+                                            <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
+                                          </div>
+                                          <span className="text-[var(--muted)] opacity-20 text-[7px]">•</span>
+                                          <span className={`text-[8px] font-black tracking-tighter ${availability.available < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                            DISP: {availability.available}H
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
                                 </div>
                               </div>
                             ) : null;

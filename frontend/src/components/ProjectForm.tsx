@@ -4,6 +4,8 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Save, Users, Briefcase, Calendar, Info, Zap, DollarSign, Target, Shield, Layout, Clock } from 'lucide-react';
+import { getUserStatus } from '@/utils/userStatus';
+import * as CapacityUtils from '@/utils/capacity';
 
 const ProjectForm: React.FC = () => {
   const { projectId, clientId: routeClientId } = useParams<{ projectId?: string; clientId?: string }>();
@@ -16,6 +18,7 @@ const ProjectForm: React.FC = () => {
     clients,
     projects,
     users,
+    tasks,
     projectMembers, // Para dependência
     createProject,
     updateProject,
@@ -380,36 +383,55 @@ const ProjectForm: React.FC = () => {
                   <label className="block text-[10px] font-black uppercase tracking-widest mb-2 opacity-70" style={{ color: 'var(--text)' }}>Colaboradores do Projeto</label>
                   <div className="border rounded-xl p-4 max-h-[340px] overflow-y-auto grid grid-cols-1 gap-2 custom-scrollbar shadow-inner"
                     style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    {users.filter(u => u.active !== false && u.torre !== 'N/A').sort((a, b) => a.name.localeCompare(b.name)).map(user => (
-                      <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2.5 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent opacity-70'}`}>
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUsers(prev => [...prev, user.id]);
-                            } else {
-                              setSelectedUsers(prev => prev.filter(id => id !== user.id));
-                            }
-                          }}
-                          className="w-5 h-5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
-                        />
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold overflow-hidden shadow-sm border border-white/10"
-                            style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)' }}>
-                            {user.avatarUrl ? (
-                              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                            ) : (
-                              user.name.substring(0, 2).toUpperCase()
-                            )}
+                    {users.filter(u => u.active !== false && u.torre !== 'N/A')
+                      .sort((a, b) => a.name.localeCompare(b.name)).map(user => (
+                        <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2.5 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent opacity-70'}`}>
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(user.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedUsers(prev => [...prev, user.id]);
+                              } else {
+                                setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                              }
+                            }}
+                            className="w-5 h-5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
+                          />
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold overflow-hidden shadow-sm border border-white/10"
+                              style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)' }}>
+                              {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                              ) : (
+                                user.name.substring(0, 2).toUpperCase()
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>{user.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[9px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
+                                {(() => {
+                                  const status = getUserStatus(user, tasks, projects, clients);
+                                  const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), tasks);
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <div className="w-1 h-1 rounded-full" style={{ backgroundColor: status.color }} />
+                                        <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
+                                      </div>
+                                      <span className="text-[var(--muted)] opacity-20 text-[7px]">•</span>
+                                      <span className={`text-[8px] font-black tracking-tighter ${availability.available < 20 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                        DISP: {availability.available}H
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>{user.name}</p>
-                            <p className="text-[9px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
-                          </div>
-                        </div>
-                      </label>
-                    ))}
+                        </label>
+                      ))}
                   </div>
                 </div>
               </div>

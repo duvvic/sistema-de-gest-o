@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { User, Role } from '@/types';
-import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield, Zap } from 'lucide-react';
+import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield, Zap, Info, LayoutGrid } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
+import OrganizationalStructureSelector from './OrganizationalStructureSelector';
 
 const UserForm: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -15,8 +16,6 @@ const UserForm: React.FC = () => {
   const initialUser = !isNew ? users.find(u => u.id === userId) : undefined;
 
   const [loading, setLoading] = useState(false);
-  const [isManualCargo, setIsManualCargo] = useState(false);
-  const [isManualLevel, setIsManualLevel] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -49,15 +48,8 @@ const UserForm: React.FC = () => {
     }
   }, [initialUser]);
 
-  const existingCargos = useMemo(() => {
-    const cargos = users
-      .map(u => u.cargo)
-      .filter((cargo): cargo is string => !!cargo && cargo.trim() !== '');
-    return Array.from(new Set(cargos)).sort();
-  }, [users]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     if (!formData.name || !formData.email) {
       alert('Por favor, preencha nome e email.');
@@ -66,13 +58,12 @@ const UserForm: React.FC = () => {
 
     setLoading(true);
     try {
-      // Preparar payload para dim_colaboradores
       const payload = {
         NomeColaborador: formData.name,
         email: formData.email,
         Cargo: formData.cargo,
         nivel: formData.nivel,
-        role: formData.role, // Mantém lowercase conforme definido nos tipos
+        role: formData.role,
         ativo: formData.active,
         avatar_url: formData.avatarUrl,
         torre: formData.torre,
@@ -84,14 +75,12 @@ const UserForm: React.FC = () => {
       if (isNew) {
         const { error } = await supabase.from('dim_colaboradores').insert(payload);
         if (error) throw error;
-        alert('Colaborador criado com sucesso!');
       } else {
         const { error } = await supabase
           .from('dim_colaboradores')
           .update(payload)
           .eq('ID_Colaborador', userId);
         if (error) throw error;
-        alert('Colaborador atualizado com sucesso!');
       }
       navigate(-1);
     } catch (error: any) {
@@ -103,342 +92,208 @@ const UserForm: React.FC = () => {
   };
 
   if (!isNew && !initialUser) {
-    return <div className="p-8">Colaborador não encontrado.</div>;
+    return <div className="p-8 text-xs font-bold text-[var(--muted)]">Colaborador não encontrado.</div>;
   }
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bgApp)]">
-      {/* Header */}
-      <div className="px-8 py-6 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-4">
+    <div className="h-full flex flex-col bg-[var(--bg)]">
+      {/* Header Compacto - Estilo Premium */}
+      <div className="px-8 py-5 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-5">
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-[var(--surfaceHover)] rounded-full transition-colors text-[var(--textMuted)]"
+            className="p-2 hover:bg-[var(--surface-2)] rounded-xl transition-colors text-[var(--muted)]"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-[var(--textTitle)] flex items-center gap-2">
-              {isNew ? 'Novo Colaborador' : 'Editar Colaborador'}
+            <h2 className="text-lg font-black text-[var(--text)] tracking-tight leading-tight">
+              {isNew ? 'Novo Integrante' : 'Editar Integrante'}
             </h2>
-            <p className="text-[var(--textMuted)] text-sm">
-              {isNew ? 'Adicionar membro à equipe' : `Editando ${formData.name}`}
+            <p className="text-[var(--muted)] text-[10px] font-black uppercase tracking-widest mt-1 opacity-70">
+              {isNew ? 'Cadastro Institucional de Equipe' : formData.name}
             </p>
           </div>
         </div>
         <button
-          onClick={handleSave}
+          type="button"
+          onClick={() => handleSave()}
           disabled={loading}
-          className="px-6 py-2.5 bg-[var(--brand)] text-white rounded-lg font-bold shadow hover:bg-[var(--brandHover)] transition-all flex items-center gap-2 disabled:opacity-50"
+          className="px-6 py-2.5 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-black/5 hover:bg-black transition-all flex items-center gap-2 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          {loading ? 'Salvando...' : 'Salvar'}
+          {loading ? (
+            <span className="flex items-center gap-2"><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Salvando</span>
+          ) : (
+            <><Save className="w-4 h-4" /> {isNew ? 'Criar Cadastro' : 'Confirmar Tudo'}</>
+          )}
         </button>
       </div>
 
-      {/* Form */}
+      {/* Form Area */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <form onSubmit={handleSave} className="bg-[var(--surface)] rounded-2xl shadow-sm border border-[var(--border)] p-8 space-y-6">
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSave} className="ui-card p-10 space-y-10">
 
-            {/* Avatar */}
-            <div className="flex justify-center mb-6">
-              <div className="w-24 h-24 rounded-full bg-[var(--bgApp)] flex items-center justify-center border-4 border-[var(--surface)] overflow-hidden text-3xl font-bold text-[var(--textMuted)]">
+            {/* Avatar e Nome Principal */}
+            <div className="flex items-center gap-8">
+              <div className="w-24 h-24 rounded-3xl bg-[var(--surface-2)] flex items-center justify-center border-4 border-[var(--surface)] shadow-lg overflow-hidden text-2xl font-black text-[var(--muted)]">
                 {formData.avatarUrl ? (
-                  <img
-                    src={formData.avatarUrl}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || 'User')}&background=f8fafc&color=475569`;
-                    }}
-                  />
+                  <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   formData.name ? formData.name.substring(0, 2).toUpperCase() : <UserIcon className="w-10 h-10" />
                 )}
               </div>
-            </div>
-
-            {/* Nome */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
-                <UserIcon className="w-4 h-4 text-[var(--brand)]" />
-                Nome Completo *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
-                placeholder="Ex: João da Silva"
-                required
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[var(--brand)]" />
-                Email *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
-                placeholder="email@exemplo.com"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Cargo */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-[var(--text)] flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-[var(--brand)]" />
-                    Cargo
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsManualCargo(!isManualCargo)}
-                    className="text-xs font-bold text-[var(--brand)] hover:opacity-80 transition-opacity"
-                  >
-                    {isManualCargo ? 'Selecionar da lista' : '+ Criar novo cargo'}
-                  </button>
-                </div>
-
-                {isManualCargo ? (
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome Completo</label>
                   <input
                     type="text"
-                    value={formData.cargo}
-                    onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                    className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
-                    placeholder="Digite o novo cargo..."
-                    autoFocus
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-bold text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all"
+                    placeholder="Ex: Ricardo Duraes"
+                    required
                   />
-                ) : (
-                  <select
-                    value={formData.cargo}
-                    onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                    className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
-                  >
-                    <option value="" disabled hidden>Selecione um cargo...</option>
-                    {existingCargos.map(cargo => (
-                      <option key={cargo} value={cargo}>{cargo}</option>
-                    ))}
-                  </select>
-                )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">E-mail Corporativo</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-bold text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all"
+                    placeholder="email@nic-labs.com.br"
+                    required
+                  />
+                </div>
               </div>
+            </div>
 
-              {/* Nível (Condicional) */}
-              {(() => {
-                const cargoLower = formData.cargo.toLowerCase();
-                let options: string[] = [];
-                let showLevelField = false;
-                let isInfra = false;
+            {/* Estrutura Organizacional */}
+            <div className="pt-10 border-t border-[var(--border)]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)]">
+                  <LayoutGrid className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-black text-[var(--text)] uppercase tracking-widest">Enquadramento e Especialidade</h3>
+              </div>
+              <OrganizationalStructureSelector
+                initialCargo={formData.cargo}
+                initialLevel={formData.nivel}
+                initialTorre={formData.torre}
+                onChange={({ cargo, nivel, torre }) => setFormData(prev => ({ ...prev, cargo, nivel, torre }))}
+              />
+            </div>
 
-                if (cargoLower.includes('desenvolvedor') || cargoLower.includes('developer')) {
-                  options = ['Estagiário', 'Trainee', 'Júnior', 'Pleno', 'Sênior', 'Especialista'];
-                  showLevelField = true;
-                } else if (cargoLower.includes('administrador') || cargoLower.includes('admin')) {
-                  options = ['RH', 'Estagiário', 'Jovem Aprendiz', 'Assistente', 'Analista'];
-                  showLevelField = true;
-                } else if (cargoLower.includes('infra') || cargoLower.includes('ti')) {
-                  // Lógica Infra: checkbox Estágio
-                  isInfra = true;
-                  showLevelField = true;
-                }
-
-                if (!showLevelField) return null;
-
-                if (isInfra) {
-                  return (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-[var(--brand)]" />
-                        Nível
-                      </label>
-                      <div className="flex items-center gap-3 p-3 border rounded-xl bg-[var(--bgApp)] border-[var(--border)]">
-                        <input
-                          type="checkbox"
-                          id="infraIntern"
-                          checked={formData.nivel === 'Estagiário'}
-                          onChange={(e) => setFormData({ ...formData, nivel: e.target.checked ? 'Estagiário' : '' })}
-                          className="w-5 h-5 text-[var(--brand)] rounded focus:ring-[var(--brand)]"
-                        />
-                        <label htmlFor="infraIntern" className="text-sm text-[var(--text)]">Estágio</label>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Dropdown padrão para outros cargos permitidos
-
-                return (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-[var(--text)] flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-[var(--brand)]" />
-                        Nível
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsManualLevel(!isManualLevel)}
-                        className="text-xs font-bold text-[var(--brand)] hover:opacity-80 transition-opacity"
-                      >
-                        {isManualLevel ? 'Selecionar da lista' : '+ Criar novo nível'}
-                      </button>
-                    </div>
-
-                    {isManualLevel ? (
-                      <input
-                        type="text"
-                        value={formData.nivel}
-                        onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
-                        className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none transition-all text-[var(--text)]"
-                        placeholder="Digite o novo nível..."
-                        autoFocus
-                      />
-                    ) : (
-                      <select
-                        value={formData.nivel}
-                        onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
-                        className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text)]"
-                      >
-                        <option value="" disabled hidden>Selecione...</option>
-                        {options.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Role (Permissão) */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-[var(--brand)]" />
-                  Permissão
-                </label>
+            {/* Acesso e Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-[var(--border)]">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nível de Permissão</label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'developer' })}
-                  className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text)]"
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                  className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all"
                 >
-                  <option value="developer">Desenvolvedor (Padrão)</option>
-                  <option value="consultor">Consultor</option>
-                  <option value="tech_lead">Tech Lead</option>
-                  <option value="gestor">Gestor / Gerente</option>
-                  <option value="pmo">PMO</option>
-                  <option value="financeiro">Financeiro</option>
-                  <option value="diretoria">Diretoria</option>
-                  <option value="admin">Administrador Sistema</option>
+                  <option value="developer">Operacional / Consultor</option>
+                  <option value="tech_lead">Tech Lead / Liderança</option>
+                  <option value="pmo">Planejamento / PMO</option>
+                  <option value="executive">Gestão Executiva</option>
+                  <option value="system_admin">Admin TI / Suporte</option>
+                  <option value="ceo">Presidência</option>
                 </select>
+              </div>
+              <div className="space-y-4">
+                <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Configurações de Fluxo e Acesso</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* TOGGLE: PARTICIPAR DO FLUXO */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, torre: prev.torre === 'N/A' ? '' : 'N/A' }))}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${formData.torre !== 'N/A' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-700'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Zap className={`w-4 h-4 ${formData.torre !== 'N/A' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{formData.torre !== 'N/A' ? 'No Fluxo' : 'Fora do Fluxo'}</span>
+                    </div>
+                    <div className={`w-2 h-2 rounded-full ${formData.torre !== 'N/A' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                  </button>
+
+                  {/* TOGGLE: DESLIGAR COLABORADOR */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, active: !formData.active })}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${formData.active ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-red-50 border-red-200 text-red-700'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Shield className={`w-4 h-4 ${formData.active ? 'text-blue-500' : 'text-red-500'}`} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{formData.active ? 'Ativo' : 'Desligar'}</span>
+                    </div>
+                    <div className={`w-2 h-2 rounded-full ${formData.active ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`}></div>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Especialização & Torre */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--text)] mb-2 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-purple-500" />
-                Torre de Atuação / Especialidade
-              </label>
-              <select
-                value={formData.torre}
-                onChange={(e) => setFormData({ ...formData, torre: e.target.value })}
-                className="w-full px-4 py-3 bg-[var(--bgApp)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text)]"
-              >
-                <option value="">Selecione a torre...</option>
-                <option value="N/A">Não participa do fluxo (N/A)</option>
-                <option value="ABAP">ABAP</option>
-                <option value="Fiori">Fiori / UI5</option>
-                <option value="GP">Gerência de Projetos (GP)</option>
-                <option value="Funcional SD">Funcional SD</option>
-                <option value="Funcional MM">Funcional MM</option>
-                <option value="Funcional FI/CO">Funcional FI/CO</option>
-                <option value="Basis">Basis / Infra</option>
-                <option value="FullStack">FullStack / Web</option>
-                <option value="Outros">Outros</option>
-              </select>
-            </div>
-
-            {/* Disponibilidade e Custos (Acesso Restrito) */}
-            <div className="p-6 rounded-2xl border space-y-6 transition-all shadow-inner" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--muted)' }}>
-                <Shield className="w-3 h-3 text-[var(--primary)]" /> Dados Executivos (Restrito)
-              </h3>
+            {/* Financeiro e Metas */}
+            <div className="p-6 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-amber-500" /> Métricas e Cargas Horárias
+                </h4>
+                <div className="p-1 rounded bg-[var(--surface)] border border-[var(--border)] text-[9px] font-black text-[var(--muted)] uppercase px-2">Privado</div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Custo Hora (IDL/Nic-Labs)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Custo Hora (Interno)</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">R$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xs font-black">R$</span>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.hourlyCost}
                       onChange={(e) => setFormData({ ...formData, hourlyCost: Number(e.target.value) })}
-                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-emerald-600"
-                      placeholder="0.00"
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase font-mono">Avatar URL (Opcional)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Avatar Personalizado (URL)</label>
                   <input
                     type="text"
                     value={formData.avatarUrl}
                     onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none text-xs font-mono text-[var(--textMuted)]"
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[10px] font-mono text-[var(--muted)]"
                     placeholder="https://..."
                   />
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Disponibilidade Diária (Horas)</label>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Carga Horária (Dia)</label>
                   <input
                     type="number"
                     value={formData.dailyAvailableHours}
                     onChange={(e) => setFormData({ ...formData, dailyAvailableHours: Number(e.target.value) })}
-                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none font-black text-slate-700 dark:text-slate-200"
-                    min="0"
-                    max="24"
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)]"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Disponibilidade Mensal (Horas)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Carga Máxima (Mês)</label>
                   <input
                     type="number"
                     value={formData.monthlyAvailableHours}
                     onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: Number(e.target.value) })}
-                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--brand)] outline-none font-black text-slate-700 dark:text-slate-200"
-                    min="0"
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)]"
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Active Checkbox - Apenas para edição */}
-            {!isNew && (
-              <div className="flex items-center gap-3 pt-4 border-t border-[var(--border)]">
-                <input
-                  type="checkbox"
-                  id="activeUser"
-                  checked={formData.active}
-                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  className="w-5 h-5 text-[var(--brand)] rounded focus:ring-[var(--brand)]"
-                />
-                <label htmlFor="activeUser" className="text-sm font-medium text-[var(--text)]">Colaborador Ativo</label>
+              <div className="flex gap-3 items-start p-4 bg-amber-500/5 rounded-xl border border-amber-500/10">
+                <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-amber-700 font-medium leading-relaxed italic">Estes dados são utilizados para o cálculo de IDL (Índice de Lucratividade) e monitoramento de capacidade. Somente administradores do sistema têm visibilidade total destes campos.</p>
               </div>
-            )}
-
+            </div>
           </form>
         </div>
       </div>

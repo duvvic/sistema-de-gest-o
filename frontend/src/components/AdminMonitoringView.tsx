@@ -426,10 +426,12 @@ const AdminMonitoringView: React.FC = () => {
         return () => clearInterval(interval);
     }, [tasksInProgress.length, taskPage]);
 
-    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
-    const filteredUsers = useMemo(() =>
-        allUsers.filter(u => u.active !== false && activeCargos.includes(u.cargo?.toLowerCase() || '')),
-        [allUsers]);
+    const filteredUsers = useMemo(() => {
+        const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead', 'developer'];
+        return allUsers.filter(u =>
+            u.active !== false && (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || ''))
+        );
+    }, [allUsers]);
 
     const userMap = useMemo(() => new Map(filteredUsers.map(u => [u.id, u])), [filteredUsers]);
 

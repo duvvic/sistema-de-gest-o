@@ -3,74 +3,59 @@
    ================================================ */
 
 :root {
-  /* LIGHT MODE - Ultra Visibility & Premium Feel */
+  /* LIGHT MODE - High Contrast & Depth */
 
-  /* Backgrounds - High Contrast Cleanliness */
+  /* Backgrounds */
   --bg: #F1F5F9;
-  /* Slightly more depth */
+  /* Slate 100 - Cleaner background */
   --surface: #FFFFFF;
   /* Pure white for cards */
   --surface-2: #E2E8F0;
-  /* Slate-200 for nested areas */
-  --surface-hover: #CBD5E1;
-  /* Slate-300 for clearer hover */
+  /* Slate 200 for nested blocks */
+  --surface-hover: #F8FAFC;
 
-  /* Sidebar & Header - Original Purple */
+  /* Sidebar & Brand */
   --sidebar-bg: #4C1D95;
   --sidebar-bg-2: #5B21B6;
-
-  /* Primary Colors - Original Violet */
   --primary: #7C3AED;
   --primary-hover: #6D28D9;
   --primary-soft: #F5F3FF;
 
-  /* Text Colors - Ultra Visibility */
-  --text: #020617;
-  /* Slate-950 */
-  --text-2: #1E293B;
-  /* Slate-800 */
-  --muted: #475569;
-  /* Slate-600 - Strong contrast */
+  /* Text - Improved Priority */
+  --text: #0F172A;
+  /* Slate 900 */
+  --text-2: #334155;
+  /* Slate 700 */
+  --muted: #64748B;
+  /* Slate 500 */
 
   /* Borders & Spacing */
-  --border: #CBD5E1;
-  /* Slate-300 */
-  --border-strong: #94A3B8;
-  /* Slate-400 */
-  --ring: rgba(79, 70, 229, 0.4);
+  --border: #E2E8F0;
+  /* Slate 200 */
+  --border-strong: #CBD5E1;
+  /* Slate 300 */
+  --ring: rgba(124, 58, 237, 0.2);
 
-  /* Status Colors (Optimized for Light Backgrounds) */
+  /* Status Colors */
   --success: #10B981;
-  /* Emerald-500 */
   --success-bg: #ECFDF5;
   --success-text: #065F46;
-
   --warning: #F59E0B;
-  /* Amber-500 */
   --warning-bg: #FFFBEB;
   --warning-text: #92400E;
-
   --danger: #EF4444;
-  /* Red-500 */
   --danger-bg: #FEF2F2;
   --danger-text: #991B1B;
-
   --info: #3B82F6;
-  /* Blue-500 */
   --info-bg: #EFF6FF;
   --info-text: #1E40AF;
 
-  /* Kanban Columns */
-  --status-todo: #F8FAFC;
-  --status-progress: #EFF6FF;
-  --status-review: #FFFBEB;
-  --status-done: #ECFDF5;
-
-  /* Shadows - Cleaner & Lighter */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  /* Shadows - More pronounced to distinguish layers in light mode */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 4px 20px -5px rgba(0, 0, 0, 0.1), 0 2px 8px -4px rgba(0, 0, 0, 0.05);
 
   /* Aliases */
   --bg-app: var(--bg);
@@ -148,24 +133,39 @@ html.dark {
    ================================================ */
 
 /* Base styles */
+/* Base styles */
 body {
   background-color: var(--bg);
   color: var(--text);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Glass Card */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+html.dark .glass-effect {
+  background: rgba(30, 27, 46, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Card component */
 .ui-card {
   background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ui-card:hover {
-  background-color: var(--surface-hover);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
 }
 
 /* Custom scrollbar - Subtle Purple */

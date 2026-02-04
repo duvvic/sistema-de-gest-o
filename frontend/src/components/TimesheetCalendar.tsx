@@ -193,9 +193,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const processedUsers = useMemo(() => {
     if (!isAdmin) return [];
 
-    const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+    const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
     return safeUsers
-      .filter(u => u.active !== false && activeCargos.includes(u.cargo?.toLowerCase() || ''))
+      .filter(u => u.active !== false && (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || '')))
       .map(u => {
         const missing = calculateDaysMissing(u.id);
         const status = missing > 2 ? 'late' : 'ontime';

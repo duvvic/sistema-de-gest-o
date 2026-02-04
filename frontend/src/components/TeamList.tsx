@@ -7,6 +7,7 @@ import { Briefcase, Mail, CheckSquare, ShieldCheck, User as UserIcon, Search, Tr
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmationModal from './ConfirmationModal';
 import { getRoleDisplayName } from '@/utils/normalizers';
+import { getUserStatus } from '@/utils/userStatus';
 
 const TeamList: React.FC = () => {
   const navigate = useNavigate();
@@ -88,8 +89,8 @@ const TeamList: React.FC = () => {
       });
 
       let userStatus: 'Livre' | 'Ocupado' | 'Estudando' | 'Atrasado' | 'Indisponível' = 'Livre';
-      const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
-      const isSystemCollaborator = activeCargos.includes(user.cargo?.toLowerCase() || '');
+      const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead', 'developer'];
+      const isSystemCollaborator = (user.torre && user.torre !== 'N/A') || activeRoles.includes(user.role?.toLowerCase() || '');
 
       if (!isSystemCollaborator) {
         userStatus = 'Indisponível';
@@ -370,8 +371,8 @@ const TeamList: React.FC = () => {
                     });
                     const hasInProgress = userActiveTasks.some(t => t.status === 'In Progress');
 
-                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
-                    const isSystemCollaborator = user.torre ? user.torre !== 'N/A' : activeCargos.includes(user.cargo?.toLowerCase() || '');
+                    const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
+                    const isSystemCollaborator = (user.torre && user.torre !== 'N/A') || activeRoles.includes(user.role?.toLowerCase() || '');
 
                     if (!isSystemCollaborator) return 'indisponível';
                     if (hasDelayed) return 'atrasado';
@@ -394,52 +395,11 @@ const TeamList: React.FC = () => {
                   }}
                   onClick={() => navigate(`/admin/team/${user.id}`)}
                 >
-                  {/* Indicador de Status Evidente (Linha lateral ou topo) */}
                   {(() => {
-                    const hasStudy = userActiveTasks.some(t => {
-                      const p = projects.find(proj => proj.id === t.projectId);
-                      const c = clients.find(cl => cl.id === p?.clientId);
-                      const isStudyProject = p?.name.toLowerCase().includes('treinamento') || p?.name.toLowerCase().includes('capacitação');
-                      const isNicLabs = c?.name.toLowerCase().includes('nic-labs');
-                      return isStudyProject && isNicLabs;
-                    });
-                    const hasDelayed = userActiveTasks.some(t => isTaskDelayed(t) && t.status !== 'Review'); // Ignora Review para "Atrasado"
-                    const hasInProgress = userActiveTasks.some(t => t.status === 'In Progress');
-
-                    let statusType: 'atrasado' | 'estudando' | 'ocupado' | 'livre' | 'indisponível' = 'livre';
-                    let statusLabel = 'Livre';
-                    let accentColor = '#10b981'; // Verde
-                    let accentBg = 'rgba(16, 185, 129, 0.1)';
-                    let textColor = '#047857'; // Verde Escuro para texto
-
-                    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'ceo'];
-                    const isSystemCollaborator = user.torre ? user.torre !== 'N/A' : activeCargos.includes(user.cargo?.toLowerCase() || '');
-
-                    if (!isSystemCollaborator) {
-                      statusType = 'indisponível';
-                      statusLabel = 'N/A';
-                      accentColor = 'var(--muted)';
-                      accentBg = 'var(--surface-2)';
-                      textColor = 'var(--textMuted)';
-                    } else if (hasDelayed) {
-                      statusType = 'atrasado';
-                      statusLabel = 'Atrasado';
-                      accentColor = '#ef4444'; // Vermelho
-                      accentBg = 'rgba(239, 68, 68, 0.1)';
-                      textColor = '#b91c1c'; // Vermelho Escuro
-                    } else if (hasInProgress) {
-                      statusType = 'ocupado';
-                      statusLabel = 'Ocupado';
-                      accentColor = '#f59e0b'; // Amarelo
-                      accentBg = 'rgba(245, 158, 11, 0.1)';
-                      textColor = '#b45309'; // Laranja Escuro
-                    } else if (hasStudy) {
-                      statusType = 'estudando';
-                      statusLabel = 'Estudando';
-                      accentColor = '#3b82f6'; // Azul
-                      accentBg = 'rgba(59, 130, 246, 0.1)';
-                      textColor = '#1d4ed8'; // Azul Escuro
-                    }
+                    const status = getUserStatus(user, tasks, projects, clients);
+                    const statusLabel = status.label;
+                    const accentColor = status.color;
+                    const accentBg = `${status.color}1A`; // 0.1 opacity
 
                     return (
                       <>
@@ -478,11 +438,9 @@ const TeamList: React.FC = () => {
                             <div className="flex items-center gap-2 mt-1">
                               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase shadow-sm border`}
                                 style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', borderColor: 'rgba(76, 29, 149, 0.1)' }}>
-                                {getRoleDisplayName(user.role)}
+                                {user.cargo || 'Operacional'}
                               </span>
-                              {user.cargo && (
-                                <p className="text-xs font-semibold truncate" style={{ color: 'var(--muted)' }}>{user.cargo}</p>
-                              )}
+                              <p className="text-xs font-semibold truncate" style={{ color: 'var(--muted)' }}>{getRoleDisplayName(user.role)}</p>
                             </div>
                           </div>
                         </div>
@@ -506,7 +464,7 @@ const TeamList: React.FC = () => {
                                 color: accentColor,
                                 borderColor: `${accentColor}44`
                               }}>
-                              {statusType === 'livre' ? <CheckCircle className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
+                              {statusLabel === 'Livre' ? <CheckCircle className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
                               {userActiveTasks.length} tarefas
                             </span>
                           </div>

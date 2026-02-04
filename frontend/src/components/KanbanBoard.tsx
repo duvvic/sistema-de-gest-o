@@ -846,10 +846,10 @@ export const KanbanBoard = () => {
                         <div className="h-px bg-white/5 my-1 mx-2" />
 
                         {(() => {
-                          const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
+                          const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
                           return users
                             .filter(u => u.active !== false &&
-                              activeCargos.includes(u.cargo?.toLowerCase() || '') &&
+                              (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || '')) &&
                               (searchTerm === '' || u.name.toLowerCase().includes(searchTerm.toLowerCase())))
                             .filter(u => !showOnlyDelayed || lateDevelopers.some(ld => ld.user.id === u.id))
                             .sort((a, b) => a.name.localeCompare(b.name))

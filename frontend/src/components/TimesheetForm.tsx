@@ -354,14 +354,14 @@ const TimesheetForm: React.FC = () => {
     if (!targetUserId) return [];
 
     const targetUser = users.find(u => u.id === targetUserId);
-    const targetIsAdmin = ['admin', 'system_admin', 'diretoria', 'gestor', 'pmo'].includes(targetUser?.role?.toLowerCase() || '');
+    const activeRoles = ['admin', 'system_admin', 'diretoria', 'gestor', 'pmo', 'ceo', 'tech_lead'];
+    const targetIsAdmin = activeRoles.includes(targetUser?.role?.toLowerCase() || '');
 
     if (targetIsAdmin) return clients.map(c => c.id);
 
-    const activeCargos = ['desenvolvedor', 'infraestrutura de ti', 'analista'];
-    const isOperational = activeCargos.includes(targetUser?.cargo?.toLowerCase() || '');
+    const isOperational = targetUser?.torre !== 'N/A';
 
-    if (!isOperational) {
+    if (!isOperational && !targetIsAdmin) {
       // Se não for operacional e não for admin, vê apenas projetos internos (ex: Nic-Labs)
       return clients
         .filter(c => c.name.toLowerCase().includes('nic-labs'))

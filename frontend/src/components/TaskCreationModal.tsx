@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
 import { Dialog } from '@headlessui/react';
@@ -94,10 +94,11 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
 
 
 
-    const filteredUsers = projectId
-        ? users.filter(u => u.active !== false && u.torre !== 'N/A' && projectMembers.some(pm => pm.projectId === projectId && pm.userId === u.id))
-        : [];
-
+    const eligibleUsers = useMemo(() => {
+        return projectId
+            ? users.filter(u => u.active !== false && u.torre !== 'N/A' && projectMembers.some(pm => pm.projectId === projectId && pm.userId === u.id))
+            : users.filter(u => u.active !== false && u.torre !== 'N/A');
+    }, [users, projectId, projectMembers]);
 
     const handleSave = async () => {
         if (!title.trim()) {
@@ -218,7 +219,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                     className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
                                 >
                                     <option value="">Selecione o Responsável...</option>
-                                    {filteredUsers
+                                    {eligibleUsers
                                         .map(u => (
                                             <option key={u.id} value={u.id}>{u.name}</option>
                                         ))
@@ -250,7 +251,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
 
                             {isCollaboratorsOpen && (
                                 <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto border rounded-lg shadow-xl bg-[var(--surface)] z-10 border-[var(--border)]">
-                                    {filteredUsers.filter(u => u.id !== developerId).map(u => (
+                                    {eligibleUsers.filter(u => u.id !== developerId).map(u => (
                                         <label key={u.id} className="flex items-center gap-2 p-2 hover:bg-[var(--surface-hover)] cursor-pointer text-sm">
                                             <input
                                                 type="checkbox"
@@ -267,7 +268,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                             <span>{u.name}</span>
                                         </label>
                                     ))}
-                                    {filteredUsers.filter(u => u.id !== developerId).length === 0 && (
+                                    {eligibleUsers.filter(u => u.id !== developerId).length === 0 && (
                                         <div className="p-3 text-center text-xs text-[var(--muted)]">
                                             Nenhum outro colaborador disponível.
                                         </div>
@@ -275,7 +276,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 </div>
                             )}
                             <p className="text-[10px] text-[var(--muted)] mt-1">
-                                {projectId && filteredUsers.length === 0 ? 'Nenhum membro no projeto.' : 'Membros extras da equipe.'}
+                                {projectId && eligibleUsers.length === 0 ? 'Nenhum membro no projeto.' : 'Membros extras da equipe.'}
                             </p>
                         </div>
 

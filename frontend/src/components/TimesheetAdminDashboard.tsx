@@ -49,11 +49,12 @@ const TimesheetAdminDashboard: React.FC = () => {
          }
       }
 
-      const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
-      return users.filter(u =>
-         u.active !== false &&
-         activeCargos.includes(u.cargo?.toLowerCase() || '')
-      ).map(user => {
+      const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
+      const monitoredCollaborators = users.filter(u =>
+         u.active !== false && (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || ''))
+      );
+
+      return monitoredCollaborators.map(user => {
          const userEntries = entries.filter(e =>
             e.userId === user.id &&
             new Date(e.date).getMonth() === currentMonth &&
@@ -159,10 +160,12 @@ const TimesheetAdminDashboard: React.FC = () => {
          });
       });
 
-      const activeCargos = ['desenvolvedor', 'infraestrutura de ti'];
       collabMap.forEach((collab, userId) => {
          const user = users.find(u => u.id === userId);
-         if (!activeCargos.includes(user?.cargo?.toLowerCase() || '')) {
+         const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
+         const isParticipant = user && (user.active !== false && (user.torre !== 'N/A' || activeRoles.includes(user.role?.toLowerCase() || '')));
+
+         if (!isParticipant) {
             collabMap.delete(userId);
             return;
          }
@@ -436,8 +439,8 @@ const TimesheetAdminDashboard: React.FC = () => {
                      <button
                         onClick={() => setActiveTab('projects')}
                         className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'projects'
-                              ? 'bg-slate-800 text-white shadow-sm'
-                              : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                           ? 'bg-slate-800 text-white shadow-sm'
+                           : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                            }`}
                      >
                         Projetos <span className="ml-1 opacity-60">({projectsWithHours.length})</span>
@@ -446,8 +449,8 @@ const TimesheetAdminDashboard: React.FC = () => {
                      <button
                         onClick={() => setActiveTab('collaborators')}
                         className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'collaborators'
-                              ? 'bg-slate-800 text-white shadow-sm'
-                              : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                           ? 'bg-slate-800 text-white shadow-sm'
+                           : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                            }`}
                      >
                         Colaboradores <span className="ml-1 opacity-60">({collaboratorsWithHours.length})</span>
