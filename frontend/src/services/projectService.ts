@@ -33,6 +33,8 @@ export async function createProject(data: Partial<Project>): Promise<number> {
     important_considerations: clean((data as any).important_considerations || (data as any).importantConsiderations),
     weekly_status_report: clean((data as any).weekly_status_report || (data as any).weeklyStatusReport),
     complexidade: data.complexidade || 'Média',
+    horas_vendidas: clean(data.horas_vendidas),
+    torre: clean(data.torre),
   };
 
   const { data: inserted, error } = await supabase
@@ -85,6 +87,8 @@ export async function updateProject(projectId: string, data: Partial<Project>): 
   if (report !== undefined) payload.weekly_status_report = clean(report);
 
   if (data.complexidade !== undefined) payload.complexidade = data.complexidade;
+  if (data.horas_vendidas !== undefined) payload.horas_vendidas = clean(data.horas_vendidas);
+  if (data.torre !== undefined) payload.torre = clean(data.torre);
 
   const { error } = await supabase
     .from("dim_projetos")

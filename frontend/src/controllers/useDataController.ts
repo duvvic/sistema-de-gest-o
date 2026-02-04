@@ -310,7 +310,7 @@ export const useDataController = () => {
     // === MEMBER CONTROLLERS ===
 
     const getProjectMembers = (projectId: string): string[] => {
-        return projectMembers.filter(pm => pm.projectId === projectId).map(pm => pm.userId);
+        return projectMembers.filter(pm => String(pm.id_projeto) === projectId).map(pm => String(pm.id_colaborador));
     };
 
     const addProjectMember = async (projectId: string, userId: string): Promise<void> => {
@@ -318,9 +318,14 @@ export const useDataController = () => {
             .from('project_members')
             .upsert({ id_projeto: Number(projectId), id_colaborador: Number(userId) }, { onConflict: 'id_projeto, id_colaborador' });
         if (error) throw error;
+        if (error) throw error;
         setProjectMembers(prev => {
-            if (prev.some(pm => pm.projectId === projectId && pm.userId === userId)) return prev;
-            return [...prev, { projectId, userId }];
+            if (prev.some(pm => String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId)) return prev;
+            return [...prev, {
+                id_pc: -1, // Temporary
+                id_projeto: Number(projectId),
+                id_colaborador: Number(userId),
+            }];
         });
     };
 
@@ -330,7 +335,7 @@ export const useDataController = () => {
             .delete()
             .match({ id_projeto: Number(projectId), id_colaborador: Number(userId) });
         if (error) throw error;
-        setProjectMembers(prev => prev.filter(pm => !(pm.projectId === projectId && pm.userId === userId)));
+        setProjectMembers(prev => prev.filter(pm => !(String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId)));
     };
 
     // === ABSENCE CONTROLLERS ===

@@ -12,6 +12,7 @@ import {
   Priority,
   Impact,
   Absence,
+  ProjectMember,
 } from "@/types";
 
 import {
@@ -35,7 +36,7 @@ interface AppData {
   projects: Project[];
   tasks: Task[];
   timesheetEntries: TimesheetEntry[];
-  projectMembers: { projectId: string; userId: string }[];
+  projectMembers: ProjectMember[];
   absences: Absence[];
   loading: boolean;
   error: string | null;
@@ -68,7 +69,7 @@ export function useAppData(): AppData {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>(MOCK_TIMESHEETS);
-  const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [absences, setAbsences] = useState<Absence[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -132,7 +133,7 @@ export function useAppData(): AppData {
           fetchProjects(),
           fetchTasks(),
           fetchTaskCollaborators(),
-          supabase.from('project_members').select('id_projeto, id_colaborador'),
+          supabase.from('project_members').select('*'),
           fetchTimesheets(),
           supabase.from('colaborador_ausencias').select('*')
         ]);
@@ -212,14 +213,18 @@ export function useAppData(): AppData {
 
         if (membersRes.data) {
 
-          const membersMapped = membersRes.data.map((row: any) => ({
-            projectId: String(row.id_projeto),
-            userId: String(row.id_colaborador)
+          const membersMapped: ProjectMember[] = membersRes.data.map((row: any) => ({
+            id_pc: row.id_pc,
+            id_projeto: row.id_projeto,
+            id_colaborador: row.id_colaborador,
+            allocation_percentage: row.allocation_percentage,
+            start_date: row.start_date,
+            end_date: row.end_date,
+            role_in_project: row.role_in_project
           }));
 
           // Deduplicate members
-          const uniqueMembers = Array.from(new Map(membersMapped.map((m: any) => [`${m.projectId}-${m.userId}`, m])).values());
-
+          const uniqueMembers = Array.from(new Map(membersMapped.map((m) => [`${m.id_projeto}-${m.id_colaborador}`, m])).values());
 
           setProjectMembers(uniqueMembers);
 

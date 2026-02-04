@@ -6,6 +6,7 @@ import { User, Role } from '@/types';
 import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield, Zap, Info, LayoutGrid } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import OrganizationalStructureSelector from './OrganizationalStructureSelector';
+import * as CapacityUtils from '@/utils/capacity';
 
 const UserForm: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -47,6 +48,17 @@ const UserForm: React.FC = () => {
       });
     }
   }, [initialUser]);
+
+  // Sincronizar Horas Mês automaticamente
+  useEffect(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonth);
+    const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
+
+    if (formData.monthlyAvailableHours !== calculatedMonthly) {
+      setFormData(prev => ({ ...prev, monthlyAvailableHours: calculatedMonthly }));
+    }
+  }, [formData.dailyAvailableHours]);
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -281,12 +293,10 @@ const UserForm: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Carga Máxima (Mês)</label>
-                  <input
-                    type="number"
-                    value={formData.monthlyAvailableHours}
-                    onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: Number(e.target.value) })}
-                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)]"
-                  />
+                  <div className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] opacity-80 cursor-not-allowed">
+                    {formData.monthlyAvailableHours} <span className="text-[10px] opacity-40 ml-2">PROJETADO</span>
+                  </div>
+                  <p className="text-[7px] font-bold opacity-40 mt-1 uppercase">Automático: {CapacityUtils.getWorkingDaysInMonth(new Date().toISOString().slice(0, 7))} dias úteis</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start p-4 bg-amber-500/5 rounded-xl border border-amber-500/10">

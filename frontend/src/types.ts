@@ -166,3 +166,13 @@ export interface AuditLogEntry {
   project_name?: string;
   task_name?: string;
 }
+
+export interface ProjectMember {
+  id_pc: number;
+  id_projeto: number;
+  id_colaborador: number;
+  allocation_percentage?: number | string;
+  start_date?: string;
+  end_date?: string;
+  role_in_project?: string;
+}

@@ -87,6 +87,17 @@ const ProjectForm: React.FC = () => {
     }
   }, [project]);
 
+  // Cálculo automático do prazo
+  useEffect(() => {
+    if (startDate && horasVendidas > 0 && selectedUsers.length > 0) {
+      const teamUsers = users.filter(u => selectedUsers.includes(u.id));
+      const calculatedDeadline = CapacityUtils.calculateProjectDeadline(startDate, horasVendidas, teamUsers);
+      if (calculatedDeadline) {
+        setEstimatedDelivery(calculatedDeadline);
+      }
+    }
+  }, [startDate, horasVendidas, selectedUsers, users]);
+
   // Carregar membros separadamente para garantir sincronia
   useEffect(() => {
     if (isEdit && projectId) {
@@ -225,9 +236,10 @@ const ProjectForm: React.FC = () => {
                   <select
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
-                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold disabled:opacity-50"
                     style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
                     required
+                    disabled={isEdit}
                   >
                     <option value="">Selecione</option>
                     {clients.filter(c => c.active !== false && c.tipo_cliente !== 'parceiro').map(c => (
@@ -241,8 +253,9 @@ const ProjectForm: React.FC = () => {
                   <select
                     value={partnerId}
                     onChange={(e) => setPartnerId(e.target.value)}
-                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold"
+                    className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all font-bold disabled:opacity-50"
                     style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    disabled={isEdit}
                   >
                     <option value="">Nenhum</option>
                     {clients.filter(c => c.active !== false && c.tipo_cliente === 'parceiro').map(c => (
@@ -341,7 +354,14 @@ const ProjectForm: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Entrega Estimada</label>
-                  <input type="date" value={estimatedDelivery} onChange={e => setEstimatedDelivery(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface)] border-[var(--border)] text-[var(--text)]" />
+                  <input
+                    type="date"
+                    value={estimatedDelivery}
+                    onChange={e => setEstimatedDelivery(e.target.value)}
+                    readOnly
+                    className="w-full px-4 py-2.5 border rounded-xl font-bold bg-[var(--surface-2)] border-[var(--border)] text-[var(--primary)] cursor-not-allowed"
+                  />
+                  <p className="text-[8px] font-black uppercase tracking-wider mt-1 opacity-50">Calculado automaticamente via Squad/Horas</p>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest mb-1 opacity-70" style={{ color: 'var(--text)' }}>Início Real</label>

@@ -512,8 +512,9 @@ const AdminDashboard: React.FC = () => {
       );
       const performedHours = userMonthEntries.reduce((acc, entry) => acc + Number(entry.totalHours || 0), 0);
 
-      // 2. Alocado (Previsto - Tarefas)
-      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeTasks);
+      // 2. Alocado (Previsto - Via Nova Lógica de Projetos e Membros)
+      // Agora espera: user, monthStr, projects, projectMembers, timesheets
+      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeProjects, projectMembers, timesheetEntries);
 
       return {
         id: u.id,
@@ -522,11 +523,11 @@ const AdminDashboard: React.FC = () => {
         capacity: capData.capacity,
         assigned: capData.allocated, // Horas planejadas
         performed: Math.round(performedHours), // Horas já trabalhadas
-        available: capData.available,
-        load: (capData.allocated / capData.capacity) * 100
+        available: capData.available, // Planejado Disponível
+        load: capData.capacity > 0 ? (capData.allocated / capData.capacity) * 100 : 0
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [users, portfolioTimesheets, capacityMonth, safeTasks]);
+  }, [users, portfolioTimesheets, capacityMonth, safeTasks, safeProjects, projectMembers, timesheetEntries]);
 
   const changeMonth = (delta: number) => {
     const [year, month] = capacityMonth.split('-').map(Number);
@@ -1605,23 +1606,48 @@ const AdminDashboard: React.FC = () => {
                                 <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider text-[var(--text)] dark:text-white">{project.name}</h4>
 
                                 <div className="space-y-4">
-                                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-purple-800/60 dark:text-purple-300/80">
-                                    <span>Evolução Física</span>
-                                    <span className="text-purple-700 dark:text-purple-400">{progress}%</span>
-                                  </div>
-                                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-2)' }}>
-                                    <div
-                                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-1000"
-                                      style={{ width: `${progress}%` }}
-                                    />
+                                  {/* Evolução Física */}
+                                  <div>
+                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                      <span>Evolução Física</span>
+                                      <span>{progress}%</span>
+                                    </div>
+                                    <div className="w-full h-1 rounded-full overflow-hidden mt-1" style={{ backgroundColor: 'var(--surface-2)' }}>
+                                      <div
+                                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-1000"
+                                        style={{ width: `${progress}%` }}
+                                      />
+                                    </div>
                                   </div>
 
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                                      <CheckSquare className="w-3.5 h-3.5 text-purple-500" />
+                                  {/* Consumo de Horas */}
+                                  {(() => {
+                                    const pTimesheets = timesheetEntries.filter(e => e.projectId === project.id);
+                                    const hoursConsumed = pTimesheets.reduce((acc, e) => acc + (Number(e.totalHours) || 0), 0);
+                                    const hoursSold = project.horas_vendidas || 0;
+                                    const hourPercentage = hoursSold > 0 ? (hoursConsumed / hoursSold) * 100 : 0;
+                                    return (
+                                      <div>
+                                        <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                          <span>Consumo de Horas</span>
+                                          <span className={hourPercentage > 100 ? 'text-red-500' : ''}>{hoursConsumed.toFixed(0)}h / {hoursSold}h</span>
+                                        </div>
+                                        <div className="w-full h-1 rounded-full overflow-hidden mt-1" style={{ backgroundColor: 'var(--surface-2)' }}>
+                                          <div
+                                            className={`h-full transition-all duration-1000 ${hourPercentage > 100 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                            style={{ width: `${Math.min(100, hourPercentage)}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+
+                                  <div className="flex items-center justify-between pt-1">
+                                    <div className="flex items-center gap-2 text-[10px] font-bold" style={{ color: 'var(--muted)' }}>
+                                      <CheckSquare className="w-3 h-3 text-purple-500" />
                                       <span className="dark:text-slate-400">{doneTasks}/{projectTasks.length}</span>
                                     </div>
-                                    <div className={`p-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border flex items-center gap-1 shadow-sm ${project.status === 'Concluído' || project.status === 'Done'
+                                    <div className={`p-1 px-2 rounded-lg text-[8px] font-black uppercase tracking-tighter border flex items-center gap-1 shadow-sm ${project.status === 'Concluído' || project.status === 'Done'
                                       ? 'text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 bg-emerald-500/5 dark:bg-emerald-500/10'
                                       : 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 bg-blue-500/5 dark:bg-blue-500/10'
                                       }`}>
@@ -1635,10 +1661,10 @@ const AdminDashboard: React.FC = () => {
                                   {/* Project Team Avatars */}
                                   <div className="pt-3 border-t flex items-center -space-x-1.5 overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                                     {projectMembers
-                                      .filter(pm => pm.projectId === project.id)
+                                      .filter(pm => String(pm.id_projeto) === project.id)
                                       .slice(0, 5)
                                       .map(pm => {
-                                        const member = users.find(u => u.id === pm.userId);
+                                        const member = users.find(u => u.id === String(pm.id_colaborador));
                                         if (!member) return null;
                                         return (
                                           <div
@@ -1656,9 +1682,9 @@ const AdminDashboard: React.FC = () => {
                                           </div>
                                         );
                                       })}
-                                    {projectMembers.filter(pm => pm.projectId === project.id).length > 5 && (
+                                    {projectMembers.filter(pm => String(pm.id_projeto) === project.id).length > 5 && (
                                       <div className="w-6 h-6 rounded-full border border-[var(--surface)] bg-[var(--surface-2)] flex items-center justify-center text-[8px] font-bold" style={{ color: 'var(--muted)' }}>
-                                        +{projectMembers.filter(pm => pm.projectId === project.id).length - 5}
+                                        +{projectMembers.filter(pm => String(pm.id_projeto) === project.id).length - 5}
                                       </div>
                                     )}
                                   </div>

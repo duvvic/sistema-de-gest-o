@@ -12,6 +12,7 @@ import { supabase } from '@/services/supabaseClient';
 
 import TimesheetCalendar from './TimesheetCalendar';
 import AbsenceManager from './AbsenceManager';
+import * as CapacityUtils from '@/utils/capacity';
 
 type ViewTab = 'details' | 'projects' | 'tasks' | 'delayed' | 'ponto' | 'absences';
 
@@ -129,7 +130,7 @@ const TeamMemberDetail: React.FC = () => {
    if (!user) return <div className="p-4 text-xs font-bold text-slate-500">Colaborador não encontrado.</div>;
 
    let userTasks = tasks.filter(t => t.developerId === user.id || (t.collaboratorIds && t.collaboratorIds.includes(user.id)));
-   const linkedProjectIds = projectMembers.filter(pm => pm.userId === user.id).map(pm => pm.projectId);
+   const linkedProjectIds = projectMembers.filter(pm => String(pm.id_colaborador) === user.id).map(pm => String(pm.id_projeto));
    const userProjects = projects.filter(p => linkedProjectIds.includes(p.id) && p.active !== false);
    const delayedTasks = userTasks.filter(t => getDelayDays(t) > 0 && t.status !== 'Review');
 
@@ -273,7 +274,17 @@ const TeamMemberDetail: React.FC = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                        <label className="block text-[10px] font-black text-[var(--muted)] uppercase">Hrs Meta Mês</label>
-                                       <input type="text" value={formData.monthlyAvailableHours || ''} onChange={(e) => handleNumberChange('monthlyAvailableHours', e.target.value)} placeholder="0" className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold focus:ring-2 focus:ring-[var(--primary)]/20 outline-none disabled:bg-transparent disabled:px-0 disabled:border-none" />
+                                       {(() => {
+                                          const currentMonth = new Date().toISOString().slice(0, 7);
+                                          const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonth);
+                                          const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
+                                          return (
+                                             <div className="w-full px-4 py-3 bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-black">
+                                                {calculatedMonthly}
+                                             </div>
+                                          );
+                                       })()}
+                                       <p className="text-[8px] font-bold uppercase opacity-40 mt-1">Base: {CapacityUtils.getWorkingDaysInMonth(new Date().toISOString().slice(0, 7))} dias úteis</p>
                                     </div>
                                  </div>
                               </div>
@@ -366,15 +377,46 @@ const TeamMemberDetail: React.FC = () => {
 
                {activeTab === 'projects' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                     {userProjects.map(p => (
-                        <div onClick={() => navigate(`/admin/projects/${p.id}`)} key={p.id} className="cursor-pointer ui-card p-6 group">
-                           <div className="flex items-center justify-between mb-4">
-                              <span className="text-[9px] px-2 py-1 rounded-md mb-2 bg-[var(--surface-2)] uppercase font-black text-[var(--muted)]">{p.status}</span>
-                              <ChevronRight className="w-4 h-4 text-[var(--muted)] opacity-30 group-hover:translate-x-1 group-hover:text-[var(--primary)] transition-all" />
+                     {userProjects.map(p => {
+                        const userProjectTasks = tasks.filter(t => t.projectId === p.id && (t.developerId === user.id || t.collaboratorIds?.includes(user.id)));
+                        const userEstimated = userProjectTasks.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0);
+                        const userReported = timesheetEntries
+                           .filter(e => e.projectId === p.id && e.userId === user.id)
+                           .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+                        const remaining = Math.max(0, userEstimated - userReported);
+
+                        return (
+                           <div onClick={() => navigate(`/admin/projects/${p.id}`)} key={p.id} className="cursor-pointer ui-card p-6 group space-y-4">
+                              <div className="flex items-center justify-between">
+                                 <span className="text-[9px] px-2 py-1 rounded-md bg-[var(--surface-2)] uppercase font-black text-[var(--muted)]">{p.status}</span>
+                                 <ChevronRight className="w-4 h-4 text-[var(--muted)] opacity-30 group-hover:translate-x-1 group-hover:text-[var(--primary)] transition-all" />
+                              </div>
+
+                              <h4 className="font-black text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors line-clamp-2">{p.name}</h4>
+
+                              <div className="pt-4 border-t border-[var(--border)] space-y-3">
+                                 <div className="flex justify-between items-end">
+                                    <p className="text-[10px] uppercase font-black text-[var(--muted)]">Minha Alocação</p>
+                                    <p className="text-xs font-black text-[var(--text)]">{userReported.toFixed(1)}h <span className="text-[var(--muted)] font-bold text-[10px]">/ {userEstimated}h</span></p>
+                                 </div>
+                                 <div className="w-full h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
+                                    <div
+                                       className={`h-full transition-all ${userReported > userEstimated ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                       style={{ width: `${Math.min(100, userEstimated > 0 ? (userReported / userEstimated) * 100 : 0)}%` }}
+                                    />
+                                 </div>
+                                 <div className="flex justify-between text-[9px] font-bold">
+                                    <span style={{ color: userReported > userEstimated ? 'var(--danger)' : 'var(--success)' }}>
+                                       {Math.round(userEstimated > 0 ? (userReported / userEstimated) * 100 : 0)}% Consumido
+                                    </span>
+                                    <span style={{ color: 'var(--muted)' }}>
+                                       Restam {remaining.toFixed(1)}h
+                                    </span>
+                                 </div>
+                              </div>
                            </div>
-                           <h4 className="font-black text-[var(--text)] text-sm mb-1 group-hover:text-[var(--primary)] transition-colors line-clamp-2">{p.name}</h4>
-                        </div>
-                     ))}
+                        );
+                     })}
                      {userProjects.length === 0 && (
                         <div className="col-span-full py-20 text-center border-2 border-dashed border-[var(--border)] rounded-2xl">
                            <p className="text-xs font-black text-[var(--muted)] uppercase tracking-widest">Nenhum projeto vinculado a este usuário.</p>

@@ -128,6 +128,7 @@ const ProjectDetailView: React.FC = () => {
   const performance = useMemo(() => {
     if (!project) return null;
     const pTimesheets = timesheetEntries.filter(e => e.projectId === projectId);
+    const consumedHours = pTimesheets.reduce((acc, entry) => acc + (Number(entry.totalHours) || 0), 0);
     const committedCost = pTimesheets.reduce((acc, entry) => {
       const u = users.find(u => u.id === entry.userId);
       return acc + (entry.totalHours * (u?.hourlyCost || 0));
@@ -158,8 +159,30 @@ const ProjectDetailView: React.FC = () => {
       }
     }
 
-    return { committedCost, weightedProgress, totalEstimated, plannedProgress, projection };
+    return { committedCost, consumedHours, weightedProgress, totalEstimated, plannedProgress, projection };
   }, [project, projectTasks, timesheetEntries, users, projectId]);
+
+  const teamMetrics = useMemo(() => {
+    if (!project || !projectId) return {};
+    const metrics: Record<string, { reported: number; remaining: number }> = {};
+
+    const projectMems = projectMembers.filter(pm => pm.projectId === projectId);
+
+    projectMems.forEach(pm => {
+      const userId = pm.userId;
+      const reported = timesheetEntries
+        .filter(e => e.projectId === projectId && e.userId === userId)
+        .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+
+      const userTasks = tasks.filter(t => t.projectId === projectId && (t.developerId === userId || t.collaboratorIds?.includes(userId)));
+      const estimated = userTasks.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0);
+      const remaining = Math.max(0, estimated - reported);
+
+      metrics[userId] = { reported, remaining };
+    });
+
+    return metrics;
+  }, [projectId, projectMembers, timesheetEntries, tasks, project]);
 
   if (!project) return <div className="p-20 text-center font-bold" style={{ color: 'var(--muted)' }}>Projeto não encontrado</div>;
 
@@ -326,17 +349,45 @@ const ProjectDetailView: React.FC = () => {
                             <p className="text-2xl font-black" style={{ color: 'var(--success)' }}>{(project.valor_total_rs || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                           </div>
 
-                          <div className="flex flex-col gap-2">
-                            <div className="flex justify-between items-end">
-                              <p className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted)' }}>Consumido (Custo)</p>
-                              <p className="text-[10px] font-bold" style={{ color: 'var(--text)' }}>{performance?.committedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                          <div className="flex flex-col gap-4">
+                            {/* CUSTO CONSUMIDO VS ORÇAMENTO (MONETÁRIO) */}
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-end">
+                                <p className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted)' }}>Consumido (Custo)</p>
+                                <p className="text-[10px] font-black" style={{ color: 'var(--text)' }}>
+                                  {performance?.committedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </p>
+                              </div>
+                              <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+                                <div
+                                  className={`h-full transition-all duration-1000 ${((performance?.committedCost || 0) / (project.valor_total_rs || 1)) > 1 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                  style={{ width: `${Math.min(100, ((performance?.committedCost || 0) / (project.valor_total_rs || 1)) * 100)}%` }}
+                                />
+                              </div>
+                              <div className="flex justify-between text-[8px] font-bold" style={{ color: 'var(--muted)' }}>
+                                <span>{Math.round(((performance?.committedCost || 0) / (project.valor_total_rs || 1)) * 100)}%</span>
+                                <span className="text-emerald-500">
+                                  Restam {((project.valor_total_rs || 0) - (performance?.committedCost || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </span>
+                              </div>
                             </div>
-                            <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
-                              <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, ((performance?.committedCost || 0) / (project.valor_total_rs || 1)) * 100)}%` }} />
-                            </div>
-                            <div className="flex justify-between text-[8px]" style={{ color: 'var(--muted)' }}>
-                              <span>0%</span>
-                              <span>{project.horas_vendidas || 0}h Vendidas</span>
+
+                            {/* HORAS CONSUMIDAS VS ORÇAMENTO (HORAS) */}
+                            <div className="space-y-2 pt-4 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                              <div className="flex justify-between items-end">
+                                <p className="text-[9px] font-bold uppercase" style={{ color: 'var(--muted)' }}>Consumido (Horas)</p>
+                                <p className="text-[10px] font-black" style={{ color: 'var(--text)' }}>{performance?.consumedHours.toFixed(1)}h</p>
+                              </div>
+                              <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+                                <div
+                                  className={`h-full transition-all duration-1000 ${((performance?.consumedHours || 0) / (project.horas_vendidas || 1)) > 1 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                  style={{ width: `${Math.min(100, ((performance?.consumedHours || 0) / (project.horas_vendidas || 1)) * 100)}%` }}
+                                />
+                              </div>
+                              <div className="flex justify-between text-[8px] font-bold" style={{ color: 'var(--muted)' }}>
+                                <span>{Math.round(((performance?.consumedHours || 0) / (project.horas_vendidas || 1)) * 100)}%</span>
+                                <span>{project.horas_vendidas || 0}h Vendidas</span>
+                              </div>
                             </div>
                           </div>
                         </>
@@ -373,17 +424,20 @@ const ProjectDetailView: React.FC = () => {
                           </p>
                         </div>
 
-                        {performance?.projection && (
-                          <div className="pt-3 mt-3 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
-                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Projeção Real (Ritmo Atual)</p>
-                            <div className="flex items-end gap-2">
-                              <p className={`text-sm font-black ${performance.projection.getTime() > new Date(project.estimatedDelivery || '2100-01-01').getTime() ? 'text-red-500' : 'text-emerald-500'}`}>
-                                {performance.projection.toLocaleDateString()}
-                              </p>
-                              <p className="text-[8px] mb-0.5 opacity-60">*Automático</p>
-                            </div>
+                        <div className="pt-3 mt-3 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                          <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Estimativa Automática</p>
+                          <div className="flex items-end gap-2">
+                            <p className="text-xl font-black text-purple-500">
+                              {(() => {
+                                const team = users.filter(u => projectMembers.some(pm => pm.projectId === project.id && pm.userId === u.id));
+                                const remainingHours = Math.max(0, (project.horas_vendidas || 0) - (performance?.consumedHours || 0));
+                                const deadline = CapacityUtils.calculateProjectDeadline(new Date().toISOString().split('T')[0], remainingHours, team);
+                                return deadline ? deadline.split('-').reverse().join('/') : '--';
+                              })()}
+                            </p>
+                            <p className="text-[8px] mb-1 opacity-60">*Baseada em Capacidade</p>
                           </div>
-                        )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -478,7 +532,19 @@ const ProjectDetailView: React.FC = () => {
                     </div>
 
                     <div className="p-6 rounded-[32px] border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                      <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: 'var(--text)' }}><Users size={16} className="text-purple-500" /> Equipe Alocada</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text)' }}>
+                          <Users size={16} className="text-purple-500" /> Equipe Alocada
+                        </h3>
+                        {project && performance && (
+                          <div className="text-right">
+                            <p className="text-[8px] font-black uppercase opacity-40">Saldo Projeto</p>
+                            <p className="text-xs font-black" style={{ color: (project.horas_vendidas - performance.consumedHours) < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                              {(project.horas_vendidas - performance.consumedHours).toFixed(1)}h
+                            </p>
+                          </div>
+                        )}
+                      </div>
                       <div className="space-y-3">
                         {isEditing ? (
                           <div className="border rounded-2xl p-4 max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar shadow-inner" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
@@ -506,7 +572,7 @@ const ProjectDetailView: React.FC = () => {
                                       <p className="text-[8px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
                                       {(() => {
                                         const status = getUserStatus(user, tasks, projects, clients);
-                                        const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), tasks);
+                                        const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), tasks, timesheetEntries);
                                         return (
                                           <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-1">
@@ -534,13 +600,25 @@ const ProjectDetailView: React.FC = () => {
                                 <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderWidth: 1 }}>
                                   {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-black" style={{ color: 'var(--primary)' }}>{u.name.substring(0, 2).toUpperCase()}</div>}
                                 </div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
                                   <div className="flex items-center gap-2">
                                     <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--primary)' }}>{u.cargo || 'Consultor'}</p>
                                     {(() => {
                                       const status = getUserStatus(u, tasks, projects, clients);
-                                      const availability = CapacityUtils.getUserMonthlyAvailability(u, new Date().toISOString().slice(0, 7), tasks);
+                                      const availability = CapacityUtils.getUserMonthlyAvailability(u, new Date().toISOString().slice(0, 7), tasks, timesheetEntries);
+
+                                      // Calculate share of remaining work
+                                      const projectRemainingHours = Math.max(0, project.horas_vendidas - (performance?.consumedHours || 0));
+                                      const teamSize = projectMembers.filter(m => m.projectId === projectId).length || 1;
+                                      const shareOfRemaining = projectRemainingHours / teamSize;
+
+                                      // Calculate monthly burden based on deadline
+                                      const now = new Date();
+                                      const deadline = project.estimatedDelivery ? new Date(project.estimatedDelivery) : new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                                      const monthsRemaining = Math.max(1, (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth()));
+                                      const monthlyBurden = shareOfRemaining / monthsRemaining;
+
                                       return (
                                         <div className="flex items-center gap-2">
                                           <div className="flex items-center gap-1">
@@ -548,12 +626,45 @@ const ProjectDetailView: React.FC = () => {
                                             <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
                                           </div>
                                           <span className="text-[var(--muted)] opacity-20 text-[7px]">•</span>
-                                          <span className={`text-[8px] font-black tracking-tighter ${availability.available < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                          <span className={`text-[8px] font-black tracking-tighter ${availability.available < monthlyBurden ? 'text-red-500' : 'text-emerald-500'}`}>
                                             DISP: {availability.available}H
                                           </span>
                                         </div>
                                       );
                                     })()}
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                                    <div>
+                                      {(() => {
+                                        const reported = timesheetEntries
+                                          .filter(e => e.projectId === projectId && e.userId === u.id)
+                                          .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+                                        return (
+                                          <>
+                                            <p className="text-[7px] font-black uppercase opacity-40">Apontado</p>
+                                            <p className="text-[9px] font-black" style={{ color: 'var(--text)' }}>{reported.toFixed(1)}h</p>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                    <div className="text-right">
+                                      {(() => {
+                                        // Logic requested: Divide missing hours by team size
+                                        const projectRemainingHours = Math.max(0, project.horas_vendidas - (performance?.consumedHours || 0));
+                                        const teamSize = projectMembers.filter(m => m.projectId === projectId).length || 1;
+                                        const shareOfRemaining = projectRemainingHours / teamSize;
+
+                                        return (
+                                          <>
+                                            <p className="text-[7px] font-black uppercase opacity-40">A Realizar (Share)</p>
+                                            <p className="text-[9px] font-black" style={{ color: shareOfRemaining > 0 ? 'var(--info)' : 'var(--success)' }}>
+                                              {shareOfRemaining.toFixed(1)}h
+                                            </p>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
                                   </div>
                                 </div>
                               </div>

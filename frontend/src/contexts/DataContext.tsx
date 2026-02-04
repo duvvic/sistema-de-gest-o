@@ -1,7 +1,7 @@
 // contexts/DataContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/useAppData';
-import { Task, Project, Client, User, TimesheetEntry, Absence } from '@/types';
+import { Task, Project, Client, User, TimesheetEntry, Absence, ProjectMember } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { mapDbTaskToTask, mapDbTimesheetToEntry, mapDbProjectToProject, mapDbUserToUser, mapDbAbsenceToAbsence } from '@/utils/normalizers';
@@ -12,7 +12,7 @@ interface DataContextType {
     tasks: Task[];
     users: User[];
     timesheetEntries: TimesheetEntry[];
-    projectMembers: { projectId: string, userId: string }[];
+    projectMembers: ProjectMember[];
     absences: Absence[];
     loading: boolean;
     error: string | null;
@@ -23,7 +23,7 @@ interface DataContextType {
     setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     setTimesheetEntries: React.Dispatch<React.SetStateAction<TimesheetEntry[]>>;
-    setProjectMembers: React.Dispatch<React.SetStateAction<{ projectId: string, userId: string }[]>>;
+    setProjectMembers: React.Dispatch<React.SetStateAction<ProjectMember[]>>;
     setAbsences: React.Dispatch<React.SetStateAction<Absence[]>>;
 }
 
@@ -50,7 +50,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [tasks, setTasks] = useState<Task[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>([]);
-    const [projectMembers, setProjectMembers] = useState<{ projectId: string, userId: string }[]>([]);
+    const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
     const [absences, setAbsences] = useState<Absence[]>([]);
 
     // Ref para evitar ciclos de re-subscrição e garantir acesso a dados frescos nos callbacks
@@ -157,9 +157,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 6. Membros
             .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, (payload) => {
                 if (payload.eventType === 'INSERT') {
-                    setProjectMembers(prev => [...prev, { projectId: String(payload.new.id_projeto), userId: String(payload.new.id_colaborador) }]);
+                    const newMember: ProjectMember = {
+                        id_pc: payload.new.id_pc,
+                        id_projeto: payload.new.id_projeto,
+                        id_colaborador: payload.new.id_colaborador,
+                        allocation_percentage: payload.new.allocation_percentage,
+                        start_date: payload.new.start_date,
+                        end_date: payload.new.end_date,
+                    };
+                    setProjectMembers(prev => [...prev, newMember]);
                 } else if (payload.eventType === 'DELETE') {
-                    setProjectMembers(prev => prev.filter(pm => !(pm.projectId === String(payload.old.id_projeto) && pm.userId === String(payload.old.id_colaborador))));
+                    setProjectMembers(prev => prev.filter(pm => !(pm.id_projeto === payload.old.id_projeto && pm.id_colaborador === payload.old.id_colaborador)));
                 }
             })
             // 7. Ausências
