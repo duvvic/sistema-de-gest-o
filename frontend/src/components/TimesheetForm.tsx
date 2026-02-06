@@ -418,7 +418,10 @@ const TimesheetForm: React.FC = () => {
               <Clock className="w-3.5 h-3.5 text-white/80" />
               <div className="flex flex-col leading-tight">
                 <span className="text-[9px] font-bold uppercase tracking-wider text-white/60">Já apontado hoje</span>
-                <span className="text-sm font-black text-white">{formatDecimalToTime(entriesForDay.reduce((sum, e) => sum + (e.totalHours || 0), 0))}h</span>
+                <span className="text-sm font-black text-white">
+                  {formatDecimalToTime(entriesForDay.reduce((sum, e) => sum + (e.totalHours || 0), 0))}h
+                  <span className="ml-1 opacity-50 font-normal">/ {(users.find(u => u.id === (formData.userId || user?.id))?.dailyAvailableHours || 8)}h</span>
+                </span>
               </div>
             </div>
           )}
@@ -671,6 +674,7 @@ const TimesheetForm: React.FC = () => {
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/20">
                         <span className="text-[10px] font-bold text-[var(--primary)]">
                           {formatDecimalToTime(entriesForDay.reduce((sum, e) => sum + (e.totalHours || 0), 0))}h
+                          <span className="ml-1 opacity-50 font-normal text-[8px]">/ {(users.find(u => u.id === (formData.userId || user?.id))?.dailyAvailableHours || 8)}h Meta</span>
                         </span>
                       </div>
                     )}

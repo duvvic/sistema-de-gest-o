@@ -214,6 +214,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
 
   /* --- DADOS DO CALENDÁRIO --- */
   const targetUserId = isAdmin ? (selectedUserId || currentUser?.id) : currentUser?.id;
+  const targetUser = useMemo(() => safeUsers.find(u => u.id === targetUserId), [safeUsers, targetUserId]);
 
   const currentEntries = useMemo(() => {
     if (!targetUserId) return [];
@@ -243,9 +244,11 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       const isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 5;
       const holiday = getHoliday(checkDate.getDate(), checkDate.getMonth(), checkDate.getFullYear());
 
+      const userDailyMeta = targetUser?.dailyAvailableHours || 8;
+
       if (isWorkDay && !holiday) {
-        // Se trabalhou em dia útil, o saldo é a diferença para as 8h
-        balanceHours += (dayTotal - 8);
+        // Se trabalhou em dia útil, o saldo é a diferença para a meta do usuário
+        balanceHours += (dayTotal - userDailyMeta);
       } else {
         // Se trabalhou em feriado ou fim de semana, TUDO é extra
         balanceHours += dayTotal;
@@ -554,7 +557,12 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                         {d}
                       </span>
                       {hasEntries && (
-                        <span className={`text-[11px] font-black text-white px-2.5 py-1 rounded-lg shadow-lg border border-white/10 leading-none transition-all hover:scale-110 ${totalDayHours > 9 ? 'bg-amber-500' : totalDayHours >= 8 ? 'bg-emerald-600' : 'bg-blue-500'}`}>
+                        <span className={`text-[11px] font-black text-white px-2.5 py-1 rounded-lg shadow-lg border border-white/10 leading-none transition-all hover:scale-110 ${totalDayHours > (targetUser?.dailyAvailableHours || 8) + 1
+                            ? 'bg-amber-500' // Extra significativo
+                            : totalDayHours >= (targetUser?.dailyAvailableHours || 8)
+                              ? 'bg-emerald-600' // Meta atingida
+                              : 'bg-blue-500' // Parcial
+                          }`}>
                           {formatDecimalToTime(totalDayHours)}h
                         </span>
                       )}

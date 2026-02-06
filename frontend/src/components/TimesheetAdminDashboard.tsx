@@ -64,6 +64,9 @@ const TimesheetAdminDashboard: React.FC = () => {
          const datesWithEntries = new Set(userEntries.map(e => e.date));
          const missingDays = workDaysUntilYesterday.filter(day => !datesWithEntries.has(day));
 
+         const dailyGoal = user.dailyAvailableHours || 8;
+         const expectedHours = workDaysUntilYesterday.length * dailyGoal;
+
          return {
             user,
             totalDays: workDaysUntilYesterday.length,
@@ -71,7 +74,9 @@ const TimesheetAdminDashboard: React.FC = () => {
             missingDays: missingDays.length,
             missingDates: missingDays,
             isUpToDate: missingDays.length === 0,
-            totalHours: userEntries.reduce((acc, curr) => acc + curr.totalHours, 0)
+            totalHours: userEntries.reduce((acc, curr) => acc + curr.totalHours, 0),
+            expectedHours,
+            dailyGoal
          };
       }).sort((a, b) => b.missingDays - a.missingDays);
    }, [users, entries]);
@@ -336,7 +341,10 @@ const TimesheetAdminDashboard: React.FC = () => {
                                        <p className="font-bold truncate" style={{ color: 'var(--text)' }}>{s.user.name}</p>
                                        <p className="text-[10px] truncate" style={{ color: 'var(--muted)' }}>{s.user.cargo || 'Desenvolvedor'}</p>
                                     </div>
-                                    <span className="text-xs font-black" style={{ color: 'var(--success-text)' }}>Disponível</span>
+                                    <div className="text-right">
+                                       <p className="text-sm font-black" style={{ color: 'var(--success-text)' }}>{s.totalHours.toFixed(0)}h</p>
+                                       <p className="text-[8px] font-black uppercase" style={{ color: 'var(--muted)' }}>v. {s.expectedHours.toFixed(0)}h</p>
+                                    </div>
                                  </div>
                               ))}
                            </div>
@@ -377,8 +385,10 @@ const TimesheetAdminDashboard: React.FC = () => {
                                           <p className="text-[10px] truncate" style={{ color: 'var(--muted)' }}>{s.user.cargo || 'Desenvolvedor'}</p>
                                        </div>
                                        <div className="text-right">
-                                          <p className="text-sm font-black" style={{ color: 'var(--warning-text)' }}>{activeTasks.length}</p>
-                                          <p className="text-[8px] font-black uppercase" style={{ color: 'var(--muted)' }}>tarefas</p>
+                                          <div className="flex flex-col items-end">
+                                             <p className="text-sm font-black" style={{ color: 'var(--warning-text)' }}>{s.totalHours.toFixed(0)}h</p>
+                                             <p className="text-[8px] font-black uppercase" style={{ color: 'var(--muted)' }}>v. {s.expectedHours.toFixed(0)}h</p>
+                                          </div>
                                        </div>
                                     </div>
                                  );
