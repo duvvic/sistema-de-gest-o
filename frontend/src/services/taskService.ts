@@ -259,14 +259,15 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
 // ===========================
 export async function deleteTask(taskId: string): Promise<void> {
   const getApiBase = () => {
-    let url = import.meta.env.VITE_API_URL?.toString()?.trim();
+    // Se não estivermos em localhost, a API deve ser relativa ao domínio atual (Tunnel/Produção)
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return `${window.location.origin}/api`;
+    }
 
-    if (!url) {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        url = 'http://localhost:3001/api';
-      } else {
-        url = `${window.location.origin}/api`;
-      }
+    // Se estivermos em localhost, tenta usar o ENV, mas ignora se for um link de túnel (obsoleto)
+    let url = import.meta.env.VITE_API_URL?.toString()?.trim();
+    if (!url || url.includes('trycloudflare.com')) {
+      url = 'http://localhost:3001/api';
     }
 
     url = url.replace(/\/$/, '');

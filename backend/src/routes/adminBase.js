@@ -139,7 +139,7 @@ router.delete('/projects/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/admin/tasks/:id
-router.delete('/tasks/:id', async (req, res) => {
+router.delete('/tasks/:id', requireAdmin, async (req, res) => {
     try {
         const taskId = req.params.id;
 

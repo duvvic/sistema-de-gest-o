@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return `${window.location.origin}/api`;
+    }
+    return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+};
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    baseURL: getBaseURL(),
 });
 
 api.interceptors.request.use((config) => {
