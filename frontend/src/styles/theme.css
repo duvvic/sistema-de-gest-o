@@ -279,6 +279,31 @@ html.dark .opacity-70 {
   opacity: 0.7 !important;
 }
 
+/* Hide number input spinners for cleaner UI */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* Glass Purple Effect */
+.glass-purple {
+  background: rgba(124, 58, 237, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.glass-purple:hover {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
 /* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

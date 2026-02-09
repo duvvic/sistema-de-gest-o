@@ -6,7 +6,7 @@ import {
   ArrowLeft, Plus, Edit, CheckSquare, Clock, Filter, ChevronDown, Check,
   Trash2, LayoutGrid, Target, ShieldAlert, Link as LinkIcon, Users,
   Calendar, Info, Zap, RefreshCw, AlertTriangle, StickyNote, DollarSign,
-  TrendingUp, BarChart2, Save, FileText, Settings, Shield
+  TrendingUp, BarChart2, Save, FileText, Settings, Shield, AlertCircle
 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +59,56 @@ const ProjectDetailView: React.FC = () => {
     torre: ''
   });
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [memberAllocations, setMemberAllocations] = useState<Record<string, number>>({});
+
+  // Helper to balance allocations among selected users
+  const balanceAllocations = (newSelected: string[], changedId?: string, newVal?: number, currentAllocations: Record<string, number> = memberAllocations) => {
+    if (newSelected.length === 0) return {};
+    if (newSelected.length === 1) return { [newSelected[0]]: 100 };
+
+    const result: Record<string, number> = {};
+
+    // 1. If adding/removing (no changedId) OR if we need to force-balance
+    if (!changedId) {
+      const equalShare = Math.floor(100 / newSelected.length);
+      const remainder = 100 % newSelected.length;
+      newSelected.forEach((id, index) => {
+        result[id] = equalShare + (index < remainder ? 1 : 0);
+      });
+      return result;
+    }
+
+    // 2. Manual change case
+    result[changedId] = newVal ?? 0;
+    const otherIds = newSelected.filter(id => id !== changedId);
+    if (otherIds.length === 0) {
+      result[changedId] = 100;
+      return result;
+    }
+
+    const totalToDistribute = 100 - (newVal ?? 0);
+    const currentOthersSum = otherIds.reduce((sum, id) => sum + (currentAllocations[id] || 0), 0);
+
+    if (currentOthersSum === 0) {
+      const equalShare = Math.floor(totalToDistribute / otherIds.length);
+      const remainder = totalToDistribute % otherIds.length;
+      otherIds.forEach((id, index) => {
+        result[id] = equalShare + (index < remainder ? 1 : 0);
+      });
+    } else {
+      let distributedSum = 0;
+      otherIds.forEach((id, index) => {
+        if (index === otherIds.length - 1) {
+          result[id] = totalToDistribute - distributedSum;
+        } else {
+          const share = Math.round(((currentAllocations[id] || 0) / currentOthersSum) * totalToDistribute);
+          result[id] = share;
+          distributedSum += share;
+        }
+      });
+    }
+    return result;
+  };
 
   useEffect(() => {
     if (project) {
@@ -84,10 +134,26 @@ const ProjectDetailView: React.FC = () => {
         complexidade: project.complexidade || 'Média',
         torre: project.torre || ''
       });
-      const members = getProjectMembers(project.id);
-      setSelectedUsers(members);
+      const membersResult = projectMembers.filter(pm => String(pm.id_projeto) === projectId);
+      const selectedIds = membersResult.map(m => String(m.id_colaborador));
+      setSelectedUsers(selectedIds);
+
+      const initialAllocations: Record<string, number> = {};
+      let totalSum = 0;
+      membersResult.forEach(m => {
+        const perc = Number(m.allocation_percentage) || 0;
+        initialAllocations[String(m.id_colaborador)] = perc;
+        totalSum += perc;
+      });
+
+      // Se a soma não for 100 e houver membros, re-balanceia automaticamente
+      if (totalSum !== 100 && selectedIds.length > 0) {
+        setMemberAllocations(balanceAllocations(selectedIds));
+      } else {
+        setMemberAllocations(initialAllocations);
+      }
     }
-  }, [project, projectId]);
+  }, [project, projectId, projectMembers]);
 
   const handleSaveProject = async () => {
     if (!project || !projectId) return;
@@ -95,11 +161,16 @@ const ProjectDetailView: React.FC = () => {
     try {
       await updateProject(projectId, { ...formData, active: true } as any);
       const initialMembers = getProjectMembers(projectId);
-      const currentMembersSet = new Set(initialMembers);
-      const newMembersSet = new Set(selectedUsers);
-      const toAdd = selectedUsers.filter(uid => !currentMembersSet.has(uid));
-      for (const userId of toAdd) await addProjectMember(projectId, userId);
-      const toRemove = initialMembers.filter(uid => !newMembersSet.has(uid));
+      const initialMembersSet = new Set(initialMembers);
+
+      // Para cada usuário selecionado, adicionamos ou atualizamos (para garantir que a % esteja certa)
+      for (const userId of selectedUsers) {
+        const perc = memberAllocations[userId] || 100;
+        await addProjectMember(projectId, userId, perc);
+      }
+
+      // Remover membros que não estão mais na lista
+      const toRemove = initialMembers.filter(uid => !selectedUsers.includes(uid));
       for (const userId of toRemove) await removeProjectMember(projectId, userId);
       setIsEditing(false);
       alert('Projeto atualizado!');
@@ -555,40 +626,95 @@ const ProjectDetailView: React.FC = () => {
                                   checked={selectedUsers.includes(user.id)}
                                   onChange={(e) => {
                                     if (e.target.checked) {
-                                      setSelectedUsers(prev => [...prev, user.id]);
+                                      const next = [...selectedUsers, user.id];
+                                      setSelectedUsers(next);
+                                      setMemberAllocations(balanceAllocations(next));
                                     } else {
-                                      setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                                      const next = selectedUsers.filter(id => id !== user.id);
+                                      setSelectedUsers(next);
+                                      setMemberAllocations(balanceAllocations(next));
                                     }
                                   }}
                                   className="w-4 h-4 rounded border-[var(--border)] text-purple-600 focus:ring-purple-500"
                                 />
-                                <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold overflow-hidden bg-[var(--surface-2)]" style={{ color: 'var(--text)' }}>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold overflow-hidden bg-[var(--surface-2)] shrink-0" style={{ color: 'var(--text)' }}>
                                     {user.avatarUrl ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" /> : user.name.substring(0, 2).toUpperCase()}
                                   </div>
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: 'var(--text)' }}>{user.name}</p>
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-[8px] font-bold uppercase opacity-50" style={{ color: 'var(--muted)' }}>{user.cargo || user.role}</p>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black uppercase tracking-tighter truncate" style={{ color: 'var(--text)' }}>{user.name}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <p className="text-[8px] font-bold uppercase opacity-40 tracking-wider truncate" style={{ color: 'var(--text)' }}>{user.cargo || user.role}</p>
                                       {(() => {
                                         const status = getUserStatus(user, tasks, projects, clients);
-                                        const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
                                         return (
-                                          <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1">
-                                              <div className="w-1 h-1 rounded-full" style={{ backgroundColor: status.color }} />
-                                              <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
-                                            </div>
-                                            <span className="text-[var(--muted)] opacity-20 text-[7px]">•</span>
-                                            <span className={`text-[8px] font-black tracking-tighter ${availability.available < 20 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                              DISP: {availability.available}H
-                                            </span>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <div className="w-1 h-1 rounded-full opacity-30" style={{ backgroundColor: 'var(--text)' }} />
+                                            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
                                           </div>
                                         );
                                       })()}
                                     </div>
                                   </div>
                                 </div>
+
+                                {(() => {
+                                  const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
+                                  const isLow = availability.available < 20;
+                                  const occupationPercent = Math.round((availability.allocated / availability.capacity) * 100);
+
+                                  return (
+                                    <>
+                                      {/* Availability Badge */}
+                                      <div className={`px-2 py-1 rounded-lg border flex flex-col items-center min-w-[38px] shrink-0 transition-all ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-emerald-500/5 border-emerald-500/20'}`}>
+                                        <span className="text-[6px] font-black opacity-40 uppercase tracking-tighter" style={{ color: isLow ? 'var(--danger)' : 'var(--success)' }}>Disp</span>
+                                        <span className={`text-[9px] font-black tabular-nums ${isLow ? 'text-red-500' : 'text-emerald-500'}`}>
+                                          {availability.available}h
+                                        </span>
+                                      </div>
+
+                                      {/* Allocation Input Pill */}
+                                      {selectedUsers.includes(user.id) && (
+                                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                          <div
+                                            className="flex items-center gap-1.5 shrink-0 glass-purple px-2 py-1 rounded-lg transition-all group/aloc shadow-sm"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                            }}
+                                          >
+                                            <span className="text-[8px] font-black text-purple-400 tracking-tighter uppercase opacity-60">Aloc</span>
+                                            <div className="flex items-center">
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={memberAllocations[user.id] || 0}
+                                                onChange={(e) => {
+                                                  const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                                                  setMemberAllocations(balanceAllocations(selectedUsers, user.id, val));
+                                                }}
+                                                className="w-6 bg-transparent text-[10px] font-black text-right outline-none border-none p-0 focus:ring-0"
+                                                style={{ color: 'var(--text)' }}
+                                              />
+                                              <span className="text-[9px] font-black text-purple-400 ml-0.5">%</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Real Occupation Warning */}
+                                          {occupationPercent > 0 && (
+                                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${occupationPercent > 100 ? 'bg-red-500/10 border-red-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
+                                              {occupationPercent > 100 && <AlertCircle className="w-2.5 h-2.5 text-red-500" />}
+                                              <span className={`text-[6px] font-black uppercase tracking-tighter ${occupationPercent > 100 ? 'text-red-500' : 'text-purple-400/60'}`}>
+                                                {occupationPercent > 100 ? `SOBRECARGA: ${occupationPercent}%` : `Ocupação Real: ${occupationPercent}%`}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </label>
                             ))}
                           </div>

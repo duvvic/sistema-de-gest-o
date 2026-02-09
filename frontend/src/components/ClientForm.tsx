@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
-import { ArrowLeft, Save, Upload, Trash2, Handshake, Building2, User, Mail, Phone, Calendar, DollarSign, FileText } from 'lucide-react';
+import { Save, Upload, Trash2, Handshake, Building2, User, Mail, Phone, Calendar, DollarSign, FileText } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
+import BackButton from './shared/BackButton';
 import { supabase } from '@/services/supabaseClient';
 
 const ClientForm: React.FC = () => {
@@ -136,9 +137,7 @@ const ClientForm: React.FC = () => {
       {/* Header Distinct per Type */}
       <div className="px-8 py-6 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-[var(--surface-hover)] rounded-full transition-colors text-[var(--text-muted)]">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton fallbackRoute="/admin/clients" />
           <div>
             <h2 className="text-xl font-bold text-[var(--text-title)] flex items-center gap-2">
               {tipo_cliente === 'parceiro' ? <Handshake className="text-purple-500" /> : <Building2 className="text-blue-500" />}

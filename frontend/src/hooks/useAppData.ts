@@ -38,6 +38,7 @@ interface AppData {
   timesheetEntries: TimesheetEntry[];
   projectMembers: ProjectMember[];
   absences: Absence[];
+  holidays: Holiday[];
   loading: boolean;
   error: string | null;
 }
@@ -58,6 +59,7 @@ import {
   mapDbTimesheetToEntry,
   mapDbAbsenceToAbsence
 } from "@/utils/normalizers";
+import { Holiday } from "@/types";
 
 // =====================================================
 // HOOK PRINCIPAL
@@ -71,6 +73,7 @@ export function useAppData(): AppData {
   const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>(MOCK_TIMESHEETS);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [absences, setAbsences] = useState<Absence[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +81,7 @@ export function useAppData(): AppData {
 
   // Helper de Cache
   const CACHE_KEY = 'nic_labs_app_data';
-  const CACHE_VERSION = '1.2'; // Incrementado para garantir carregamento de avatarUrl
+  const CACHE_VERSION = '1.3'; // Incrementado para incluir holidays
 
   // Carregamento inicial do cache
   useEffect(() => {
@@ -94,6 +97,7 @@ export function useAppData(): AppData {
           setTimesheetEntries(parsed.timesheetEntries || []);
           setProjectMembers(parsed.projectMembers || []);
           setAbsences(parsed.absences || []);
+          setHolidays(parsed.holidays || []);
           // Se temos cache, já podemos sinalizar que não estamos mais "travados"
           setLoading(false);
         }
@@ -127,7 +131,7 @@ export function useAppData(): AppData {
 
 
 
-        const [usersData, clientsData, projectsData, tasksData, tasksCollaboratorsData, membersRes, rawTimesheets, absencesRes] = await Promise.all([
+        const [usersData, clientsData, projectsData, tasksData, tasksCollaboratorsData, membersRes, rawTimesheets, absencesRes, holidaysRes] = await Promise.all([
           fetchUsers(),
           fetchClients(),
           fetchProjects(),
@@ -135,7 +139,8 @@ export function useAppData(): AppData {
           fetchTaskCollaborators(),
           supabase.from('project_members').select('*'),
           fetchTimesheets(),
-          supabase.from('colaborador_ausencias').select('*')
+          supabase.from('colaborador_ausencias').select('*'),
+          supabase.from('feriados').select('*')
         ]);
 
         if (!isMounted) return;
@@ -198,6 +203,16 @@ export function useAppData(): AppData {
         });
 
         const absencesMapped = (absencesRes.data || []).map(mapDbAbsenceToAbsence);
+        const holidaysMapped: Holiday[] = (holidaysRes.data || []).map((r: any) => ({
+          id: String(r.id),
+          name: r.nome,
+          date: r.data,
+          endDate: r.data_fim || r.data,
+          type: r.tipo,
+          observations: r.observacoes,
+          period: r.periodo,
+          endTime: r.hora_fim
+        }));
 
         const deduplicateById = <T extends { id: string }>(items: T[]): T[] => {
           return Array.from(new Map(items.map(i => [i.id, i])).values());
@@ -210,6 +225,7 @@ export function useAppData(): AppData {
         setTasks(deduplicateById(tasksMapped));
         setTimesheetEntries(deduplicateById(timesheetMapped));
         setAbsences(deduplicateById(absencesMapped));
+        setHolidays(deduplicateById(holidaysMapped));
 
         if (membersRes.data) {
 
@@ -238,7 +254,8 @@ export function useAppData(): AppData {
             tasks: tasksMapped,
             timesheetEntries: timesheetMapped,
             projectMembers: membersMapped,
-            absences: absencesMapped
+            absences: absencesMapped,
+            holidays: holidaysMapped
           };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
         } else {
@@ -275,6 +292,7 @@ export function useAppData(): AppData {
     timesheetEntries,
     projectMembers,
     absences,
+    holidays,
     loading,
     error,
   };

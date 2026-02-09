@@ -1,5 +1,5 @@
 import { useData } from '@/contexts/DataContext';
-import { Task, Project, Client, User, TimesheetEntry, Absence } from '@/types';
+import { Task, Project, Client, User, TimesheetEntry, Absence, Holiday } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import * as clientService from '@/services/clientService';
 import * as projectService from '@/services/projectService';
@@ -16,6 +16,7 @@ export const useDataController = () => {
         timesheetEntries, setTimesheetEntries,
         projectMembers, setProjectMembers,
         absences, setAbsences,
+        holidays, setHolidays,
         loading,
         error
     } = useData();
@@ -319,18 +320,31 @@ export const useDataController = () => {
         return projectMembers.filter(pm => String(pm.id_projeto) === projectId).map(pm => String(pm.id_colaborador));
     };
 
-    const addProjectMember = async (projectId: string, userId: string): Promise<void> => {
+    const addProjectMember = async (projectId: string, userId: string, allocationPercentage: number = 100): Promise<void> => {
         const { error } = await supabase
             .from('project_members')
-            .upsert({ id_projeto: Number(projectId), id_colaborador: Number(userId) }, { onConflict: 'id_projeto, id_colaborador' });
+            .upsert({
+                id_projeto: Number(projectId),
+                id_colaborador: Number(userId),
+                allocation_percentage: allocationPercentage
+            }, { onConflict: 'id_projeto, id_colaborador' });
+
         if (error) throw error;
-        if (error) throw error;
+
         setProjectMembers(prev => {
-            if (prev.some(pm => String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId)) return prev;
+            const exists = prev.find(pm => String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId);
+            if (exists) {
+                return prev.map(pm =>
+                    String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId
+                        ? { ...pm, allocation_percentage: allocationPercentage }
+                        : pm
+                );
+            }
             return [...prev, {
                 id_pc: -1, // Temporary
                 id_projeto: Number(projectId),
                 id_colaborador: Number(userId),
+                allocation_percentage: allocationPercentage
             }];
         });
     };
@@ -355,7 +369,9 @@ export const useDataController = () => {
                 data_inicio: data.startDate,
                 data_fim: data.endDate,
                 status: data.status,
-                observacoes: data.observations
+                observacoes: data.observations,
+                periodo: data.period,
+                hora_fim: data.endTime
             })
             .select('id')
             .single();
@@ -372,7 +388,9 @@ export const useDataController = () => {
                 data_inicio: updates.startDate,
                 data_fim: updates.endDate,
                 status: updates.status,
-                observacoes: updates.observations
+                observacoes: updates.observations,
+                periodo: updates.period,
+                hora_fim: updates.endTime
             })
             .eq('id', Number(id));
 
@@ -388,14 +406,62 @@ export const useDataController = () => {
         if (error) throw error;
     };
 
+    // === HOLIDAY CONTROLLERS ===
+
+    const createHoliday = async (data: Partial<Holiday>): Promise<string> => {
+        const { data: row, error } = await supabase
+            .from('feriados')
+            .insert({
+                nome: data.name,
+                data: data.date,
+                data_fim: data.endDate || data.date,
+                tipo: data.type,
+                observacoes: data.observations,
+                periodo: data.period,
+                hora_fim: data.endTime
+            })
+            .select('id')
+            .single();
+
+        if (error) throw error;
+        return String(row.id);
+    };
+
+    const updateHoliday = async (id: string, updates: Partial<Holiday>): Promise<void> => {
+        const { error } = await supabase
+            .from('feriados')
+            .update({
+                nome: updates.name,
+                data: updates.date,
+                data_fim: updates.endDate || updates.date,
+                tipo: updates.type,
+                observacoes: updates.observations,
+                periodo: updates.period,
+                hora_fim: updates.endTime
+            })
+            .eq('id', Number(id));
+
+        if (error) throw error;
+    };
+
+    const deleteHoliday = async (id: string): Promise<void> => {
+        const { error } = await supabase
+            .from('feriados')
+            .delete()
+            .eq('id', Number(id));
+
+        if (error) throw error;
+    };
+
     return {
-        clients, projects, tasks, users, timesheetEntries, projectMembers, absences, loading, error,
+        clients, projects, tasks, users, timesheetEntries, projectMembers, absences, holidays, loading, error,
         getClientById, getActiveClients, createClient, updateClient, deactivateClient, deleteClient,
         getProjectById, getProjectsByClient, createProject, updateProject, deleteProject,
         getTaskById, getTasksByProject, getTasksByUser, createTask, updateTask, deleteTask,
         getTimesheetsByUser, createTimesheet, updateTimesheet, deleteTimesheet,
         getUserById, getActiveUsers, createUser, updateUser, deleteUser,
         getProjectMembers, addProjectMember, removeProjectMember,
-        createAbsence, updateAbsence, deleteAbsence
+        createAbsence, updateAbsence, deleteAbsence,
+        createHoliday, updateHoliday, deleteHoliday
     };
 };

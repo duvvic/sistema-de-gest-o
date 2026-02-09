@@ -213,11 +213,13 @@ export function mapDbAbsenceToAbsence(row: any): any {
     return {
         id: String(row.id),
         userId: String(row.colaborador_id),
-        type: row.type,
+        type: row.tipo || row.type,
         startDate: row.data_inicio,
         endDate: row.data_fim,
         status: row.status,
         observations: row.observacoes || undefined,
+        period: row.periodo || undefined,
+        endTime: row.hora_fim || undefined,
         createdAt: row.created_at
     };
 }

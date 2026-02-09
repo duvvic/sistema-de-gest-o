@@ -42,8 +42,9 @@ const Notes: React.FC = () => {
             // Save to cache
             localStorage.setItem(CACHE_KEY, JSON.stringify(data.tabs));
         } catch (err) {
-            console.error(err);
-            setError('Falha ao carregar links de notas.');
+            console.error('[Notes] Erro ao carregar links:', err);
+            // Silently fail - keep cached data if available
+            // Don't set error to avoid breaking the UI
         } finally {
             setLoading(false);
         }

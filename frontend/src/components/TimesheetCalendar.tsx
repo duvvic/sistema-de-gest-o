@@ -7,7 +7,7 @@ import { TimesheetEntry } from '@/types';
 import {
   ChevronLeft, ChevronRight, Plus, Clock, TrendingUp, Trash2,
   Users, AlertTriangle, CheckCircle, Calendar,
-  Search, ChevronDown, Check, Coffee, PartyPopper, Flag, Gift, Sparkles, Heart, Hammer, Palmtree
+  Search, ChevronDown, Check, Coffee, PartyPopper, Flag, Gift, Sparkles, Heart, Hammer, Palmtree, MapPin
 } from 'lucide-react';
 import { formatDecimalToTime } from '@/utils/normalizers';
 import ConfirmationModal from './ConfirmationModal';
@@ -21,7 +21,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, isAdmin } = useAuth();
-  const { timesheetEntries, deleteTimesheet, tasks, users, loading, clients, projects, absences, createAbsence, createTimesheet } = useDataController();
+  const { timesheetEntries, deleteTimesheet, tasks, users, loading, clients, projects, absences, holidays, createAbsence, createTimesheet } = useDataController();
 
   const [isCloning, setIsCloning] = useState(false);
 
@@ -118,25 +118,34 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   ];
 
   // Helper de Feriados Nacionais (Brasil 2025/2026)
+  // Helper de Feriados Dinâmicos (Vem do Banco + Lógica de Cores)
   const getHoliday = (d: number, m: number, y: number) => {
-    const dates: { [key: string]: { name: string, icon: any, color: string, bg: string } } = {
-      "1-0": { name: "Confraternização Universal", icon: PartyPopper, color: "#EAB308", bg: "rgba(234, 179, 8, 0.05)" }, // Yellow
-      "21-3": { name: "Tiradentes", icon: Sparkles, color: "#10B981", bg: "rgba(16, 185, 129, 0.05)" }, // Green
-      "1-4": { name: "Dia do Trabalho", icon: Hammer, color: "#EF4444", bg: "rgba(239, 68, 68, 0.05)" }, // Red
-      "7-8": { name: "Independência do Brasil", icon: Flag, color: "#F59E0B", bg: "rgba(245, 158, 11, 0.05)" }, // Amber/Gold
-      "12-9": { name: "Nossa Sra. Aparecida", icon: Heart, color: "#3B82F6", bg: "rgba(59, 130, 246, 0.05)" }, // Blue
-      "2-10": { name: "Finados", icon: Sparkles, color: "#64748B", bg: "rgba(100, 116, 139, 0.05)" }, // Slate
-      "15-10": { name: "Proclamação da República", icon: Flag, color: "#065F46", bg: "rgba(6, 95, 70, 0.05)" }, // Dark Green
-      "20-10": { name: "Consciência Negra", icon: Sparkles, color: "#7C2D12", bg: "rgba(124, 45, 18, 0.05)" }, // Brown/Rust
-      "25-11": { name: "Natal", icon: Gift, color: "#DC2626", bg: "rgba(220, 38, 38, 0.05)" } // Christmas Red
+    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const h = (holidays || []).find(hf => {
+      const start = hf.date;
+      const end = hf.endDate || hf.date;
+      return dateStr >= start && dateStr <= end;
+    });
+
+    if (!h) return null;
+
+    const config: { [key: string]: { icon: any, color: string, bg: string } } = {
+      'nacional': { icon: Flag, color: "#EF4444", bg: "rgba(239, 68, 68, 0.05)" },
+      'corporativo': { icon: PartyPopper, color: "#8B5CF6", bg: "rgba(139, 92, 246, 0.05)" },
+      'local': { icon: MapPin, color: "#10B981", bg: "rgba(16, 185, 129, 0.05)" }
     };
-    // Feriados móveis (Exemplo simplificado para 2026)
-    if (y === 2026) {
-      if (d === 3 && m === 3) return { name: "Sexta-feira Santa", icon: Heart, color: "#4F46E5", bg: "rgba(79, 70, 229, 0.05)" };
-      if (d === 5 && m === 3) return { name: "Páscoa", icon: PartyPopper, color: "#EC4899", bg: "rgba(236, 72, 153, 0.05)" };
-      if (d === 4 && m === 5) return { name: "Corpus Christi", icon: Sparkles, color: "#FBBF24", bg: "rgba(251, 191, 36, 0.05)" };
-    }
-    return dates[`${d}-${m}`];
+
+    const typeConfig = config[h.type] || config['nacional'];
+
+    return {
+      name: h.name,
+      icon: typeConfig.icon,
+      color: typeConfig.color,
+      bg: typeConfig.bg,
+      period: h.period,
+      endTime: h.endTime,
+      isLastDay: dateStr === (h.endDate || h.date)
+    };
   };
 
   /* --- LÓGICA DE PENDÊNCIAS --- */
@@ -558,10 +567,10 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                       </span>
                       {hasEntries && (
                         <span className={`text-[11px] font-black text-white px-2.5 py-1 rounded-lg shadow-lg border border-white/10 leading-none transition-all hover:scale-110 ${totalDayHours > (targetUser?.dailyAvailableHours || 8) + 1
-                            ? 'bg-amber-500' // Extra significativo
-                            : totalDayHours >= (targetUser?.dailyAvailableHours || 8)
-                              ? 'bg-emerald-600' // Meta atingida
-                              : 'bg-blue-500' // Parcial
+                          ? 'bg-amber-500' // Extra significativo
+                          : totalDayHours >= (targetUser?.dailyAvailableHours || 8)
+                            ? 'bg-emerald-600' // Meta atingida
+                            : 'bg-blue-500' // Parcial
                           }`}>
                           {formatDecimalToTime(totalDayHours)}h
                         </span>
@@ -575,6 +584,17 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                         <span className="text-[7px] font-black uppercase whitespace-normal leading-tight px-1" style={{ color: 'var(--text)' }}>
                           {holiday.name}
                         </span>
+                        {(holiday.period && holiday.period !== 'integral') && (
+                          <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
+                            {holiday.period}
+                            {(holiday.isLastDay && holiday.endTime) ? ` até ${holiday.endTime}` : ''}
+                          </span>
+                        )}
+                        {(holiday.isLastDay && holiday.endTime && (!holiday.period || holiday.period === 'integral')) && (
+                          <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
+                            Até {holiday.endTime}
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -585,6 +605,17 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                         <span className={`text-[7px] font-black uppercase whitespace-normal leading-tight px-1 ${dayAbsence.type === 'férias' ? 'text-emerald-500' : 'text-blue-500'}`}>
                           {dayAbsence.type}
                         </span>
+                        {(dayAbsence.period && dayAbsence.period !== 'integral') && (
+                          <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
+                            {dayAbsence.period}
+                            {(dateStr === dayAbsence.endDate && dayAbsence.endTime) ? ` até ${dayAbsence.endTime}` : ''}
+                          </span>
+                        )}
+                        {(dateStr === dayAbsence.endDate && dayAbsence.endTime && (!dayAbsence.period || dayAbsence.period === 'integral')) && (
+                          <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
+                            Até {dayAbsence.endTime}
+                          </span>
+                        )}
                       </div>
                     )}
 

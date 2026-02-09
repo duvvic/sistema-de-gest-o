@@ -1,7 +1,7 @@
 // contexts/DataContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/useAppData';
-import { Task, Project, Client, User, TimesheetEntry, Absence, ProjectMember } from '@/types';
+import { Task, Project, Client, User, TimesheetEntry, Absence, ProjectMember, Holiday } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { mapDbTaskToTask, mapDbTimesheetToEntry, mapDbProjectToProject, mapDbUserToUser, mapDbAbsenceToAbsence } from '@/utils/normalizers';
@@ -14,6 +14,7 @@ interface DataContextType {
     timesheetEntries: TimesheetEntry[];
     projectMembers: ProjectMember[];
     absences: Absence[];
+    holidays: Holiday[];
     loading: boolean;
     error: string | null;
 
@@ -25,6 +26,7 @@ interface DataContextType {
     setTimesheetEntries: React.Dispatch<React.SetStateAction<TimesheetEntry[]>>;
     setProjectMembers: React.Dispatch<React.SetStateAction<ProjectMember[]>>;
     setAbsences: React.Dispatch<React.SetStateAction<Absence[]>>;
+    setHolidays: React.Dispatch<React.SetStateAction<Holiday[]>>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -41,6 +43,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         timesheetEntries: loadedTimesheets,
         projectMembers: loadedProjectMembers,
         absences: loadedAbsences,
+        holidays: loadedHolidays,
         loading: dataLoading,
         error: dataError
     } = useAppData();
@@ -52,6 +55,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>([]);
     const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
     const [absences, setAbsences] = useState<Absence[]>([]);
+    const [holidays, setHolidays] = useState<Holiday[]>([]);
 
     // Ref para evitar ciclos de re-subscrição e garantir acesso a dados frescos nos callbacks
     const usersRef = React.useRef<User[]>([]);
@@ -68,7 +72,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProjectMembers(loadedProjectMembers || []);
         setUsers(loadedUsers);
         setAbsences(loadedAbsences || []);
-    }, [dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers, loadedAbsences]);
+        setHolidays(loadedHolidays || []);
+    }, [dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers, loadedAbsences, loadedHolidays]);
 
     // === REALTIME SUBSCRIPTIONS ===
     useEffect(() => {
@@ -183,6 +188,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setAbsences(prev => prev.filter(a => a.id !== String(payload.old.id)));
                 }
             })
+            // 8. Feriados
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'feriados' }, (payload) => {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const h = payload.new;
+                    const holiday: Holiday = {
+                        id: String(h.id),
+                        name: h.nome,
+                        date: h.data,
+                        type: h.tipo,
+                        observations: h.observacoes
+                    };
+                    setHolidays(prev => {
+                        const exists = prev.find(item => item.id === holiday.id);
+                        if (exists) return prev.map(item => item.id === holiday.id ? holiday : item);
+                        return [...prev, holiday];
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setHolidays(prev => prev.filter(h => h.id !== String(payload.old.id)));
+                }
+            })
             .subscribe();
 
         return () => {
@@ -198,6 +223,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         timesheetEntries,
         projectMembers,
         absences,
+        holidays,
         loading: dataLoading && (clients.length === 0),
         error: dataError,
         setClients,
@@ -206,8 +232,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsers,
         setTimesheetEntries,
         setProjectMembers,
-        setAbsences
-    }), [clients, projects, tasks, users, timesheetEntries, projectMembers, absences, dataLoading, dataError]);
+        setAbsences,
+        setHolidays
+    }), [clients, projects, tasks, users, timesheetEntries, projectMembers, absences, holidays, dataLoading, dataError]);
 
     return (
         <DataContext.Provider value={value}>

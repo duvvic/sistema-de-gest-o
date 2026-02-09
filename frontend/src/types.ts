@@ -144,6 +144,8 @@ export interface Absence {
   endDate: string;
   status: 'sugestao' | 'aprovada_gestao' | 'aprovada_rh' | 'finalizada_dp' | 'cancelado' | 'rejeitado';
   observations?: string;
+  period?: 'integral' | 'manha' | 'tarde' | 'noite';
+  endTime?: string;
   createdAt?: string;
 }
 
@@ -175,4 +177,15 @@ export interface ProjectMember {
   start_date?: string;
   end_date?: string;
   role_in_project?: string;
+}
+
+export interface Holiday {
+  id: string;
+  name: string;
+  date: string;
+  endDate?: string;
+  type: 'nacional' | 'corporativo' | 'local';
+  observations?: string;
+  period?: 'integral' | 'manha' | 'tarde' | 'noite';
+  endTime?: string;
 }

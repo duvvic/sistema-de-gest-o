@@ -26,6 +26,8 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [observations, setObservations] = useState('');
+    const [period, setPeriod] = useState<Absence['period']>('integral');
+    const [endTime, setEndTime] = useState('');
     const [loading, setLoading] = useState(false);
 
     // Filter absences for the effective user
@@ -61,7 +63,9 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                 startDate,
                 endDate,
                 status: isAdmin ? 'aprovada_gestao' : 'sugestao',
-                observations
+                observations,
+                period,
+                endTime
             });
             setIsAdding(false);
             resetForm();
@@ -78,6 +82,8 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
         setStartDate('');
         setEndDate('');
         setObservations('');
+        setPeriod('integral');
+        setEndTime('');
     };
 
     const handleDelete = async () => {
@@ -137,6 +143,7 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         className="p-6 rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-xl"
+                        key="form"
                     >
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -184,6 +191,31 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                                         disabled={type === 'day-off'}
                                         className={`w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[var(--primary)] outline-none ${type === 'day-off' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-[var(--muted)] mb-2">Período</label>
+                                    <select
+                                        value={period}
+                                        onChange={(e) => setPeriod(e.target.value as any)}
+                                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                                    >
+                                        <option value="integral">Dia Integral</option>
+                                        <option value="manha">Manhã (08:00 - 12:00)</option>
+                                        <option value="tarde">Tarde (13:00 - 18:00)</option>
+                                        <option value="noite">Noite (18:00 - 22:00)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-[var(--muted)] mb-2">Hora Fim (No último dia)</label>
+                                    <input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[var(--primary)] outline-none"
                                     />
                                 </div>
                             </div>
@@ -271,7 +303,13 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                         </form>
                     </motion.div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4"
+                        key="list"
+                    >
                         {myAbsences.length === 0 ? (
                             <div className="md:col-span-2 py-12 flex flex-col items-center justify-center bg-[var(--surface)] rounded-[32px] border-2 border-dashed border-[var(--border)] opacity-60">
                                 <Calendar size={48} className="text-[var(--muted)] mb-4" />
@@ -310,6 +348,13 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                                             </div>
                                         </div>
 
+                                        {(absence.period && absence.period !== 'integral') && (
+                                            <div className="flex justify-between text-[10px] font-black uppercase text-[var(--primary)] mt-1">
+                                                <span>Período: {absence.period}</span>
+                                                {absence.endTime && <span>Até: {absence.endTime} (no último dia)</span>}
+                                            </div>
+                                        )}
+
                                         {absence.observations && (
                                             <div className="p-3 rounded-2xl bg-[var(--surface-2)] text-[11px] font-medium text-[var(--text-2)] leading-relaxed italic border border-[var(--border)]">
                                                 {absence.observations}
@@ -340,7 +385,7 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                                 </motion.div>
                             ))
                         )}
-                    </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
 

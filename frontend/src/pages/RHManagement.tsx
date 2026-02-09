@@ -10,18 +10,25 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmationModal from '@/components/ConfirmationModal';
+import HolidayManager from '@/components/HolidayManager';
+import AbsenceManager from '@/components/AbsenceManager';
 
 const RHManagement: React.FC = () => {
-    const { isAdmin } = useAuth();
+    const { isAdmin, currentUser } = useAuth();
     const { absences, users, updateAbsence, deleteAbsence } = useDataController();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | Absence['status']>('all');
     const [towerFilter, setTowerFilter] = useState('all');
-    const [activeTab, setActiveTab] = useState<'requests' | 'calendar' | 'collaborators'>('requests');
+    const [activeTab, setActiveTab] = useState<'requests' | 'calendar' | 'collaborators' | 'holidays'>('requests');
 
     const [loading, setLoading] = useState(false);
     const [actionModal, setActionModal] = useState<{ id: string, type: 'approve' | 'reject' | 'delete' } | null>(null);
+    const [showRequestModal, setShowRequestModal] = useState(false);
+
+
+    // ... rest of the code logic remains ...
+
 
     // Filters
     const filteredAbsences = useMemo(() => {
@@ -48,15 +55,30 @@ const RHManagement: React.FC = () => {
 
             if (actionModal.type === 'approve') {
                 let nextStatus: Absence['status'] = current.status;
-                if (current.status === 'sugestao') nextStatus = 'aprovada_gestao';
-                else if (current.status === 'aprovada_gestao') nextStatus = 'aprovada_rh';
-                else if (current.status === 'aprovada_rh') nextStatus = 'finalizada_dp';
+                let statusLabel = '';
+
+                if (current.status === 'sugestao') {
+                    nextStatus = 'aprovada_gestao';
+                    statusLabel = 'Aprovada pela Gestão';
+                } else if (current.status === 'aprovada_gestao') {
+                    nextStatus = 'aprovada_rh';
+                    statusLabel = 'Aprovada pelo RH';
+                } else if (current.status === 'aprovada_rh') {
+                    nextStatus = 'finalizada_dp';
+                    statusLabel = 'Finalizada no DP';
+                }
 
                 await updateAbsence(actionModal.id, { status: nextStatus });
+
+                // Feedback visual
+                const userName = users.find(u => u.id === current.userId)?.name || 'Colaborador';
+                alert(`✅ Solicitação aprovada!\n\n${userName}\nNovo status: ${statusLabel}\n\nA solicitação agora aparece com a nova etapa na lista.`);
             } else if (actionModal.type === 'reject') {
                 await updateAbsence(actionModal.id, { status: 'rejeitado' });
+                alert('❌ Solicitação rejeitada.');
             } else if (actionModal.type === 'delete') {
                 await deleteAbsence(actionModal.id);
+                alert('🗑️ Solicitação excluída.');
             }
             setActionModal(null);
         } catch (error) {
@@ -94,6 +116,65 @@ const RHManagement: React.FC = () => {
         return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
     };
 
+    // Função para exportar relatório em CSV
+    const handleExportReport = () => {
+        const csvRows = [];
+        const headers = ['Colaborador', 'Cargo', 'Torre', 'Data Início', 'Data Fim', 'Dias', 'Status', 'Periodo', 'Observações'];
+        csvRows.push(headers.join(','));
+
+        filteredAbsences.forEach(absence => {
+            const user = users.find(u => u.id === absence.userId);
+            const days = calculateDays(absence.startDate, absence.endDate);
+            const row = [
+                user?.name || 'N/A',
+                user?.cargo || 'N/A',
+                user?.torre || 'N/A',
+                new Date(absence.startDate).toLocaleDateString('pt-BR'),
+                new Date(absence.endDate).toLocaleDateString('pt-BR'),
+                days,
+                getStatusLabel(absence.status),
+                absence.period || 'integral',
+                absence.observations || ''
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvData = csvRows.join('\n');
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `ferias_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Função para calcular estatísticas mensais
+    const getMonthlyStats = (monthIdx: number) => {
+        const monthAbsences = absences.filter(a => {
+            const date = new Date(a.startDate);
+            return date.getMonth() === monthIdx && date.getFullYear() === 2026;
+        });
+
+        const totalDays = monthAbsences.reduce((acc, a) => acc + calculateDays(a.startDate, a.endDate), 0);
+        const uniqueCollaborators = new Set(monthAbsences.map(a => a.userId)).size;
+
+        return {
+            total: monthAbsences.length,
+            totalDays,
+            collaborators: uniqueCollaborators,
+            byStatus: {
+                sugestao: monthAbsences.filter(a => a.status === 'sugestao').length,
+                aprovada_gestao: monthAbsences.filter(a => a.status === 'aprovada_gestao').length,
+                aprovada_rh: monthAbsences.filter(a => a.status === 'aprovada_rh').length,
+                finalizada_dp: monthAbsences.filter(a => a.status === 'finalizada_dp').length,
+            }
+        };
+    };
+
+
     return (
         <div className="h-full flex flex-col p-8 gap-8 overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -105,6 +186,15 @@ const RHManagement: React.FC = () => {
                     <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest mt-1">
                         Fluxo de Aprovação e Planejamento Anual
                     </p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setShowRequestModal(true)}
+                        className="bg-emerald-600 text-white px-6 py-2.5 rounded-2xl text-xs font-black uppercase flex items-center gap-2 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/20"
+                    >
+                        <Palmtree size={18} /> Solicitar Férias
+                    </button>
                 </div>
 
                 <div className="flex bg-[var(--surface-2)] p-1 rounded-2xl border border-[var(--border)] overflow-hidden">
@@ -125,6 +215,12 @@ const RHManagement: React.FC = () => {
                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'collaborators' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
                     >
                         Regras e Saldos
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('holidays')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'holidays' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--muted)] hover:text-[var(--text)]'}`}
+                    >
+                        Feriados
                     </button>
                 </div>
             </div>
@@ -164,128 +260,205 @@ const RHManagement: React.FC = () => {
 
                 {activeTab === 'requests' && (
                     <div className="flex-1 flex flex-col gap-4 min-h-0">
+                        {/* Guia Visual do Fluxo */}
+                        <div className="bg-[var(--surface-2)] p-4 rounded-3xl border border-[var(--border)] flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center font-black text-xs">1</div>
+                                <span className="text-[10px] font-black uppercase text-amber-700">Sugestão</span>
+                            </div>
+                            <div className="h-px bg-[var(--border)] flex-1 min-w-[20px]" />
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-600 flex items-center justify-center font-black text-xs">2</div>
+                                <span className="text-[10px] font-black uppercase text-blue-700">Gestão</span>
+                            </div>
+                            <div className="h-px bg-[var(--border)] flex-1 min-w-[20px]" />
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-black text-xs">3</div>
+                                <span className="text-[10px] font-black uppercase text-emerald-700">RH</span>
+                            </div>
+                            <div className="h-px bg-[var(--border)] flex-1 min-w-[20px]" />
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-600 flex items-center justify-center font-black text-xs">4</div>
+                                <span className="text-[10px] font-black uppercase text-purple-700">DP (Finalizada)</span>
+                            </div>
+                        </div>
+
                         <div className="bg-[var(--surface)] p-4 rounded-3xl border border-[var(--border)] shadow-sm flex flex-wrap items-center gap-4">
                             <div className="flex-1 flex items-center bg-[var(--bgApp)] rounded-xl border border-[var(--border)] px-4 py-2 gap-3 min-w-[200px]">
                                 <Search size={18} className="text-[var(--muted)]" />
                                 <input
                                     type="text"
-                                    placeholder="Buscar colaborador..."
-                                    className="bg-transparent border-none outline-none text-sm w-full font-bold"
+                                    placeholder="Buscar por colaborador ou observação..."
+                                    className="bg-transparent border-none outline-none w-full text-sm font-medium"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                             <select
-                                className="bg-[var(--bgApp)] border border-[var(--border)] rounded-xl px-4 py-2 text-xs font-bold outline-none"
+                                value={towerFilter}
+                                onChange={(e) => setTowerFilter(e.target.value)}
+                                className="bg-[var(--bgApp)] border border-[var(--border)] rounded-xl px-4 py-2 text-xs font-bold outline-none cursor-pointer hover:bg-[var(--surface-2)] transition-colors"
+                            >
+                                <option value="all">Todas as Torres</option>
+                                <option value="Engenharia">Engenharia</option>
+                                <option value="Design">Design</option>
+                                <option value="QA">QA</option>
+                                <option value="DevOps">DevOps</option>
+                            </select>
+                            <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value as any)}
+                                className="bg-[var(--bgApp)] border border-[var(--border)] rounded-xl px-4 py-2 text-xs font-bold outline-none cursor-pointer hover:bg-[var(--surface-2)] transition-colors"
                             >
-                                <option value="all">Todas as Etapas</option>
-                                <option value="sugestao">1. Sugestão (Amarelo)</option>
+                                <option value="all">Todos os Status</option>
+                                <option value="sugestao">1. Sugestão</option>
                                 <option value="aprovada_gestao">2. Gestão (Azul)</option>
                                 <option value="aprovada_rh">3. RH (Verde)</option>
                                 <option value="finalizada_dp">4. DP (Lilas)</option>
                                 <option value="rejeitado">Rejeitados</option>
                             </select>
-                            <button className="p-2.5 bg-[var(--surface-2)] text-[var(--text)] rounded-xl border border-[var(--border)] hover:bg-[var(--surface-hover)] transition-all flex items-center gap-2 text-xs font-bold">
+                            <button
+                                onClick={handleExportReport}
+                                className="p-2.5 bg-[var(--surface-2)] text-[var(--text)] rounded-xl border border-[var(--border)] hover:bg-[var(--primary)] hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
+                            >
                                 <Download size={16} /> Exportar
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-                            <div className="grid grid-cols-1 gap-4">
-                                {filteredAbsences.length === 0 ? (
-                                    <div className="py-20 text-center flex flex-col items-center justify-center opacity-50 bg-[var(--surface)] rounded-[32px] border-2 border-dashed border-[var(--border)]">
-                                        <AlertCircle size={48} className="mb-4" />
-                                        <p className="font-bold">Nenhum pedido neste filtro.</p>
-                                    </div>
-                                ) : (
-                                    filteredAbsences.map(absence => {
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-8 min-h-0">
+                            {/* Seção de Pendentes */}
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase text-amber-600 tracking-widest pl-2 flex items-center gap-2">
+                                    <Clock size={14} /> Solicitações em Fluxo
+                                </h3>
+                                <AnimatePresence mode="popLayout">
+                                    {filteredAbsences.filter(a => a.status !== 'finalizada_dp' && a.status !== 'rejeitado').map((absence) => {
                                         const user = users.find(u => u.id === absence.userId);
                                         const days = calculateDays(absence.startDate, absence.endDate);
-                                        const startDateObj = new Date(absence.startDate);
-                                        const daysUntilStart = Math.floor((startDateObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                        const daysUntilStart = Math.ceil((new Date(absence.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
                                         return (
                                             <motion.div
                                                 layout
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.95 }}
                                                 key={absence.id}
-                                                className="bg-[var(--surface)] p-5 rounded-[32px] border border-[var(--border)] shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center gap-6 group"
+                                                className="bg-[var(--surface)] p-5 rounded-[32px] border border-[var(--border)] shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center gap-6 group relative overflow-hidden"
                                             >
+                                                {/* Indicador lateral da fase atual */}
+                                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${absence.status === 'sugestao' ? 'bg-amber-400' :
+                                                    absence.status === 'aprovada_gestao' ? 'bg-blue-400' :
+                                                        'bg-emerald-400'
+                                                    }`} />
+
                                                 <div className="flex items-center gap-4 min-w-[200px]">
-                                                    <div className="w-10 h-10 rounded-full bg-[var(--primary-soft)] flex items-center justify-center text-[var(--primary)] font-black">
+                                                    <div className="w-10 h-10 rounded-full bg-[var(--primary-soft)] flex items-center justify-center text-[var(--primary)] font-black text-sm">
                                                         {user?.name.charAt(0)}
                                                     </div>
                                                     <div>
                                                         <h3 className="font-black text-sm text-[var(--text)]">{user?.name}</h3>
-                                                        <p className="text-[9px] font-bold text-[var(--muted)] uppercase">{user?.cargo}</p>
+                                                        <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-tighter">{user?.cargo}</p>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                                <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-6 w-full">
                                                     <div>
-                                                        <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Período</p>
-                                                        <p className="text-xs font-bold text-[var(--text)]">
+                                                        <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Datas</p>
+                                                        <p className="text-[11px] font-black text-[var(--text)] whitespace-nowrap">
                                                             {new Date(absence.startDate).toLocaleDateString()}
                                                             <ArrowRight size={12} className="inline mx-1 opacity-40" />
                                                             {new Date(absence.endDate).toLocaleDateString()}
                                                         </p>
                                                     </div>
-
-                                                    <div className="text-center md:text-left">
-                                                        <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Quantidade</p>
-                                                        <p className="text-sm font-black">{days} dias</p>
-                                                    </div>
-
                                                     <div>
-                                                        <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Status Atual</p>
-                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border whitespace-nowrap ${getStatusStyle(absence.status)}`}>
+                                                        <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Duração</p>
+                                                        <p className="text-xs font-black">{days} {days === 1 ? 'dia' : 'dias'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Fase Atual</p>
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase border whitespace-nowrap ${getStatusStyle(absence.status)}`}>
                                                             {getStatusLabel(absence.status)}
                                                         </span>
                                                     </div>
-
-                                                    <div className="lg:col-span-1">
+                                                    <div>
                                                         <p className="text-[9px] font-black uppercase text-[var(--muted)] mb-1">Antecedência</p>
                                                         <p className={`text-[10px] font-black ${daysUntilStart < 30 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                            {daysUntilStart} dias para o início
+                                                            {daysUntilStart} dias
                                                         </p>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 md:self-center">
-                                                    {['sugestao', 'aprovada_gestao', 'aprovada_rh'].includes(absence.status) && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => setActionModal({ id: absence.id, type: 'approve' })}
-                                                                className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:scale-105 transition-all shadow-lg shadow-emerald-500/20 text-[10px] font-black uppercase"
-                                                            >
-                                                                {absence.status === 'sugestao' ? 'Passar p/ Gestão' : absence.status === 'aprovada_gestao' ? 'Passar p/ RH' : 'Passar p/ DP'}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setActionModal({ id: absence.id, type: 'reject' })}
-                                                                className="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-200"
-                                                                title="Rejeitar Solicitação"
-                                                            >
-                                                                <XCircle size={18} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {absence.status === 'finalizada_dp' && (
-                                                        <div className="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase flex items-center gap-1">
-                                                            <CheckCircle size={12} /> Concluído
-                                                        </div>
-                                                    )}
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button
+                                                        onClick={() => setActionModal({ id: absence.id, type: 'approve' })}
+                                                        className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:scale-105 transition-all shadow-lg shadow-emerald-500/20 text-[9px] font-black uppercase"
+                                                    >
+                                                        {absence.status === 'sugestao' ? 'Passar p/ Gestão' : absence.status === 'aprovada_gestao' ? 'Passar p/ RH' : 'Passar p/ DP'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setActionModal({ id: absence.id, type: 'reject' })}
+                                                        className="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-200"
+                                                        title="Rejeitar"
+                                                    >
+                                                        <XCircle size={16} />
+                                                    </button>
                                                     <button
                                                         onClick={() => setActionModal({ id: absence.id, type: 'delete' })}
-                                                        className="p-2.5 text-[var(--muted)] hover:text-red-500 transition-all"
+                                                        className="p-2.5 text-[var(--muted)] hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                                                     >
-                                                        <Trash2 size={18} />
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 </div>
                                             </motion.div>
                                         );
-                                    })
+                                    })}
+                                </AnimatePresence>
+
+                                {filteredAbsences.filter(a => a.status !== 'finalizada_dp' && a.status !== 'rejeitado').length === 0 && (
+                                    <div className="text-center py-10 bg-[var(--surface-2)] rounded-[32px] border border-dashed border-[var(--border)]">
+                                        <p className="text-[var(--muted)] text-xs font-bold uppercase tracking-widest">Nenhuma solicitação pendente</p>
+                                    </div>
                                 )}
+                            </div>
+
+                            {/* Seção de Finalizadas */}
+                            <div className="space-y-4 opacity-70 hover:opacity-100 transition-opacity">
+                                <h3 className="text-[10px] font-black uppercase text-purple-600 tracking-widest pl-2 flex items-center gap-2">
+                                    <CheckCheck size={14} /> Recentemente Finalizadas (Histórico)
+                                </h3>
+                                <div className="space-y-3">
+                                    {filteredAbsences.filter(a => a.status === 'finalizada_dp' || a.status === 'rejeitado').map((absence) => {
+                                        const user = users.find(u => u.id === absence.userId);
+                                        const isRejected = absence.status === 'rejeitado';
+
+                                        return (
+                                            <div
+                                                key={absence.id}
+                                                className={`bg-[var(--bgApp)] p-4 rounded-3xl border ${isRejected ? 'border-red-100' : 'border-purple-100'} flex items-center gap-4 group transition-all`}
+                                            >
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${isRejected ? 'bg-red-50 text-red-500' : 'bg-purple-50 text-purple-500'}`}>
+                                                    {user?.name.charAt(0)}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="font-bold text-xs">{user?.name}</h4>
+                                                    <p className="text-[9px] font-black text-[var(--muted)]">{new Date(absence.startDate).toLocaleDateString()} a {new Date(absence.endDate).toLocaleDateString()}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase border ${getStatusStyle(absence.status)}`}>
+                                                        {getStatusLabel(absence.status)}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={() => setActionModal({ id: absence.id, type: 'delete' })}
+                                                    className="p-2 text-[var(--muted)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -317,11 +490,28 @@ const RHManagement: React.FC = () => {
                                         const date = new Date(a.startDate);
                                         return date.getMonth() === monthIdx && date.getFullYear() === 2026;
                                     });
+                                    const stats = getMonthlyStats(monthIdx);
 
                                     return (
                                         <div key={monthIdx} className="w-80 flex-shrink-0 flex flex-col gap-4">
-                                            <div className="bg-amber-100 p-2 text-center text-[11px] font-black uppercase rounded-lg border border-amber-200">
-                                                {monthLabel}
+                                            <div className="bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 p-4 rounded-2xl border border-purple-200 dark:border-purple-700 space-y-2">
+                                                <div className="text-center text-[11px] font-black uppercase text-purple-900 dark:text-purple-200">
+                                                    {monthLabel}
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 text-center">
+                                                    <div className="bg-white/50 dark:bg-black/20 p-1.5 rounded-lg">
+                                                        <p className="text-[8px] font-black uppercase opacity-60">Solicit.</p>
+                                                        <p className="text-sm font-black text-purple-600 dark:text-purple-400">{stats.total}</p>
+                                                    </div>
+                                                    <div className="bg-white/50 dark:bg-black/20 p-1.5 rounded-lg">
+                                                        <p className="text-[8px] font-black uppercase opacity-60">Pessoas</p>
+                                                        <p className="text-sm font-black text-blue-600 dark:text-blue-400">{stats.collaborators}</p>
+                                                    </div>
+                                                    <div className="bg-white/50 dark:bg-black/20 p-1.5 rounded-lg">
+                                                        <p className="text-sm font-black uppercase opacity-60">Dias</p>
+                                                        <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.totalDays}</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="flex-1 bg-[var(--bgApp)] rounded-2xl border border-[var(--border)] p-2 space-y-2 overflow-y-auto custom-scrollbar">
                                                 <div className="grid grid-cols-4 gap-1 text-[8px] font-black uppercase opacity-60 px-2">
@@ -361,7 +551,7 @@ const RHManagement: React.FC = () => {
                 )}
 
                 {activeTab === 'collaborators' && (
-                    <div className="flex-1 flex flex-col gap-6">
+                    <div className="flex-1 flex flex-col gap-6 min-h-0 overflow-y-auto custom-scrollbar pr-2">
                         <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-[32px] border border-blue-100 dark:border-blue-800 flex items-start gap-4 shadow-sm">
                             <Info className="text-blue-500 shrink-0" />
                             <div className="space-y-2">
@@ -421,6 +611,12 @@ const RHManagement: React.FC = () => {
                     </div>
                 )}
 
+                {activeTab === 'holidays' && (
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                        <HolidayManager />
+                    </div>
+                )}
+
             </div>
 
             <ConfirmationModal
@@ -431,6 +627,45 @@ const RHManagement: React.FC = () => {
                 onCancel={() => setActionModal(null)}
                 confirmColor={actionModal?.type === 'reject' || actionModal?.type === 'delete' ? 'red' : 'blue'}
             />
+
+            {/* Modal de Solicitação de Férias */}
+            <AnimatePresence>
+                {showRequestModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowRequestModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative bg-[var(--bg)] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[40px] shadow-2xl border border-[var(--border)] p-8 custom-scrollbar"
+                        >
+                            <div className="flex justify-between items-center mb-8">
+                                <div>
+                                    <h2 className="text-2xl font-black text-[var(--text)]">Solicitar Férias / Ausência</h2>
+                                    <p className="text-sm font-medium text-[var(--muted)]">Preencha os dados abaixo para enviar sua solicitação ao fluxo de aprovação.</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowRequestModal(false)}
+                                    className="p-3 hover:bg-[var(--surface-2)] rounded-2xl text-[var(--muted)] transition-colors"
+                                >
+                                    <XCircle size={24} />
+                                </button>
+                            </div>
+
+                            <AbsenceManager
+                                targetUserId={currentUser?.id}
+                                targetUserName={currentUser?.name}
+                            />
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save, Users, Briefcase, Calendar, Info, Zap, DollarSign, Target, Shield, Layout, Clock, ChevronDown, LayoutGrid, AlertCircle, FileSpreadsheet, ExternalLink, CheckSquare, User } from 'lucide-react';
+import { Save, Users, Briefcase, Calendar, Info, Zap, DollarSign, Target, Shield, Layout, Clock, ChevronDown, LayoutGrid, AlertCircle, FileSpreadsheet, ExternalLink, CheckSquare, User } from 'lucide-react';
+import BackButton from './shared/BackButton';
 import { getUserStatus } from '@/utils/userStatus';
 import * as CapacityUtils from '@/utils/capacity';
 
@@ -58,7 +59,58 @@ const ProjectForm: React.FC = () => {
   const [torre, setTorre] = useState('');
 
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [memberAllocations, setMemberAllocations] = useState<Record<string, number>>({});
+
   const [loading, setLoading] = useState(false);
+
+  // Helper to balance allocations among selected users
+  const balanceAllocations = (newSelected: string[], changedId?: string, newVal?: number, currentAllocations: Record<string, number> = memberAllocations) => {
+    if (newSelected.length === 0) return {};
+    if (newSelected.length === 1) return { [newSelected[0]]: 100 };
+
+    const result: Record<string, number> = {};
+
+    // 1. If adding/removing (no changedId) OR if we need to force-balance
+    if (!changedId) {
+      const equalShare = Math.floor(100 / newSelected.length);
+      const remainder = 100 % newSelected.length;
+      newSelected.forEach((id, index) => {
+        result[id] = equalShare + (index < remainder ? 1 : 0);
+      });
+      return result;
+    }
+
+    // 2. Manual change case
+    result[changedId] = newVal ?? 0;
+    const otherIds = newSelected.filter(id => id !== changedId);
+    if (otherIds.length === 0) {
+      result[changedId] = 100;
+      return result;
+    }
+
+    const totalToDistribute = 100 - (newVal ?? 0);
+    const currentOthersSum = otherIds.reduce((sum, id) => sum + (currentAllocations[id] || 0), 0);
+
+    if (currentOthersSum === 0) {
+      const equalShare = Math.floor(totalToDistribute / otherIds.length);
+      const remainder = totalToDistribute % otherIds.length;
+      otherIds.forEach((id, index) => {
+        result[id] = equalShare + (index < remainder ? 1 : 0);
+      });
+    } else {
+      let distributedSum = 0;
+      otherIds.forEach((id, index) => {
+        if (index === otherIds.length - 1) {
+          result[id] = totalToDistribute - distributedSum;
+        } else {
+          const share = Math.round(((currentAllocations[id] || 0) / currentOthersSum) * totalToDistribute);
+          result[id] = share;
+          distributedSum += share;
+        }
+      });
+    }
+    return result;
+  };
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -101,11 +153,27 @@ const ProjectForm: React.FC = () => {
 
   // Carregar membros separadamente para garantir sincronia
   useEffect(() => {
-    if (isEdit && projectId) {
-      const currentMembers = getProjectMembers(projectId);
-      setSelectedUsers(currentMembers);
+    if (isEdit && projectId && projectMembers.length > 0) {
+      const currentProjectMembers = projectMembers.filter(pm => String(pm.id_projeto) === projectId);
+      const selectedIds = currentProjectMembers.map(m => String(m.id_colaborador));
+      setSelectedUsers(selectedIds);
+
+      const initialAllocations: Record<string, number> = {};
+      let totalSum = 0;
+      currentProjectMembers.forEach(m => {
+        const perc = Number(m.allocation_percentage) || 0;
+        initialAllocations[String(m.id_colaborador)] = perc;
+        totalSum += perc;
+      });
+
+      // Se a soma não for 100 e houver membros, re-balanceia automaticamente
+      if (totalSum !== 100 && selectedIds.length > 0) {
+        setMemberAllocations(balanceAllocations(selectedIds, undefined, undefined, {}));
+      } else {
+        setMemberAllocations(initialAllocations);
+      }
     }
-  }, [isEdit, projectId, projectMembers]); // Re-executa se os membros globais mudarem (ex: ao terminar de carregar)
+  }, [isEdit, projectId, projectMembers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,18 +224,16 @@ const ProjectForm: React.FC = () => {
       if (targetProjectId) {
         // Membros que já estavam no banco
         const initialMembers = isEdit ? getProjectMembers(targetProjectId) : [];
-        const currentMembersSet = new Set(initialMembers);
-        const newMembersSet = new Set(selectedUsers);
 
-        // Adicionar novos
-        const toAdd = selectedUsers.filter(uid => !currentMembersSet.has(uid));
-        for (const userId of toAdd) {
-          await addProjectMember(targetProjectId, userId);
+        // Adicionar/Atualizar selecionados
+        for (const userId of selectedUsers) {
+          const perc = memberAllocations[userId] || 100;
+          await addProjectMember(targetProjectId, userId, perc);
         }
 
         // Remover excluídos (apenas em edição)
         if (isEdit) {
-          const toRemove = initialMembers.filter(uid => !newMembersSet.has(uid));
+          const toRemove = initialMembers.filter(uid => !selectedUsers.includes(uid));
           for (const userId of toRemove) {
             await removeProjectMember(targetProjectId, userId);
           }
@@ -210,12 +276,7 @@ const ProjectForm: React.FC = () => {
       {/* Header com Transparência e Blur */}
       <div className="px-8 py-6 border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-xl sticky top-0 z-30 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2.5 hover:bg-[var(--surface-hover)] rounded-xl transition-all text-[var(--muted)] hover:text-[var(--text)]"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackButton />
           <div>
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text)' }}>
               <Briefcase className="w-6 h-6 text-[var(--primary)]" />
@@ -578,6 +639,7 @@ const ProjectForm: React.FC = () => {
                     const isSelected = selectedUsers.includes(user.id);
                     const status = getUserStatus(user, tasks, projects, clients);
                     const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
+                    const occupationPercent = Math.round((availability.allocated / availability.capacity) * 100);
 
                     return (
                       <label
@@ -589,8 +651,15 @@ const ProjectForm: React.FC = () => {
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => {
-                              if (e.target.checked) setSelectedUsers(prev => [...prev, user.id]);
-                              else setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                              if (e.target.checked) {
+                                const next = [...selectedUsers, user.id];
+                                setSelectedUsers(next);
+                                setMemberAllocations(balanceAllocations(next));
+                              } else {
+                                const next = selectedUsers.filter(id => id !== user.id);
+                                setSelectedUsers(next);
+                                setMemberAllocations(balanceAllocations(next));
+                              }
                             }}
                             className="peer sr-only"
                           />
@@ -611,18 +680,76 @@ const ProjectForm: React.FC = () => {
 
                         <div className="flex-1 min-w-0">
                           <p className={`text-xs font-bold truncate transition-colors ${isSelected ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>{user.name}</p>
-                          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-0.5">
-                            <span className="text-[9px] uppercase tracking-wider opacity-50 truncate max-w-[100px]">{user.cargo || 'Consultor'}</span>
-
-                            {/* Status Dots */}
-                            <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-[var(--surface-2)]">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: status.color }} />
-                              <span className={`text-[8px] font-black ${availability.available < 20 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                {availability.available}h
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] uppercase tracking-wider opacity-40 truncate max-w-[80px]" style={{ color: 'var(--text)' }}>{user.cargo || 'Consultor'}</span>
+                            {(() => {
+                              const status = getUserStatus(user, tasks, projects, clients);
+                              return (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <div className="w-1 h-1 rounded-full opacity-30" style={{ backgroundColor: 'var(--text)' }} />
+                                  <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
+
+                        {(() => {
+                          const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
+                          const isLow = availability.available < 20;
+                          const occupationPercent = Math.round((availability.allocated / availability.capacity) * 100);
+
+                          return (
+                            <>
+                              {/* Availability Badge */}
+                              <div className={`px-2 py-1 rounded-lg border flex flex-col items-center min-w-[38px] shrink-0 transition-all ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-emerald-500/5 border-emerald-500/20'}`}>
+                                <span className="text-[6px] font-black opacity-40 uppercase tracking-tighter" style={{ color: isLow ? 'var(--danger)' : 'var(--success)' }}>Disp</span>
+                                <span className={`text-[9px] font-black tabular-nums ${isLow ? 'text-red-500' : 'text-emerald-500'}`}>
+                                  {availability.available}h
+                                </span>
+                              </div>
+
+                              {isSelected && (
+                                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                  <div
+                                    className="flex items-center gap-1.5 glass-purple px-2 py-1 rounded-lg transition-all shadow-sm"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <span className="text-[8px] font-black text-purple-400 tracking-tighter uppercase opacity-60">Dedicação</span>
+                                    <div className="flex items-center">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={memberAllocations[user.id] || 0}
+                                        onChange={(e) => {
+                                          const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                                          setMemberAllocations(balanceAllocations(selectedUsers, user.id, val));
+                                        }}
+                                        className="w-7 bg-transparent text-[10px] font-black text-right outline-none border-none p-0 focus:ring-0"
+                                        style={{ color: 'var(--text)' }}
+                                      />
+                                      <span className="text-[9px] font-black text-purple-400 ml-0.5">%</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Real Occupation Warning */}
+                                  {occupationPercent > 0 && (
+                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${occupationPercent > 100 ? 'bg-red-500/10 border-red-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
+                                      {occupationPercent > 100 && <AlertCircle className="w-2.5 h-2.5 text-red-500" />}
+                                      <span className={`text-[6px] font-black uppercase tracking-tighter ${occupationPercent > 100 ? 'text-red-500' : 'text-purple-400/60'}`}>
+                                        {occupationPercent > 100 ? `SOBRECARGA: ${occupationPercent}%` : `Ocupação Real: ${occupationPercent}%`}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </label>
                     );
                   })}
