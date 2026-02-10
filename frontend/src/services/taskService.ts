@@ -257,41 +257,11 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
 // ===========================
 // DELETE
 // ===========================
+import { apiRequest } from './apiClient';
+
 export async function deleteTask(taskId: string): Promise<void> {
-  const getApiBase = () => {
-    let url = import.meta.env.VITE_API_URL?.toString()?.trim();
-
-    // Se o ENV tem uma URL absoluta que não seja localhost, usamos ela (é o túnel ou prod API)
-    if (url && url.startsWith('http') && !url.includes('localhost')) {
-      url = url.replace(/\/$/, '');
-      return url.endsWith('/api') ? url : `${url}/api`;
-    }
-
-    // Se estivermos em localhost, usamos o fallback para 3001
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return url || 'http://localhost:3001/api';
-    }
-
-    // Fallback final para o domínio atual (pode dar 405 em hosts estáticos se não houver proxy)
-    return `${window.location.origin}/api`;
-  };
-
-  const API_BASE = getApiBase();
-
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-
-  const res = await fetch(`${API_BASE}/admin/tasks/${taskId}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    }
+  await apiRequest(`/admin/tasks/${taskId}`, {
+    method: 'DELETE'
   });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Erro ao excluir tarefa (${res.status})`);
-  }
 }
+
