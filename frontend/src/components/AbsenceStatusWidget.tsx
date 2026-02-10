@@ -59,11 +59,7 @@ const AbsenceStatusWidget: React.FC = () => {
     };
 
     if (statusData.returningToday.length === 0 && statusData.absentToday.length === 0 && statusData.futureAbsences.length === 0) {
-        return (
-            <div className="flex items-center justify-center p-4 text-[10px] font-black uppercase text-[var(--muted)] opacity-50">
-                <Calendar size={14} className="mr-2" /> Nenhum evento de disponibilidade hoje
-            </div>
-        );
+        return null;
     }
 
     return (

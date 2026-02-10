@@ -63,54 +63,7 @@ const ProjectForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // Helper to balance allocations among selected users
-  const balanceAllocations = (newSelected: string[], changedId?: string, newVal?: number, currentAllocations: Record<string, number> = memberAllocations) => {
-    if (newSelected.length === 0) return {};
-    if (newSelected.length === 1) return { [newSelected[0]]: 100 };
-
-    const result: Record<string, number> = {};
-
-    // 1. If adding/removing (no changedId) OR if we need to force-balance
-    if (!changedId) {
-      const equalShare = Math.floor(100 / newSelected.length);
-      const remainder = 100 % newSelected.length;
-      newSelected.forEach((id, index) => {
-        result[id] = equalShare + (index < remainder ? 1 : 0);
-      });
-      return result;
-    }
-
-    // 2. Manual change case
-    result[changedId] = newVal ?? 0;
-    const otherIds = newSelected.filter(id => id !== changedId);
-    if (otherIds.length === 0) {
-      result[changedId] = 100;
-      return result;
-    }
-
-    const totalToDistribute = 100 - (newVal ?? 0);
-    const currentOthersSum = otherIds.reduce((sum, id) => sum + (currentAllocations[id] || 0), 0);
-
-    if (currentOthersSum === 0) {
-      const equalShare = Math.floor(totalToDistribute / otherIds.length);
-      const remainder = totalToDistribute % otherIds.length;
-      otherIds.forEach((id, index) => {
-        result[id] = equalShare + (index < remainder ? 1 : 0);
-      });
-    } else {
-      let distributedSum = 0;
-      otherIds.forEach((id, index) => {
-        if (index === otherIds.length - 1) {
-          result[id] = totalToDistribute - distributedSum;
-        } else {
-          const share = Math.round(((currentAllocations[id] || 0) / currentOthersSum) * totalToDistribute);
-          result[id] = share;
-          distributedSum += share;
-        }
-      });
-    }
-    return result;
-  };
+  // balanceAllocations removido conforme nova regra (cálculos nas tarefas)
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -140,16 +93,7 @@ const ProjectForm: React.FC = () => {
     }
   }, [project]);
 
-  // Cálculo automático do prazo
-  useEffect(() => {
-    if (startDate && horasVendidas > 0 && selectedUsers.length > 0) {
-      const teamUsers = users.filter(u => selectedUsers.includes(u.id));
-      const calculatedDeadline = CapacityUtils.calculateProjectDeadline(startDate, horasVendidas, teamUsers);
-      if (calculatedDeadline) {
-        setEstimatedDelivery(calculatedDeadline);
-      }
-    }
-  }, [startDate, horasVendidas, selectedUsers, users]);
+  // Cálculo automático do prazo removido conforme nova regra de negócio (horas nas tarefas)
 
   // Carregar membros separadamente para garantir sincronia
   useEffect(() => {
@@ -168,7 +112,10 @@ const ProjectForm: React.FC = () => {
 
       // Se a soma não for 100 e houver membros, re-balanceia automaticamente
       if (totalSum !== 100 && selectedIds.length > 0) {
-        setMemberAllocations(balanceAllocations(selectedIds, undefined, undefined, {}));
+        // Se houver membros, inicializa com 100% (flag de presença)
+        const all100: Record<string, number> = {};
+        selectedIds.forEach(id => all100[id] = 100);
+        setMemberAllocations(all100);
       } else {
         setMemberAllocations(initialAllocations);
       }
@@ -225,10 +172,9 @@ const ProjectForm: React.FC = () => {
         // Membros que já estavam no banco
         const initialMembers = isEdit ? getProjectMembers(targetProjectId) : [];
 
-        // Adicionar/Atualizar selecionados
+        // Adicionar/Atualizar selecionados - Agora sempre 100% (apenas um flag de "está no projeto")
         for (const userId of selectedUsers) {
-          const perc = memberAllocations[userId] || 100;
-          await addProjectMember(targetProjectId, userId, perc);
+          await addProjectMember(targetProjectId, userId, 100);
         }
 
         // Remover excluídos (apenas em edição)
@@ -455,20 +401,7 @@ const ProjectForm: React.FC = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-2 opacity-60" style={{ color: 'var(--text)' }}>Horas Vendidas (Budget)</label>
-                    <div className="relative group">
-                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
-                      <input
-                        type="number"
-                        value={horasVendidas}
-                        onChange={(e) => setHorasVendidas(Number(e.target.value))}
-                        className="w-full pl-12 pr-4 py-3 font-bold border rounded-xl focus:ring-2 focus:ring-[var(--ring)] outline-none transition-all tabular-nums bg-transparent"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-                        placeholder="0h"
-                      />
-                    </div>
-                  </div>
+                  {/* Campo de Horas Vendidas removido conforme nova regra (cálculos nas tarefas) */}
                 </div>
 
                 <div className="p-6 rounded-2xl border border-[var(--border)] bg-[var(--bg)]/50">
@@ -523,11 +456,7 @@ const ProjectForm: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase mb-1 opacity-50">Entrega Estimada</label>
-                    <input type="date" value={estimatedDelivery} readOnly className="w-full px-4 py-2 border rounded-xl font-bold bg-[var(--surface-2)] border-[var(--border)] opacity-60 cursor-not-allowed" />
-                    <div className="flex items-center gap-1 mt-1.5 text-[9px] text-[var(--primary)] font-bold opacity-80">
-                      <Zap className="w-3 h-3" />
-                      Calculada automaticamente (Budget/Equipe)
-                    </div>
+                    <input type="date" value={estimatedDelivery} onChange={e => setEstimatedDelivery(e.target.value)} className="w-full px-4 py-2 border rounded-xl font-medium bg-[var(--bg)] border-[var(--border)] text-[var(--text)]" />
                   </div>
                 </div>
 
@@ -654,11 +583,9 @@ const ProjectForm: React.FC = () => {
                               if (e.target.checked) {
                                 const next = [...selectedUsers, user.id];
                                 setSelectedUsers(next);
-                                setMemberAllocations(balanceAllocations(next));
                               } else {
                                 const next = selectedUsers.filter(id => id !== user.id);
                                 setSelectedUsers(next);
-                                setMemberAllocations(balanceAllocations(next));
                               }
                             }}
                             className="peer sr-only"
@@ -695,7 +622,7 @@ const ProjectForm: React.FC = () => {
                         </div>
 
                         {(() => {
-                          const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
+                          const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries, tasks);
                           const isLow = availability.available < 20;
                           const occupationPercent = Math.round((availability.allocated / availability.capacity) * 100);
 
@@ -711,42 +638,13 @@ const ProjectForm: React.FC = () => {
 
                               {isSelected && (
                                 <div className="flex flex-col items-end gap-0.5 shrink-0">
-                                  <div
-                                    className="flex items-center gap-1.5 glass-purple px-2 py-1 rounded-lg transition-all shadow-sm"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                    }}
-                                  >
-                                    <span className="text-[8px] font-black text-purple-400 tracking-tighter uppercase opacity-60">Dedicação</span>
-                                    <div className="flex items-center">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={memberAllocations[user.id] || 0}
-                                        onChange={(e) => {
-                                          const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                                          setMemberAllocations(balanceAllocations(selectedUsers, user.id, val));
-                                        }}
-                                        className="w-7 bg-transparent text-[10px] font-black text-right outline-none border-none p-0 focus:ring-0"
-                                        style={{ color: 'var(--text)' }}
-                                      />
-                                      <span className="text-[9px] font-black text-purple-400 ml-0.5">%</span>
-                                    </div>
+                                  <div className="flex items-center gap-1.5 glass-purple px-4 py-2 rounded-xl">
+                                    <Users className="w-4 h-4 text-purple-400" />
+                                    <span className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">No Projeto</span>
                                   </div>
-
-                                  {/* Real Occupation Warning */}
-                                  {occupationPercent > 0 && (
-                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${occupationPercent > 100 ? 'bg-red-500/10 border-red-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
-                                      {occupationPercent > 100 && <AlertCircle className="w-2.5 h-2.5 text-red-500" />}
-                                      <span className={`text-[6px] font-black uppercase tracking-tighter ${occupationPercent > 100 ? 'text-red-500' : 'text-purple-400/60'}`}>
-                                        {occupationPercent > 100 ? `SOBRECARGA: ${occupationPercent}%` : `Ocupação Real: ${occupationPercent}%`}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                               )}
+
                             </>
                           );
                         })()}

@@ -61,54 +61,7 @@ const ProjectDetailView: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [memberAllocations, setMemberAllocations] = useState<Record<string, number>>({});
 
-  // Helper to balance allocations among selected users
-  const balanceAllocations = (newSelected: string[], changedId?: string, newVal?: number, currentAllocations: Record<string, number> = memberAllocations) => {
-    if (newSelected.length === 0) return {};
-    if (newSelected.length === 1) return { [newSelected[0]]: 100 };
-
-    const result: Record<string, number> = {};
-
-    // 1. If adding/removing (no changedId) OR if we need to force-balance
-    if (!changedId) {
-      const equalShare = Math.floor(100 / newSelected.length);
-      const remainder = 100 % newSelected.length;
-      newSelected.forEach((id, index) => {
-        result[id] = equalShare + (index < remainder ? 1 : 0);
-      });
-      return result;
-    }
-
-    // 2. Manual change case
-    result[changedId] = newVal ?? 0;
-    const otherIds = newSelected.filter(id => id !== changedId);
-    if (otherIds.length === 0) {
-      result[changedId] = 100;
-      return result;
-    }
-
-    const totalToDistribute = 100 - (newVal ?? 0);
-    const currentOthersSum = otherIds.reduce((sum, id) => sum + (currentAllocations[id] || 0), 0);
-
-    if (currentOthersSum === 0) {
-      const equalShare = Math.floor(totalToDistribute / otherIds.length);
-      const remainder = totalToDistribute % otherIds.length;
-      otherIds.forEach((id, index) => {
-        result[id] = equalShare + (index < remainder ? 1 : 0);
-      });
-    } else {
-      let distributedSum = 0;
-      otherIds.forEach((id, index) => {
-        if (index === otherIds.length - 1) {
-          result[id] = totalToDistribute - distributedSum;
-        } else {
-          const share = Math.round(((currentAllocations[id] || 0) / currentOthersSum) * totalToDistribute);
-          result[id] = share;
-          distributedSum += share;
-        }
-      });
-    }
-    return result;
-  };
+  // balanceAllocations removido (cálculos nas tarefas)
 
   useEffect(() => {
     if (project) {
@@ -148,39 +101,15 @@ const ProjectDetailView: React.FC = () => {
 
       // Se a soma não for 100 e houver membros, re-balanceia automaticamente
       if (totalSum !== 100 && selectedIds.length > 0) {
-        setMemberAllocations(balanceAllocations(selectedIds));
+        // Se houver membros, inicializa com 100% (flag de presença)
+        const all100: Record<string, number> = {};
+        selectedIds.forEach(id => all100[id] = 100);
+        setMemberAllocations(all100);
       } else {
         setMemberAllocations(initialAllocations);
       }
     }
   }, [project, projectId, projectMembers]);
-
-  const handleSaveProject = async () => {
-    if (!project || !projectId) return;
-    setLoading(true);
-    try {
-      await updateProject(projectId, { ...formData, active: true } as any);
-      const initialMembers = getProjectMembers(projectId);
-      const initialMembersSet = new Set(initialMembers);
-
-      // Para cada usuário selecionado, adicionamos ou atualizamos (para garantir que a % esteja certa)
-      for (const userId of selectedUsers) {
-        const perc = memberAllocations[userId] || 100;
-        await addProjectMember(projectId, userId, perc);
-      }
-
-      // Remover membros que não estão mais na lista
-      const toRemove = initialMembers.filter(uid => !selectedUsers.includes(uid));
-      for (const userId of toRemove) await removeProjectMember(projectId, userId);
-      setIsEditing(false);
-      alert('Projeto atualizado!');
-    } catch (error: any) {
-      console.error(error);
-      alert('Erro ao salvar.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const projectTasks = useMemo(() => {
     const pTasks = tasks.filter(t => t.projectId === projectId);
@@ -189,12 +118,6 @@ const ProjectDetailView: React.FC = () => {
     }
     return pTasks;
   }, [tasks, projectId, currentUser, isAdmin]);
-
-  const filteredTasks = useMemo(() => {
-    let t = projectTasks;
-    if (selectedStatus !== 'Todos') t = t.filter(task => task.status === selectedStatus);
-    return t.sort((a, b) => (new Date(a.estimatedDelivery || '2099-12-31').getTime() - new Date(b.estimatedDelivery || '2099-12-31').getTime()));
-  }, [projectTasks, selectedStatus]);
 
   const performance = useMemo(() => {
     if (!project) return null;
@@ -232,6 +155,56 @@ const ProjectDetailView: React.FC = () => {
 
     return { committedCost, consumedHours, weightedProgress, totalEstimated, plannedProgress, projection };
   }, [project, projectTasks, timesheetEntries, users, projectId]);
+
+  // --- AUTOMATION: Auto-start project if there is activity ---
+  useEffect(() => {
+    if (!project || !projectId || !isAdmin) return;
+
+    // Only check if currently "Not Started"
+    if (project.status === 'Não Iniciado') {
+      const hasProgress = (performance?.weightedProgress || 0) > 0;
+      const hasActiveTasks = projectTasks.some(t => t.status === 'In Progress' || t.status === 'Review' || t.status === 'Done');
+      const hasHours = timesheetEntries.some(e => e.projectId === projectId);
+
+      if (hasProgress || hasActiveTasks || hasHours) {
+        // Auto-update to "In Progress"
+        updateProject(projectId, { status: 'Em Andamento' } as any)
+          .catch(err => console.error("Falha ao iniciar projeto automaticamente:", err));
+      }
+    }
+  }, [project, projectId, performance, projectTasks, timesheetEntries, updateProject, isAdmin]);
+
+  const handleSaveProject = async () => {
+    if (!project || !projectId) return;
+    setLoading(true);
+    try {
+      await updateProject(projectId, { ...formData, active: true } as any);
+      const initialMembers = getProjectMembers(projectId);
+      const initialMembersSet = new Set(initialMembers);
+
+      // Para cada usuário selecionado, adicionamos sempre como 100% (flag)
+      for (const userId of selectedUsers) {
+        await addProjectMember(projectId, userId, 100);
+      }
+
+      // Remover membros que não estão mais na lista
+      const toRemove = initialMembers.filter(uid => !selectedUsers.includes(uid));
+      for (const userId of toRemove) await removeProjectMember(projectId, userId);
+      setIsEditing(false);
+      alert('Projeto atualizado!');
+    } catch (error: any) {
+      console.error(error);
+      alert('Erro ao salvar.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredTasks = useMemo(() => {
+    let t = projectTasks;
+    if (selectedStatus !== 'Todos') t = t.filter(task => task.status === selectedStatus);
+    return t.sort((a, b) => (new Date(a.estimatedDelivery || '2099-12-31').getTime() - new Date(b.estimatedDelivery || '2099-12-31').getTime()));
+  }, [projectTasks, selectedStatus]);
 
   const teamMetrics = useMemo(() => {
     if (!project || !projectId) return {};
@@ -401,17 +374,7 @@ const ProjectDetailView: React.FC = () => {
                       <h4 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>Finanças</h4>
                       {isEditing ? (
                         <div className="space-y-4">
-                          <div>
-                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Valor do Projeto (R$)</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-emerald-500">R$</span>
-                              <input type="number" value={formData.valor_total_rs} onChange={e => setFormData({ ...formData, valor_total_rs: Number(e.target.value) })} className="text-xl font-black w-full rounded p-1 outline-none" style={{ backgroundColor: 'var(--bg)', color: 'var(--success)' }} placeholder="0,00" />
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Horas Vendidas (Orçamento)</p>
-                            <input type="number" value={formData.horas_vendidas} onChange={e => setFormData({ ...formData, horas_vendidas: Number(e.target.value) })} className="w-full text-sm font-bold p-2 rounded outline-none border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="0" />
-                          </div>
+                          <p className="text-[10px] font-bold text-[var(--muted)] opacity-50 uppercase">Finanças e Budget são configurados na criação do projeto.</p>
                         </div>
                       ) : (
                         <>
@@ -496,18 +459,8 @@ const ProjectDetailView: React.FC = () => {
                         </div>
 
                         <div className="pt-3 mt-3 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
-                          <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Estimativa Automática</p>
-                          <div className="flex items-end gap-2">
-                            <p className="text-xl font-black text-purple-500">
-                              {(() => {
-                                const team = users.filter(u => projectMembers.some(pm => String(pm.id_projeto) === project.id && String(pm.id_colaborador) === u.id));
-                                const remainingHours = Math.max(0, (project.horas_vendidas || 0) - (performance?.consumedHours || 0));
-                                const deadline = CapacityUtils.calculateProjectDeadline(new Date().toISOString().split('T')[0], remainingHours, team);
-                                return deadline ? deadline.split('-').reverse().join('/') : '--';
-                              })()}
-                            </p>
-                            <p className="text-[8px] mb-1 opacity-60">*Baseada em Capacidade</p>
-                          </div>
+                          <p className="text-[9px] font-bold uppercase mb-1" style={{ color: 'var(--muted)' }}>Capacidade do Time</p>
+                          <p className="text-[10px] text-[var(--muted)]">Cronograma baseado em entregas nas tarefas.</p>
                         </div>
                       </div>
                     )}
@@ -607,14 +560,6 @@ const ProjectDetailView: React.FC = () => {
                         <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text)' }}>
                           <Users size={16} className="text-purple-500" /> Equipe Alocada
                         </h3>
-                        {project && performance && (
-                          <div className="text-right">
-                            <p className="text-[8px] font-black uppercase opacity-40">Saldo Projeto</p>
-                            <p className="text-xs font-black" style={{ color: (project.horas_vendidas - performance.consumedHours) < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                              {(project.horas_vendidas - performance.consumedHours).toFixed(1)}h
-                            </p>
-                          </div>
-                        )}
                       </div>
                       <div className="space-y-3">
                         {isEditing ? (
@@ -628,11 +573,9 @@ const ProjectDetailView: React.FC = () => {
                                     if (e.target.checked) {
                                       const next = [...selectedUsers, user.id];
                                       setSelectedUsers(next);
-                                      setMemberAllocations(balanceAllocations(next));
                                     } else {
                                       const next = selectedUsers.filter(id => id !== user.id);
                                       setSelectedUsers(next);
-                                      setMemberAllocations(balanceAllocations(next));
                                     }
                                   }}
                                   className="w-4 h-4 rounded border-[var(--border)] text-purple-600 focus:ring-purple-500"
@@ -645,77 +588,20 @@ const ProjectDetailView: React.FC = () => {
                                     <p className="text-[10px] font-black uppercase tracking-tighter truncate" style={{ color: 'var(--text)' }}>{user.name}</p>
                                     <div className="flex items-center gap-1.5 mt-0.5">
                                       <p className="text-[8px] font-bold uppercase opacity-40 tracking-wider truncate" style={{ color: 'var(--text)' }}>{user.cargo || user.role}</p>
-                                      {(() => {
-                                        const status = getUserStatus(user, tasks, projects, clients);
-                                        return (
-                                          <div className="flex items-center gap-1 shrink-0">
-                                            <div className="w-1 h-1 rounded-full opacity-30" style={{ backgroundColor: 'var(--text)' }} />
-                                            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
-                                          </div>
-                                        );
-                                      })()}
                                     </div>
                                   </div>
                                 </div>
 
-                                {(() => {
-                                  const availability = CapacityUtils.getUserMonthlyAvailability(user, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
-                                  const isLow = availability.available < 20;
-                                  const occupationPercent = Math.round((availability.allocated / availability.capacity) * 100);
-
-                                  return (
-                                    <>
-                                      {/* Availability Badge */}
-                                      <div className={`px-2 py-1 rounded-lg border flex flex-col items-center min-w-[38px] shrink-0 transition-all ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-emerald-500/5 border-emerald-500/20'}`}>
-                                        <span className="text-[6px] font-black opacity-40 uppercase tracking-tighter" style={{ color: isLow ? 'var(--danger)' : 'var(--success)' }}>Disp</span>
-                                        <span className={`text-[9px] font-black tabular-nums ${isLow ? 'text-red-500' : 'text-emerald-500'}`}>
-                                          {availability.available}h
-                                        </span>
-                                      </div>
-
-                                      {/* Allocation Input Pill */}
-                                      {selectedUsers.includes(user.id) && (
-                                        <div className="flex flex-col items-end gap-0.5 shrink-0">
-                                          <div
-                                            className="flex items-center gap-1.5 shrink-0 glass-purple px-2 py-1 rounded-lg transition-all group/aloc shadow-sm"
-                                            onClick={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                            }}
-                                          >
-                                            <span className="text-[8px] font-black text-purple-400 tracking-tighter uppercase opacity-60">Aloc</span>
-                                            <div className="flex items-center">
-                                              <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={memberAllocations[user.id] || 0}
-                                                onChange={(e) => {
-                                                  const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                                                  setMemberAllocations(balanceAllocations(selectedUsers, user.id, val));
-                                                }}
-                                                className="w-6 bg-transparent text-[10px] font-black text-right outline-none border-none p-0 focus:ring-0"
-                                                style={{ color: 'var(--text)' }}
-                                              />
-                                              <span className="text-[9px] font-black text-purple-400 ml-0.5">%</span>
-                                            </div>
-                                          </div>
-
-                                          {/* Real Occupation Warning */}
-                                          {occupationPercent > 0 && (
-                                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${occupationPercent > 100 ? 'bg-red-500/10 border-red-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
-                                              {occupationPercent > 100 && <AlertCircle className="w-2.5 h-2.5 text-red-500" />}
-                                              <span className={`text-[6px] font-black uppercase tracking-tighter ${occupationPercent > 100 ? 'text-red-500' : 'text-purple-400/60'}`}>
-                                                {occupationPercent > 100 ? `SOBRECARGA: ${occupationPercent}%` : `Ocupação Real: ${occupationPercent}%`}
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </>
-                                  );
-                                })()}
+                                {selectedUsers.includes(user.id) && (
+                                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                    <div className="flex items-center gap-1.5 glass-purple px-2 py-1 rounded-lg">
+                                      <Users className="w-3 h-3 text-purple-400" />
+                                      <span className="text-[8px] font-black text-purple-400 uppercase tracking-tighter">Membro</span>
+                                    </div>
+                                  </div>
+                                )}
                               </label>
+
                             ))}
                           </div>
                         ) : (
@@ -730,64 +616,19 @@ const ProjectDetailView: React.FC = () => {
                                   <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
                                   <div className="flex items-center gap-2">
                                     <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--primary)' }}>{u.cargo || 'Consultor'}</p>
-                                    {(() => {
-                                      const status = getUserStatus(u, tasks, projects, clients);
-                                      const availability = CapacityUtils.getUserMonthlyAvailability(u, new Date().toISOString().slice(0, 7), projects, projectMembers, timesheetEntries);
-
-                                      // Calculate share of remaining work
-                                      const projectRemainingHours = Math.max(0, project.horas_vendidas - (performance?.consumedHours || 0));
-                                      const teamSize = projectMembers.filter(m => String(m.id_projeto) === projectId).length || 1;
-                                      const shareOfRemaining = projectRemainingHours / teamSize;
-
-                                      // Calculate monthly burden based on deadline
-                                      const now = new Date();
-                                      const deadline = project.estimatedDelivery ? new Date(project.estimatedDelivery) : new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                                      const monthsRemaining = Math.max(1, (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth()));
-                                      const monthlyBurden = shareOfRemaining / monthsRemaining;
-
-                                      return (
-                                        <div className="flex items-center gap-2">
-                                          <div className="flex items-center gap-1">
-                                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: status.color }} />
-                                            <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: status.color }}>{status.label}</span>
-                                          </div>
-                                          <span className="text-[var(--muted)] opacity-20 text-[7px]">•</span>
-                                          <span className={`text-[8px] font-black tracking-tighter ${availability.available < monthlyBurden ? 'text-red-500' : 'text-emerald-500'}`}>
-                                            DISP: {availability.available}H
-                                          </span>
-                                        </div>
-                                      );
-                                    })()}
                                   </div>
 
-                                  <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                                  <div className="mt-2 pt-2 border-t border-dashed flex justify-between items-center" style={{ borderColor: 'var(--border)' }}>
                                     <div>
                                       {(() => {
                                         const reported = timesheetEntries
                                           .filter(e => e.projectId === projectId && e.userId === u.id)
                                           .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
                                         return (
-                                          <>
+                                          <div className="flex items-center gap-3">
                                             <p className="text-[7px] font-black uppercase opacity-40">Apontado</p>
-                                            <p className="text-[9px] font-black" style={{ color: 'var(--text)' }}>{reported.toFixed(1)}h</p>
-                                          </>
-                                        );
-                                      })()}
-                                    </div>
-                                    <div className="text-right">
-                                      {(() => {
-                                        // Logic requested: Divide missing hours by team size
-                                        const projectRemainingHours = Math.max(0, project.horas_vendidas - (performance?.consumedHours || 0));
-                                        const teamSize = projectMembers.filter(m => String(m.id_projeto) === projectId).length || 1;
-                                        const shareOfRemaining = projectRemainingHours / teamSize;
-
-                                        return (
-                                          <>
-                                            <p className="text-[7px] font-black uppercase opacity-40">A Realizar (Share)</p>
-                                            <p className="text-[9px] font-black" style={{ color: shareOfRemaining > 0 ? 'var(--info)' : 'var(--success)' }}>
-                                              {shareOfRemaining.toFixed(1)}h
-                                            </p>
-                                          </>
+                                            <p className="text-[12px] font-black" style={{ color: 'var(--text)' }}>{reported.toFixed(1)}h</p>
+                                          </div>
                                         );
                                       })()}
                                     </div>
@@ -984,13 +825,7 @@ const ProjectTaskCard: React.FC<{ task: any, users: any[], timesheetEntries: any
               {isAdmin && (
                 <div className="flex items-center gap-1">
                   <span className="text-[10px] font-bold opacity-40" style={{ color: 'var(--muted)' }}>
-                    / {(() => {
-                      if (!task.scheduledStart || !task.estimatedDelivery) return task.estimatedHours || 0;
-                      const d1 = new Date(task.scheduledStart);
-                      const d2 = new Date(task.estimatedDelivery);
-                      const diff = Math.floor((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                      return diff > 0 ? diff * 8 : (task.estimatedHours || 0);
-                    })()}h
+                    / {task.estimatedHours || 0}h
                   </span>
                 </div>
               )}

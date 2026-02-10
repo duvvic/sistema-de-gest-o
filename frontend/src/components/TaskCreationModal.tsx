@@ -27,6 +27,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
     const [notes, setNotes] = useState('');
     const [priority, setPriority] = useState<Priority>('Medium');
     const [estimatedDelivery, setEstimatedDelivery] = useState('');
+    const [estimatedHours, setEstimatedHours] = useState<string>('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -54,6 +55,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
             setDescription('');
             setNotes('');
             setPriority('Medium');
+            setEstimatedHours('');
 
             // Set default estimated delivery to 7 days from now
             const nextWeek = new Date();
@@ -128,6 +130,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                 collaboratorIds: collaboratorIds || undefined,
                 priority,
                 estimatedDelivery: estimatedDelivery || undefined,
+                estimatedHours: estimatedHours ? Number(estimatedHours) : undefined,
                 status: 'Todo',
                 progress: 0
             });
@@ -350,7 +353,21 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                     className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
                                 />
                             </div>
+
+                            {/* Horas Estimadas */}
+                            <div className="col-span-2">
+                                <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Horas Estimadas (Opcional)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={estimatedHours}
+                                    onChange={(e) => setEstimatedHours(e.target.value)}
+                                    placeholder="Ex: 8"
+                                    className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
+                                />
+                            </div>
                         </div>
+
 
                     </div>
 

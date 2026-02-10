@@ -121,7 +121,8 @@ export const getUserMonthlyAvailability = (
     monthStr: string,
     projects: Project[],
     projectMembers: ProjectMember[],
-    timesheetEntries: any[] = []
+    timesheetEntries: any[] = [],
+    tasks: Task[] = []
 ): { capacity: number; allocated: number; available: number } => {
     const [year, month] = monthStr.split('-').map(Number);
     const monthStart = new Date(year, month - 1, 1);
@@ -132,75 +133,10 @@ export const getUserMonthlyAvailability = (
     const dailyGoal = user.dailyAvailableHours || 8;
     const capacity = dailyGoal * workingDays;
 
-    // 2. Horas Alocadas (Logica de Demanda com Saldo Transporado)
-    let allocated = 0;
+    // 2. Horas Alocadas (Nova Lógica: Baseada em TAREFAS)
+    // Usamos a função auxiliar que já calcula horas de tarefas para o mês especificado
+    const allocated = getMonthlyAllocatedHours(user.id, monthStr, tasks);
 
-    // Filtrar projetos que o usuário é membro
-    const userAllocations = projectMembers.filter(pm => String(pm.id_colaborador) === user.id);
-
-    userAllocations.forEach(allocation => {
-        const project = projects.find(p => String(p.id) === String(allocation.id_projeto));
-        if (!project || project.active === false) return;
-
-        // Regra de Alocação por Demanda:
-        // A carga horária é baseada no que resta do projeto dividido pelos participantes.
-        const soldHours = project.horas_vendidas || 0;
-        const teamSize = projectMembers.filter(pm => String(pm.id_projeto) === String(project.id)).length || 1;
-        const userShare = (Number(allocation.allocation_percentage) || 100) / 100;
-
-        let remainingDemand = 0;
-
-        if (soldHours > 0) {
-            // Total de horas que este usuário deve entregar no projeto inteiro
-            const totalUserTarget = (soldHours / teamSize) * userShare;
-
-            // Calcular o que já foi realizado pelo usuário NESTE projeto ANTES deste mês
-            const performedBeforeThisMonth = timesheetEntries.filter(t => {
-                if (String(t.userId) !== String(user.id)) return false;
-                if (String(t.projectId) !== String(project.id)) return false;
-                if (!t.date) return false;
-                const d = new Date(t.date + 'T12:00:00');
-                return d < monthStart;
-            }).reduce((sum, t) => sum + (Number(t.totalHours || t.hours) || 0), 0);
-
-            remainingDemand = Math.max(0, totalUserTarget - performedBeforeThisMonth);
-        } else {
-            // Fallback para Manutenção/Suporte (soldHours <= 0) - Alocação fixa baseada na % do banco
-            // Mas limitada ao que cabe no mês restrito pela %
-            remainingDemand = workingDays * dailyGoal * (userShare / 10); // Div /10 pois o user usa 100 para 10% em manut
-        }
-
-        if (remainingDemand > 0) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const today = new Date(todayStr + 'T12:00:00');
-            const startDate = project.startDate ? new Date(project.startDate + 'T00:00:00') : new Date(0);
-
-            if (monthEnd >= startDate && monthEnd >= today) {
-                // --- AJUSTE CRUCIAL: Consumo Planejado ---
-                // Se estamos olhando para um mês no futuro (ex: Setembro), 
-                // precisamos descontar o que o colaborador VAI trabalhar entre HOJE e o início de Setembro.
-                if (monthStart > today) {
-                    const daysUntilMonthStart = getWorkingDaysInRange(todayStr, monthStart.toISOString().split('T')[0]);
-                    // Descontamos a capacidade que será consumida nesse intervalo (respeitando a carga do projeto)
-                    const plannedConsumption = (daysUntilMonthStart - 1) * dailyGoal * userShare;
-                    remainingDemand = Math.max(0, remainingDemand - plannedConsumption);
-                }
-
-                // Dias úteis RESTANTES no mês ou totais
-                let effectivWorkingDays = workingDays;
-                if (today > monthStart && today < monthEnd) {
-                    effectivWorkingDays = getWorkingDaysInRange(todayStr, monthStr + '-' + new Date(year, month, 0).getDate());
-                }
-
-                const monthPotential = effectivWorkingDays * dailyGoal * userShare;
-                const spaceLeft = Math.max(0, capacity - allocated);
-
-                // Alocação deste mês
-                const monthAllocation = Math.min(remainingDemand, monthPotential, spaceLeft);
-                allocated += monthAllocation;
-            }
-        }
-    });
 
     // 3. Cálculo de Disponibilidade Real (Folga)
     let currentAvailability = 0;
@@ -269,55 +205,52 @@ export const calculateIndividualReleaseDate = (
     user: User,
     projects: Project[],
     projectMembers: ProjectMember[],
-    timesheetEntries: any[]
+    timesheetEntries: any[],
+    tasks: Task[] = []
 ): string => {
     const todayStr = new Date().toISOString().split('T')[0];
     const today = new Date(todayStr + 'T12:00:00');
     const dailyGoal = user.dailyAvailableHours || 8;
 
-    // Filtrar alocações ativas
-    const userAllocations = projectMembers.filter(pm => String(pm.id_colaborador) === user.id);
+    // 1. Filtrar tarefas ativas do usuário
+    const userTasks = tasks.filter(t =>
+        (t.developerId === user.id || (t.collaboratorIds && t.collaboratorIds.includes(user.id))) &&
+        t.status !== 'Done'
+    );
+
     let totalRemainingDemand = 0;
-    let maxAllocationShare = 0;
 
-    userAllocations.forEach(allocation => {
-        const project = projects.find(p => String(p.id) === String(allocation.id_projeto));
-        if (!project || project.active === false) return;
+    userTasks.forEach(task => {
+        const estimated = task.estimatedHours || 0;
+        if (estimated <= 0) return;
 
-        const soldHours = project.horas_vendidas || 0;
-        if (soldHours <= 0) return; // Maintenance doesn't have a fixed "release" end
+        // Horas já realizadas NESTA tarefa específica
+        const performedOnTask = timesheetEntries
+            .filter(te => String(te.taskId) === String(task.id) && String(te.userId) === String(user.id))
+            .reduce((sum, te) => sum + (Number(te.totalHours || te.hours) || 0), 0);
 
-        const teamSize = projectMembers.filter(pm => String(pm.id_projeto) === String(project.id)).length || 1;
-        const userShare = (Number(allocation.allocation_percentage) || 100) / 100;
-        maxAllocationShare = Math.max(maxAllocationShare, userShare);
+        const userCount = 1 + (task.collaboratorIds?.length || 0);
+        const individualTarget = estimated / userCount;
 
-        const totalUserTarget = (soldHours / teamSize) * userShare;
-        const performedSoFar = timesheetEntries.filter(t =>
-            String(t.userId) === String(user.id) && String(t.projectId) === String(project.id)
-        ).reduce((sum, t) => sum + (Number(t.totalHours || t.hours) || 0), 0);
-
-        totalRemainingDemand += Math.max(0, totalUserTarget - performedSoFar);
+        totalRemainingDemand += Math.max(0, individualTarget - performedOnTask);
     });
 
-    if (totalRemainingDemand <= 0) return '';
+    if (totalRemainingDemand <= 0) return 'Disponível';
 
-    // Quantos dias úteis ele precisa de HOJE para liquidar esse BACKLOG
-    // Consideramos a capacidade dedicada dele (baseada na maior alocação ou simplesmente no dailyGoal)
-    const effectiveDailyCapacity = dailyGoal * (maxAllocationShare || 1);
-    const workingDaysNeeded = Math.ceil(totalRemainingDemand / (effectiveDailyCapacity || 1));
+    // 2. Calcular dias necessários
+    const workingDaysNeeded = Math.ceil(totalRemainingDemand / dailyGoal);
 
     let currentDate = new Date(today);
     let daysAdded = 0;
 
     while (daysAdded < workingDaysNeeded) {
+        currentDate.setDate(currentDate.getDate() + 1);
         const dayOfWeek = currentDate.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
             daysAdded++;
-        }
-        if (daysAdded < workingDaysNeeded) {
-            currentDate.setDate(currentDate.getDate() + 1);
         }
     }
 
     return currentDate.toLocaleDateString('pt-BR');
 };
+

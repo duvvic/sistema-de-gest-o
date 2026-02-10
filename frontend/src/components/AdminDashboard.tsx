@@ -49,7 +49,7 @@ const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navi
   const sumProgress = projectTasks.reduce((acc: number, t: any) => acc + (t.progress || 0), 0);
   const progress = projectTasks.length > 0 ? sumProgress / projectTasks.length : 0;
 
-  const hoursSold = p.horas_vendidas || p.budget || 0;
+  const hoursSold = p.horas_vendidas || 0;
   const hoursReal = pTimesheets.reduce((acc: number, e: any) => acc + (Number(e.totalHours) || 0), 0);
   const sold = p.valor_total_rs || 0;
   const result = sold - costToday;
@@ -265,22 +265,14 @@ const AdminDashboard: React.FC = () => {
         const clientWords = clientName.split(/[\s-]+/);
         const matchesClientName = clientWords.some(word => word.startsWith(term)) || clientName.startsWith(term);
 
-        // Busca nos projetos deste cliente
-        const matchesProjectName = safeProjects.some(p => {
-          if (String(p.clientId) !== String(c.id)) return false;
-          const projectName = (p.name || '').toLowerCase();
-          const projectWords = projectName.split(/[\s-]+/);
-          return projectWords.some(word => word.startsWith(term)) || projectName.startsWith(term);
-        });
-
-        return matchesClientName || matchesProjectName;
+        return matchesClientName;
       });
     }
 
     // Aplicar Filtro de Status de Tarefa
     if (taskStatusFilter !== 'all') {
       result = result.filter(client => {
-        const clientTasks = safeTasks.filter(t => t.clientId === client.id);
+        const clientTasks = safeTasks.filter(t => String(t.clientId) === String(client.id));
         if (taskStatusFilter === 'late') {
           return clientTasks.some(t => {
             if (t.status === 'Done' || t.status === 'Review') return false;
@@ -292,7 +284,7 @@ const AdminDashboard: React.FC = () => {
           return clientTasks.some(t => t.status === 'In Progress');
         }
         if (taskStatusFilter === 'done') {
-          const clientProjects = safeProjects.filter(p => p.clientId === client.id);
+          const clientProjects = safeProjects.filter(p => String(p.clientId) === String(client.id));
           return clientProjects.some(p => p.status === 'Concluído');
         }
         return true;
@@ -556,10 +548,10 @@ const AdminDashboard: React.FC = () => {
 
       // 2. Alocado (Previsto - Via Nova Lógica de Projetos e Membros)
       // Agora espera: user, monthStr, projects, projectMembers, timesheets
-      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeProjects, projectMembers, timesheetEntries);
+      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks);
 
       // 3. Data de Disponibilidade (Preditivo - Baseado em Backlog Total)
-      const releaseDate = CapacityUtils.calculateIndividualReleaseDate(u, safeProjects, projectMembers, timesheetEntries) || 'N/A';
+      const releaseDate = CapacityUtils.calculateIndividualReleaseDate(u, safeProjects, projectMembers, timesheetEntries, safeTasks) || 'N/A';
 
       return {
         id: u.id,
@@ -1548,7 +1540,7 @@ const AdminDashboard: React.FC = () => {
                         {client.name}
                       </h2>
                       <div className="text-[10px] font-bold opacity-50 uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
-                        {safeProjects.filter((p) => p.clientId === client.id).length} {safeProjects.filter((p) => p.clientId === client.id).length === 1 ? 'PROJETO' : 'PROJETOS'}
+                        {safeProjects.filter((p) => String(p.clientId) === String(client.id)).length} {safeProjects.filter((p) => String(p.clientId) === String(client.id)).length === 1 ? 'PROJETO' : 'PROJETOS'}
                       </div>
                     </div>
                   </div>
@@ -1563,8 +1555,8 @@ const AdminDashboard: React.FC = () => {
               className="flex-1 overflow-y-auto custom-scrollbar space-y-8 pb-10"
             >
               {filteredSortedClients.map((client) => {
-                const clientProjects = safeProjects.filter(p => p.clientId === client.id);
-                const clientTasks = safeTasks.filter(t => t.clientId === client.id);
+                const clientProjects = safeProjects.filter(p => String(p.clientId) === String(client.id));
+                const clientTasks = safeTasks.filter(t => String(t.clientId) === String(client.id));
 
                 return (
                   <div key={client.id} className="space-y-4">
