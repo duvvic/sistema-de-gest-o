@@ -430,7 +430,7 @@ const TaskDetail: React.FC = () => {
         </div>
 
         <div className="pt-3 border-t border-[var(--border)]">
-          <label className="block text-[8px] font-black uppercase tracking-[0.1em] opacity-40 mb-1">Nome da Tarefa</label>
+          <label className="block text-[8px] font-black uppercase tracking-[0.1em] opacity-60 mb-1" style={{ color: 'var(--text)' }}>Nome da Tarefa</label>
           <input
             type="text"
             value={formData.title}
@@ -813,8 +813,8 @@ const TaskDetail: React.FC = () => {
       <div className="space-y-6 flex-1 flex flex-col justify-center">
         <div className="flex items-center justify-center gap-8">
           <div className="text-center space-y-1">
-            <p className="text-[8px] font-black text-[var(--muted)] uppercase tracking-wider">Estimado</p>
-            <div className="bg-gradient-to-br from-[var(--bg)] to-[var(--surface-2)] p-2 rounded-[14px] border border-[var(--border)] shadow-inner w-16">
+            <p className="text-[8px] font-black text-[var(--muted)] uppercase tracking-wider">Horas Alocadas</p>
+            <div className="bg-gradient-to-br from-[var(--bg)] to-[var(--surface-2)] p-2 rounded-[14px] border border-[var(--border)] shadow-inner w-20">
               <input
                 type="number"
                 step="0.5"
@@ -825,13 +825,20 @@ const TaskDetail: React.FC = () => {
                 disabled={!canEditEverything}
               />
             </div>
+            {selectedProject?.horas_vendidas ? (
+              <p className="text-[7px] font-bold text-[var(--muted)]">
+                Peso: {((Number(formData.estimatedHours || 0) / Number(selectedProject.horas_vendidas)) * 100).toFixed(1)}%
+              </p>
+            ) : (
+              <p className="text-[7px] font-bold text-[var(--muted)]">--%</p>
+            )}
           </div>
 
           <div className="w-px h-10 bg-gradient-to-b from-transparent via-[var(--border)] to-transparent" />
 
           <div className="text-center space-y-1">
             <p className="text-[8px] font-black text-[var(--muted)] uppercase tracking-wider">Realizado</p>
-            <div className="bg-gradient-to-br from-purple-500/5 to-indigo-500/10 p-2 rounded-[14px] border border-purple-500/10 shadow-sm w-16">
+            <div className="bg-gradient-to-br from-purple-500/5 to-indigo-500/10 p-2 rounded-[14px] border border-purple-500/10 shadow-sm w-20">
               <span className={`font-black text-base ${actualHoursSpent > (formData.estimatedHours || 0) ? 'text-red-500' : 'text-purple-600'}`}>
                 {actualHoursSpent}h
               </span>

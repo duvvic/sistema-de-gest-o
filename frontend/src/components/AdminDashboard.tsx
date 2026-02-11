@@ -1645,14 +1645,14 @@ const AdminDashboard: React.FC = () => {
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 )}
-                                <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider text-[var(--text)] dark:text-white">{project.name}</h4>
+                                <h4 className="font-bold mb-3 line-clamp-1 transition-colors uppercase text-[11px] tracking-wider text-purple-600 dark:text-purple-400">{project.name}</h4>
 
                                 <div className="space-y-4">
                                   {/* Evolução Física */}
                                   <div>
-                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
                                       <span>Evolução Física</span>
-                                      <span>{progress}%</span>
+                                      <span style={{ color: 'var(--text)' }}>{progress}%</span>
                                     </div>
                                     <div className="w-full h-1 rounded-full overflow-hidden mt-1" style={{ backgroundColor: 'var(--surface-2)' }}>
                                       <div
@@ -1670,9 +1670,9 @@ const AdminDashboard: React.FC = () => {
                                     const hourPercentage = hoursSold > 0 ? (hoursConsumed / hoursSold) * 100 : 0;
                                     return (
                                       <div>
-                                        <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                        <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
                                           <span>Consumo de Horas</span>
-                                          <span className={hourPercentage > 100 ? 'text-red-500' : ''}>{hoursConsumed.toFixed(0)}h / {hoursSold}h</span>
+                                          <span className={hourPercentage > 100 ? 'text-red-500' : ''} style={{ color: hourPercentage > 100 ? undefined : 'var(--text)' }}>{hoursConsumed.toFixed(0)}h / {hoursSold}h</span>
                                         </div>
                                         <div className="w-full h-1 rounded-full overflow-hidden mt-1" style={{ backgroundColor: 'var(--surface-2)' }}>
                                           <div

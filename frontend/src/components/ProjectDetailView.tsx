@@ -301,22 +301,53 @@ const ProjectDetailView: React.FC = () => {
               >
                 {/* KPI ROW */}
                 <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
-                  {/* Saúde do Projeto - Prazo */}
-                  <div className="p-8 rounded-[32px] border shadow-sm relative overflow-hidden transition-all hover:shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>Status de Entrega</h4>
-                    {(() => {
-                      const delta = (performance?.weightedProgress || 0) - (performance?.plannedProgress || 0);
-                      const health = delta >= 0 ? { label: 'No Prazo', color: 'text-emerald-500', bg: 'bg-emerald-500' } :
-                        delta >= -10 ? { label: 'Atraso Leve', color: 'text-amber-500', bg: 'bg-amber-500' } :
-                          { label: 'Em Atraso', color: 'text-red-500', bg: 'bg-red-500' };
-                      return (
-                        <div className="flex flex-col items-center justify-center py-1">
-                          <div className={`w-3 h-3 rounded-full ${health.bg} animate-pulse shadow-[0_0_12px_rgba(0,0,0,0.1)] mb-2`} />
-                          <span className={`text-xl font-black uppercase tracking-tighter ${health.color}`}>{health.label}</span>
-                          <span className="text-[9px] font-black mt-1 uppercase tracking-widest" style={{ color: 'var(--muted)' }}>Desvio: {delta > 0 ? '+' : ''}{Math.round(delta)}%</span>
+                  {/* Resumo do Planejamento - Cronograma & Peso */}
+                  <div className="p-6 rounded-[32px] border shadow-sm relative overflow-hidden transition-all hover:shadow-md flex flex-col" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', height: '320px' }}>
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>Cronograma & Peso</h4>
+                      <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600">
+                        <Calendar size={12} />
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                      {projectTasks
+                        .sort((a, b) => {
+                          const dateA = new Date(a.scheduledStart || 0).getTime();
+                          const dateB = new Date(b.scheduledStart || 0).getTime();
+                          return dateA - dateB;
+                        })
+                        .map(task => {
+                          const weight = project.horas_vendidas ? ((task.estimatedHours || 0) / project.horas_vendidas) * 100 : 0;
+                          const startDate = task.scheduledStart ? new Date(task.scheduledStart).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '--/--';
+
+                          return (
+                            <div key={task.id} className="flex items-center justify-between p-2 rounded-xl border border-transparent hover:border-[var(--border)] hover:bg-[var(--bg)] transition-all group/item cursor-pointer" onClick={() => navigate(`/tasks/${task.id}`)}>
+                              <div className="flex-1 min-w-0 pr-3">
+                                <p className="text-[10px] font-bold text-[var(--text)] truncate group-hover/item:text-purple-500 transition-colors">{task.title}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-[var(--surface-2)] text-[var(--muted)]'}`}>
+                                    {task.status === 'Todo' ? 'Fila' : task.status === 'In Progress' ? 'Andamento' : task.status === 'Review' ? 'Review' : 'Feito'}
+                                  </span>
+                                  <span className="text-[8px] font-bold text-[var(--muted)] opacity-60">Início: {startDate}</span>
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                <p className="text-[10px] font-black text-[var(--text)]">{weight.toFixed(1)}%</p>
+                                <p className="text-[7px] font-bold uppercase text-[var(--muted)] opacity-50">Peso</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                      {projectTasks.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                          <LayoutGrid size={24} className="mb-2" />
+                          <p className="text-[9px] font-bold uppercase">Sem tarefas</p>
                         </div>
-                      )
-                    })()}
+                      )}
+                    </div>
                   </div>
 
                   {/* Progresso vs Plano */}
@@ -364,6 +395,23 @@ const ProjectDetailView: React.FC = () => {
                           <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${performance?.plannedProgress || 0}%` }} />
                         </div>
                       </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>Status de Entrega</h4>
+                      {(() => {
+                        const delta = (performance?.weightedProgress || 0) - (performance?.plannedProgress || 0);
+                        const health = delta >= 0 ? { label: 'No Prazo', color: 'text-emerald-500', bg: 'bg-emerald-500' } :
+                          delta >= -10 ? { label: 'Atraso Leve', color: 'text-amber-500', bg: 'bg-amber-500' } :
+                            { label: 'Em Atraso', color: 'text-red-500', bg: 'bg-red-500' };
+                        return (
+                          <div className="flex flex-col items-center justify-center py-1">
+                            <div className={`w-3 h-3 rounded-full ${health.bg} animate-pulse shadow-[0_0_12px_rgba(0,0,0,0.1)] mb-2`} />
+                            <span className={`text-xl font-black uppercase tracking-tighter ${health.color}`}>{health.label}</span>
+                            <span className="text-[9px] font-black mt-1 uppercase tracking-widest" style={{ color: 'var(--muted)' }}>Desvio: {delta > 0 ? '+' : ''}{Math.round(delta)}%</span>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
 
