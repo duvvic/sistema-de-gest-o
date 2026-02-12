@@ -26,11 +26,40 @@ export async function getApiBaseUrl(): Promise<string> {
             .single();
 
         if (!error && data?.value) {
-            cachedApiUrl = data.value.replace(/\/$/, '');
-            if (!cachedApiUrl.endsWith('/api')) {
-                cachedApiUrl += '/api';
+            let candidateUrl = data.value.replace(/\/$/, '');
+            if (!candidateUrl.endsWith('/api')) {
+                candidateUrl += '/api';
             }
-            console.log('[API] Usando URL dinâmica do Supabase:', cachedApiUrl);
+
+            // Validação de Conectividade (Health Check Rápido)
+            // Se a URL do banco for um túnel (ngrok/cloudflare), verifica se está ativa
+            if (candidateUrl.includes('ngrok') || candidateUrl.includes('trycloudflare')) {
+                try {
+                    // Tenta verificar se a URL está viva
+                    // Ajuste: timeout de 2s. Se falhar, considera offline.
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+                    const response = await fetch(`${candidateUrl.replace(/\/api$/, '')}/health`, {
+                        method: 'GET',
+                        signal: controller.signal
+                    }).catch(() => null);
+
+                    clearTimeout(timeoutId);
+
+                    if (!response || !response.ok) {
+                        console.warn('[API] URL dinâmica offline ou inválida (Health Check falhou). Ignorando:', candidateUrl);
+                        // Força erro para cair no catch e ir p/ fallback
+                        throw new Error('Dynamic URL Unreachable');
+                    }
+                } catch (e) {
+                    console.warn('[API] Falha ao validar URL dinâmica:', candidateUrl);
+                    throw e; // Lança erro para sair do bloco e usar localhost
+                }
+            }
+
+            console.log('[API] Usando URL dinâmica do Supabase:', candidateUrl);
+            cachedApiUrl = candidateUrl;
             return cachedApiUrl;
         }
     } catch (e) {
