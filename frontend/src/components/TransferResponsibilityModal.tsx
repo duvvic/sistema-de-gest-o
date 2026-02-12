@@ -89,12 +89,11 @@ const TransferResponsibilityModal: React.FC<TransferResponsibilityModalProps> = 
                                     <button
                                         key={collab.id}
                                         onClick={() => setSelectedCollaboratorId(collab.id)}
-                                        className={`w-full p-4 rounded-xl border transition-all flex items-center gap-3 ${selectedCollaboratorId === collab.id ? 'ring-2' : ''
+                                        className={`w-full p-4 rounded-xl border transition-all flex items-center gap-3 ${selectedCollaboratorId === collab.id ? 'ring-2 ring-purple-500' : ''
                                             }`}
                                         style={{
                                             backgroundColor: selectedCollaboratorId === collab.id ? 'var(--primary-soft)' : 'var(--surface)',
-                                            borderColor: selectedCollaboratorId === collab.id ? 'var(--primary)' : 'var(--border)',
-                                            ringColor: 'var(--primary)'
+                                            borderColor: selectedCollaboratorId === collab.id ? 'var(--primary)' : 'var(--border)'
                                         }}
                                     >
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold"

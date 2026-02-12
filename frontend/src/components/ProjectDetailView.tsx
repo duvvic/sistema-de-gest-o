@@ -986,9 +986,8 @@ const ProjectDetailView: React.FC = () => {
                     <div className="flex bg-white/5 p-1 rounded-xl gap-1">
                       {[
                         { label: 'Todos', value: 'Todos' },
-                        { label: 'Não Iniciado', value: 'Todo' },
-                        { label: 'Iniciado', value: 'In Progress' },
-                        { label: 'Pendente', value: 'Review' },
+                        { label: 'A Fazer', value: 'Todo' },
+                        { label: 'Em Progresso', value: 'In Progress' },
                         { label: 'Concluído', value: 'Done' }
                       ].map(item => (
                         <button
@@ -1076,8 +1075,8 @@ const ProjectTaskCard: React.FC<{ task: any, users: any[], timesheetEntries: any
   const actualHours = timesheetEntries.filter(e => e.taskId === task.id).reduce((sum, e) => sum + e.totalHours, 0);
 
   const statusMap: Record<string, { label: string, color: string, bg: string }> = {
-    'Todo': { label: 'Não Iniciado', color: 'text-slate-500', bg: 'bg-slate-500/10' },
-    'In Progress': { label: 'Iniciado', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    'Todo': { label: 'A Fazer', color: 'text-slate-500', bg: 'bg-slate-500/10' },
+    'In Progress': { label: 'Em Progresso', color: 'text-blue-500', bg: 'bg-blue-500/10' },
     'Review': { label: 'Pendente', color: 'text-amber-500', bg: 'bg-amber-500/10' },
     'Done': { label: 'Concluído', color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
   };
