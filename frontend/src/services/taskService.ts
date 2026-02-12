@@ -3,6 +3,7 @@
 
 import { supabase } from './supabaseClient';
 import { Task } from '@/types';
+import { apiRequest } from './apiClient';
 
 // ===========================
 // HELPER: Buscar ID do colaborador pelo nome
@@ -254,10 +255,6 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
 // ===========================
 // DELETE
 // ===========================
-// ===========================
-// DELETE
-// ===========================
-import { apiRequest } from './apiClient';
 
 export async function deleteTask(taskId: string, force: boolean = false): Promise<void> {
   const query = force ? '?force=true' : '';

@@ -6,10 +6,19 @@ let cachedApiUrl: string | null = null;
  * Obtém a URL da API dinamicamente, priorizando o Supabase para evitar mudanças constantes no .env
  */
 export async function getApiBaseUrl(): Promise<string> {
+    // 1. Prioridade: Environment Variable (Build/Production)
+    const envUrl = (import.meta as any).env?.VITE_API_URL?.toString()?.trim();
+    if (envUrl && envUrl !== 'undefined') {
+        let url = envUrl.replace(/\/$/, '');
+        if (!url.endsWith('/api')) url += '/api';
+        cachedApiUrl = url;
+        return url;
+    }
+
     if (cachedApiUrl) return cachedApiUrl;
 
     try {
-        // Tenta buscar a URL mais recente salva no banco
+        // 2. Fallback: Buscar URL dinâmica no banco (apenas se não houver ENV definido)
         const { data, error } = await supabase
             .from('system_settings')
             .select('value')
@@ -18,7 +27,6 @@ export async function getApiBaseUrl(): Promise<string> {
 
         if (!error && data?.value) {
             cachedApiUrl = data.value.replace(/\/$/, '');
-            // Garante que termina com /api se não tiver
             if (!cachedApiUrl.endsWith('/api')) {
                 cachedApiUrl += '/api';
             }
@@ -26,17 +34,11 @@ export async function getApiBaseUrl(): Promise<string> {
             return cachedApiUrl;
         }
     } catch (e) {
-        console.warn('[API] Erro ao buscar URL dinâmica, usando fallback do .env', e);
+        console.warn('[API] Erro ao buscar URL dinâmica, usando fallback localhost', e);
     }
 
-    // Fallback para o .env ou localhost
-    let url = (import.meta as any).env?.VITE_API_URL?.toString()?.trim() || 'http://localhost:3001/api';
-    url = url.replace(/\/$/, '');
-    if (!url.endsWith('/api')) {
-        url += '/api';
-    }
-    cachedApiUrl = url;
-    return url;
+    // 3. Último caso: Localhost
+    return 'http://localhost:3001/api';
 }
 
 /**

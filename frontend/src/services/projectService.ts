@@ -3,6 +3,7 @@
 
 import { supabase } from './supabaseClient';
 import { Project } from '@/types';
+import { apiRequest } from './apiClient';
 
 // ===========================
 // CREATE
@@ -105,13 +106,6 @@ export async function updateProject(projectId: string, data: Partial<Project>): 
 // ===========================
 // DELETE (Soft Delete - marca como inativo)
 // ===========================
-// ===========================
-// DELETE (Soft Delete - marca como inativo)
-// ===========================
-// ===========================
-// DELETE
-// ===========================
-import { apiRequest } from './apiClient';
 
 export async function deleteProject(projectId: string, force: boolean = false): Promise<void> {
   const query = force ? '?force=true' : '';
