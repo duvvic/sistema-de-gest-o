@@ -115,6 +115,14 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
             setError('O projeto é obrigatório.');
             return;
         }
+        if (collaboratorIds.length === 0) {
+            setError('A equipe alocada é obrigatória. Selecione pelo menos um colaborador.');
+            return;
+        }
+        if (!developerId) {
+            setError('O responsável principal é obrigatório.');
+            return;
+        }
 
         try {
             setLoading(true);
@@ -212,32 +220,9 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                             </select>
                         </div>
 
-                        {/* Colaborador (Responsável Principal) */}
-                        <div>
-                            <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Responsável Principal</label>
-                            {isAdmin ? (
-                                <select
-                                    value={developerId}
-                                    onChange={(e) => setDeveloperId(e.target.value)}
-                                    className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
-                                >
-                                    <option value="">Selecione o Responsável...</option>
-                                    {eligibleUsers
-                                        .map(u => (
-                                            <option key={u.id} value={u.id}>{u.name}</option>
-                                        ))
-                                    }
-                                </select>
-                            ) : (
-                                <div className="w-full p-2.5 border rounded-lg bg-[var(--surface-hover)] border-[var(--border)] text-[var(--text)] font-medium text-sm opacity-70 cursor-not-allowed">
-                                    {currentUser?.name || 'Seu Usuário'} (Você)
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Colaboradores Adicionais */}
+                        {/* Equipe Alocada (Colaboradores) */}
                         <div className="relative">
-                            <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Colaboradores Adicionais</label>
+                            <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Equipe Alocada *</label>
                             <button
                                 type="button"
                                 onClick={() => setIsCollaboratorsOpen(!isCollaboratorsOpen)}
@@ -254,7 +239,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
 
                             {isCollaboratorsOpen && (
                                 <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto border rounded-lg shadow-xl bg-[var(--surface)] z-10 border-[var(--border)]">
-                                    {eligibleUsers.filter(u => u.id !== developerId).map(u => (
+                                    {eligibleUsers.map(u => (
                                         <label key={u.id} className="flex items-center gap-2 p-2 hover:bg-[var(--surface-hover)] cursor-pointer text-sm">
                                             <input
                                                 type="checkbox"
@@ -263,7 +248,12 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                                     if (e.target.checked) {
                                                         setCollaboratorIds([...collaboratorIds, u.id]);
                                                     } else {
-                                                        setCollaboratorIds(collaboratorIds.filter(id => id !== u.id));
+                                                        const newCollaboratorIds = collaboratorIds.filter(id => id !== u.id);
+                                                        setCollaboratorIds(newCollaboratorIds);
+                                                        // Se o responsável foi removido da equipe, limpar o responsável
+                                                        if (developerId === u.id) {
+                                                            setDeveloperId('');
+                                                        }
                                                     }
                                                 }}
                                                 className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
@@ -271,15 +261,43 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                             <span>{u.name}</span>
                                         </label>
                                     ))}
-                                    {eligibleUsers.filter(u => u.id !== developerId).length === 0 && (
+                                    {eligibleUsers.length === 0 && (
                                         <div className="p-3 text-center text-xs text-[var(--muted)]">
-                                            Nenhum outro colaborador disponível.
+                                            Nenhum colaborador disponível no projeto.
                                         </div>
                                     )}
                                 </div>
                             )}
                             <p className="text-[10px] text-[var(--muted)] mt-1">
-                                {projectId && eligibleUsers.length === 0 ? 'Nenhum membro no projeto.' : 'Membros extras da equipe.'}
+                                {projectId && eligibleUsers.length === 0 ? 'Nenhum membro no projeto.' : 'Selecione os membros da equipe para esta tarefa.'}
+                            </p>
+                        </div>
+
+                        {/* Responsável Principal (apenas membros da equipe alocada) */}
+                        <div>
+                            <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Responsável Principal *</label>
+                            {isAdmin ? (
+                                <select
+                                    value={developerId}
+                                    onChange={(e) => setDeveloperId(e.target.value)}
+                                    disabled={collaboratorIds.length === 0}
+                                    className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50"
+                                >
+                                    <option value="">Selecione o Responsável...</option>
+                                    {eligibleUsers
+                                        .filter(u => collaboratorIds.includes(u.id))
+                                        .map(u => (
+                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                        ))
+                                    }
+                                </select>
+                            ) : (
+                                <div className="w-full p-2.5 border rounded-lg bg-[var(--surface-hover)] border-[var(--border)] text-[var(--text)] font-medium text-sm opacity-70 cursor-not-allowed">
+                                    {currentUser?.name || 'Seu Usuário'} (Você)
+                                </div>
+                            )}
+                            <p className="text-[10px] text-[var(--muted)] mt-1">
+                                Escolha o responsável dentre os membros da equipe alocada.
                             </p>
                         </div>
 
