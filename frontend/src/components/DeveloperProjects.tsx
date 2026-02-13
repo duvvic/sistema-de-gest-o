@@ -216,11 +216,6 @@ const DeveloperProjects: React.FC = () => {
                             e.currentTarget.style.boxShadow = `0 4px 6px -1px ${statusStyle.shadowColor}`;
                           }}
                         >
-                          {isIncomplete && (
-                            <div className="absolute top-0 right-0 p-1 px-2 bg-yellow-500 text-black text-[8px] font-black uppercase rounded-bl-lg animate-pulse z-10 font-sans">
-                              Cadastro Incompleto
-                            </div>
-                          )}
                           <h3 className="text-lg font-bold mb-2 group-hover:text-[var(--brand)]" style={{ color: 'var(--textTitle)' }}>
                             {project.name}
                           </h3>
@@ -340,11 +335,6 @@ const DeveloperProjects: React.FC = () => {
                     e.currentTarget.style.boxShadow = `0 4px 6px -1px ${statusStyle.shadowColor}`;
                   }}
                 >
-                  {isIncomplete && (
-                    <div className="absolute top-0 right-0 p-1 px-2 bg-yellow-500 text-black text-[8px] font-black uppercase rounded-bl-lg animate-pulse z-10 font-sans">
-                      Cadastro Incompleto
-                    </div>
-                  )}
                   {/* Cliente Logo */}
                   {client && (
                     <div className="flex items-center gap-2 mb-4 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>

@@ -33,6 +33,13 @@ const ProjectDetailView: React.FC = () => {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Redirecionar colaboradores para aba de tarefas
+  useEffect(() => {
+    if (!isAdmin) {
+      setActiveTab('tasks');
+    }
+  }, [isAdmin]);
+
   const project = projects.find(p => p.id === projectId);
   const client = project ? clients.find(c => c.id === project.clientId) : null;
 
@@ -338,7 +345,7 @@ const ProjectDetailView: React.FC = () => {
                 <h1 className="text-xl font-bold">{project.name}</h1>
               )}
               <div className="flex items-center gap-2 mt-1">
-                {isProjectIncomplete && (
+                {isAdmin && isProjectIncomplete && (
                   <span
                     className="text-[10px] font-black uppercase bg-yellow-500 text-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg shadow-yellow-500/20 cursor-help"
                     title="Cadastro incompleto. Clique no ícone de lápis ao lado para editar e preencher os campos amarelados."
@@ -364,12 +371,14 @@ const ProjectDetailView: React.FC = () => {
         <div className="flex items-center gap-6">
           {/* TABS SELECTOR IN HEADER */}
           <div className="hidden md:flex bg-black/20 p-1 rounded-2xl gap-1">
-            <button
-              onClick={() => setActiveTab('technical')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'technical' ? 'bg-white text-purple-900 shadow-sm' : 'text-white/60 hover:text-white'}`}
-            >
-              Visão Geral
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('technical')}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'technical' ? 'bg-white text-purple-900 shadow-sm' : 'text-white/60 hover:text-white'}`}
+              >
+                Visão Geral
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('tasks')}
               className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'tasks' ? 'bg-white text-purple-900 shadow-sm' : 'text-white/60 hover:text-white'}`}
