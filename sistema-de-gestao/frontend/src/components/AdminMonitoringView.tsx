@@ -28,6 +28,24 @@ import {
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
+const MONITORING_STATUS_COLORS: any = {
+    'LIVRE': 'text-emerald-600 border-emerald-500 bg-emerald-50',
+    'INICIADO': 'text-purple-600 border-purple-500 bg-purple-50',
+    'ESTUDANDO': 'text-blue-600 border-blue-500 bg-blue-50',
+    'ATRASADO': 'text-red-600 border-red-500 bg-red-50',
+    'APONTADO': 'text-indigo-700 border-indigo-500 bg-indigo-50',
+    'AUSENTE': 'text-slate-500 border-slate-400 bg-slate-50'
+};
+
+const MONITORING_DOT_COLORS: any = {
+    'LIVRE': 'bg-emerald-500',
+    'INICIADO': 'bg-purple-500',
+    'ESTUDANDO': 'bg-blue-500',
+    'ATRASADO': 'bg-red-500',
+    'APONTADO': 'bg-indigo-600',
+    'AUSENTE': 'bg-slate-400'
+};
+
 // --- Sub-componentes Estilizados ---
 
 const Badge = ({ children, status, className = "" }: { children: React.ReactNode, status: string, className?: string }) => {
@@ -502,11 +520,13 @@ const AdminMonitoringView: React.FC = () => {
         const todayStr = now.toISOString().split('T')[0];
 
         const members = filteredUsers.map(user => {
-            // Check de ausência aprovada
-            const isAbsent = allAbsences.some(abs => {
+            // 1. PRIORIDADE MÁXIMA: Check de ausência aprovada hoje
+            const activeAbsence = allAbsences.find(abs => {
                 if (String(abs.userId) !== String(user.id)) return false;
                 const status = (abs.status || '').toLowerCase();
-                if (status !== 'finalizada_dp' && status !== 'aprovada_rh') return false;
+                // Considera aprovada gestão, rh ou processada
+                const isApproved = ['aprovada_gestao', 'aprovada_rh', 'finalizada_dp'].includes(status);
+                if (!isApproved) return false;
 
                 const start = new Date(abs.startDate + 'T00:00:00');
                 const end = new Date(abs.endDate + 'T23:59:59');
@@ -538,22 +558,28 @@ const AdminMonitoringView: React.FC = () => {
                 entry.date === todayStr
             );
 
-            let status: 'LIVRE' | 'ESTUDANDO' | 'INICIADO' | 'APONTADO' | 'ATRASADO' | 'AUSENTE' = 'LIVRE';
+            let statusLabel = 'LIVRE';
 
             // Hierarquia: Ausente > Atrasado > Apontado (após 16h) > Iniciado > Estudando > Livre
-            if (isAbsent) {
-                status = 'AUSENTE';
+            if (activeAbsence) {
+                const typeLabels: Record<string, string> = {
+                    'férias': 'FÉRIAS',
+                    'atestado': 'ATESTADO',
+                    'day-off': 'DAY-OFF',
+                    'feriado_local': 'FERIADO'
+                };
+                statusLabel = typeLabels[activeAbsence.type.toLowerCase()] || 'AUSENTE';
             } else if (delayedTasksForStatus.length > 0) {
-                status = 'ATRASADO';
+                statusLabel = 'ATRASADO';
             } else if (isAfter16h && hasTimesheetToday) {
-                status = 'APONTADO';
+                statusLabel = 'APONTADO';
             } else if (activeTasks.length > 0) {
-                status = 'INICIADO';
+                statusLabel = 'INICIADO';
             } else if (isStudyCargo || hasStudy) {
-                status = 'ESTUDANDO';
+                statusLabel = 'ESTUDANDO';
             }
 
-            return { ...user, boardStatus: status };
+            return { ...user, boardStatus: statusLabel };
         });
 
         return members;
@@ -623,7 +649,7 @@ const AdminMonitoringView: React.FC = () => {
                 atrasado: teamStatus.filter(m => m.boardStatus === 'ATRASADO').length,
                 estudando: teamStatus.filter(m => m.boardStatus === 'ESTUDANDO').length,
                 apontado: teamStatus.filter(m => m.boardStatus === 'APONTADO').length,
-                ausente: teamStatus.filter(m => m.boardStatus === 'AUSENTE').length
+                ausente: teamStatus.filter(m => ['FÉRIAS', 'ATESTADO', 'DAY-OFF', 'FERIADO', 'AUSENTE'].includes(m.boardStatus)).length
             }
         };
     }, [allTasks, allProjects, teamStatus]);
@@ -1009,25 +1035,12 @@ const AdminMonitoringView: React.FC = () => {
                         <div className="relative w-full overflow-hidden pb-1.5">
                             <div className="flex gap-2 sm:gap-3 lg:gap-4 w-max animate-marquee-reverse hover:[animation-play-state:paused]">
                                 {[...teamStatus, ...teamStatus, ...teamStatus].map((member, idx) => { // Triplicated for infinite loop
-                                    const colors: any = {
-                                        'LIVRE': 'text-emerald-600 border-emerald-500 bg-emerald-50',
-                                        'INICIADO': 'text-purple-600 border-purple-500 bg-purple-50',
-                                        'ESTUDANDO': 'text-blue-600 border-blue-500 bg-blue-50',
-                                        'ATRASADO': 'text-red-600 border-red-500 bg-red-50',
-                                        'APONTADO': 'text-indigo-700 border-indigo-500 bg-indigo-50',
-                                        'AUSENTE': 'text-slate-500 border-slate-400 bg-slate-50'
-                                    };
-                                    const dotColors: any = {
-                                        'LIVRE': 'bg-emerald-500',
-                                        'INICIADO': 'bg-purple-500',
-                                        'ESTUDANDO': 'bg-blue-500',
-                                        'ATRASADO': 'bg-red-500',
-                                        'APONTADO': 'bg-indigo-600',
-                                        'AUSENTE': 'bg-slate-400'
-                                    };
+                                    const statusKey = member.boardStatus;
+                                    const cardStyle = MONITORING_STATUS_COLORS[statusKey] || MONITORING_STATUS_COLORS['AUSENTE'];
+                                    const dotStyle = MONITORING_DOT_COLORS[statusKey] || MONITORING_DOT_COLORS['AUSENTE'];
 
                                     return (
-                                        <div key={`${member.id}-${idx}`} className="min-w-[170px] sm:min-w-[190px] 2xl:min-w-[260px] h-[65px] sm:h-[70px] 2xl:h-[100px] bg-white border border-slate-200 rounded-xl p-2 2xl:p-4 flex flex-col justify-between shadow-lg group hover:border-emerald-400 hover:shadow-xl transition-all relative overflow-hidden">
+                                        <div key={`${member.id}-${idx}`} className={`min-w-[170px] sm:min-w-[190px] 2xl:min-w-[260px] h-[65px] sm:h-[70px] 2xl:h-[100px] bg-white border border-slate-200 rounded-xl p-2 2xl:p-4 flex flex-col justify-between shadow-lg group hover:border-emerald-400 hover:shadow-xl transition-all relative overflow-hidden`}>
                                             <div className="flex items-center gap-2 2xl:gap-4 mb-1">
                                                 <div className="w-7 h-7 2xl:w-11 2xl:h-11 rounded-full p-0.5 border border-slate-200 shadow-sm shrink-0">
                                                     <img
@@ -1047,10 +1060,10 @@ const AdminMonitoringView: React.FC = () => {
                                             </div>
 
                                             <div className="border-t border-slate-50 pt-1 2xl:pt-3 flex items-center justify-between">
-                                                <span className={`text-[7px] 2xl:text-[10px] font-black px-2 py-0.5 rounded-lg border ${colors[member.boardStatus]} whitespace-nowrap`}>
+                                                <span className={`text-[7px] 2xl:text-[10px] font-black px-2 py-0.5 rounded-lg border ${cardStyle} whitespace-nowrap`}>
                                                     {member.boardStatus}
                                                 </span>
-                                                <div className={`w-1.5 h-1.5 2xl:w-2.5 2xl:h-2.5 rounded-full ${dotColors[member.boardStatus]} shadow-md`} />
+                                                <div className={`w-1.5 h-1.5 2xl:w-2.5 2xl:h-2.5 rounded-full ${dotStyle} shadow-md`} />
                                             </div>
                                         </div>
                                     );

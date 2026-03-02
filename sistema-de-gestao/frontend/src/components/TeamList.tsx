@@ -11,7 +11,7 @@ import { getUserStatus } from '@/utils/userStatus';
 
 const TeamList: React.FC = () => {
   const navigate = useNavigate();
-  const { users, tasks, projects, clients, timesheetEntries, deleteUser, loading } = useDataController();
+  const { users, tasks, projects, clients, timesheetEntries, absences, deleteUser, loading } = useDataController();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCargo, setSelectedCargo] = useState<'Todos' | string>('Todos');
@@ -106,7 +106,7 @@ const TeamList: React.FC = () => {
 
       return matchesSearch && matchesCargo && matchesStatus;
     });
-  }, [visibleUsers, searchTerm, selectedCargo, statusFilter, tasks]);
+  }, [visibleUsers, searchTerm, selectedCargo, statusFilter, tasks, absences]);
 
 
   const getUserMissingDays = (userId: string) => {
@@ -396,7 +396,7 @@ const TeamList: React.FC = () => {
                   onClick={() => navigate(`/admin/team/${user.id}`)}
                 >
                   {(() => {
-                    const status = getUserStatus(user, tasks, projects, clients);
+                    const status = getUserStatus(user, tasks, projects, clients, absences);
                     const statusLabel = status.label;
                     const accentColor = status.color;
                     const accentBg = `${status.color}1A`; // 0.1 opacity

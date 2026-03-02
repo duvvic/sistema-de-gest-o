@@ -1,4 +1,4 @@
-import { User, Task, Project, Client } from '@/types';
+import { User, Task, Project, Client, Absence } from '@/types';
 
 export interface UserStatus {
     label: string;
@@ -13,8 +13,40 @@ export const getUserStatus = (
     user: User,
     tasks: Task[],
     projects: Project[],
-    clients: Client[]
+    clients: Client[],
+    absences: Absence[] = []
 ): UserStatus => {
+    const now = new Date();
+
+    // 1. PRIORIDADE MÁXIMA: Check de Ausência Aprovada Hoje
+    const activeAbsence = absences.find(abs => {
+        if (String(abs.userId) !== String(user.id)) return false;
+        const status = (abs.status || '').toLowerCase();
+        // Inclui aprovada por gestão, RH ou já processada (finalizada_dp)
+        const isApproved = ['aprovada_gestao', 'aprovada_rh', 'finalizada_dp'].includes(status);
+        if (!isApproved) return false;
+
+        const start = new Date(abs.startDate + 'T00:00:00');
+        const end = new Date(abs.endDate + 'T23:59:59');
+        return now >= start && now <= end;
+    });
+
+    if (activeAbsence) {
+        const typeLabels: Record<string, string> = {
+            'férias': 'FÉRIAS',
+            'atestado': 'ATESTADO',
+            'day-off': 'DAY-OFF',
+            'feriado_local': 'FERIADO'
+        };
+        const label = typeLabels[activeAbsence.type.toLowerCase()] || 'AUSENTE';
+        return {
+            label,
+            color: '#64748b' // Slate-500 (Geral para ausências)
+        };
+    }
+
+    const todayStr = now.toISOString().split('T')[0];
+
     const userAllTasks = tasks.filter(t => t.developerId === user.id || (t.collaboratorIds && t.collaboratorIds.includes(user.id)));
     const userActiveTasks = userAllTasks.filter(t => t.status !== 'Done');
 
