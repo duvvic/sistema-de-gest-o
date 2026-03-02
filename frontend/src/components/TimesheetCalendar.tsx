@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { useAuth } from '@/contexts/AuthContext';
-import { TimesheetEntry } from '@/types';
+import { User, Task, Project, Client, Absence, Holiday, TimesheetEntry } from '@/types';
 import {
   ChevronLeft, ChevronRight, Plus, Clock, TrendingUp, Trash2,
   Users, AlertTriangle, CheckCircle, Calendar,
@@ -121,7 +121,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   // Helper de Feriados Dinâmicos (Vem do Banco + Lógica de Cores)
   const getHoliday = (d: number, m: number, y: number) => {
     const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const h = (holidays || []).find(hf => {
+    const h = (holidays || []).find((hf: Holiday) => {
       const start = hf.date;
       const end = hf.endDate || hf.date;
       return dateStr >= start && dateStr <= end;
@@ -160,18 +160,20 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       return `${y}-${m}-${d}`;
     };
 
+    const usr = safeUsers.find((u: User) => u.id === uid);
+
     if (usr && (['ceo', 'diretoria', 'executive'].includes(usr.role?.toLowerCase() || '') || usr.torre?.toLowerCase() === 'pmo')) {
       return 0; // Diretoria/Executivos não possuem pendência de timesheet
     }
 
-    const userEntries = allEntries.filter(e => {
+    const userEntries = allEntries.filter((e: TimesheetEntry) => {
       if (!e.date) return false;
       const [y, m] = e.date.split('-').map(Number);
       return e.userId === uid && (m - 1) === month && y === year;
     });
 
-    const userAbsences = (absences || []).filter(a => a.userId === uid);
-    const workedDays = new Set(userEntries.map(e => e.date));
+    const userAbsences = (absences || []).filter((a: Absence) => a.userId === uid);
+    const workedDays = new Set(userEntries.map((e: TimesheetEntry) => e.date));
 
     let missing = 0;
     const todayStr = toLocalISO(new Date());
@@ -192,7 +194,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       const holiday = getHoliday(checkDate.getDate(), checkDate.getMonth(), checkDate.getFullYear());
 
       // Verificar se há ausência registrada para este dia
-      const hasAbsence = userAbsences.some(a => dStr >= a.startDate && dStr <= a.endDate);
+      const hasAbsence = userAbsences.some((a: Absence) => dStr >= a.startDate && dStr <= a.endDate);
 
       if (isWorkDay && !workedDays.has(dStr) && !holiday && !hasAbsence) {
         missing++;
@@ -209,34 +211,34 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
 
     const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
     return safeUsers
-      .filter(u => u.active !== false && (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || '')))
-      .map(u => {
+      .filter((u: User) => u.active !== false && (u.torre !== 'N/A' || activeRoles.includes(u.role?.toLowerCase() || '')))
+      .map((u: User) => {
         const missing = calculateDaysMissing(u.id);
         const status = missing > 2 ? 'late' : 'ontime';
         return { ...u, missing, status };
       })
-      .sort((a, b) => b.missing - a.missing);
+      .sort((a: any, b: any) => b.missing - a.missing);
   }, [safeUsers, allEntries, year, month, isAdmin, absences]);
 
   // Search Filter
   const searchedUsers = useMemo(() => {
     if (!searchTerm) return processedUsers;
-    return processedUsers.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    return processedUsers.filter((u: any) => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [processedUsers, searchTerm]);
 
 
   /* --- DADOS DO CALENDÁRIO --- */
   const targetUserId = isAdmin ? (selectedUserId || currentUser?.id) : currentUser?.id;
-  const targetUser = useMemo(() => safeUsers.find(u => u.id === targetUserId), [safeUsers, targetUserId]);
+  const targetUser = useMemo(() => safeUsers.find((u: User) => u.id === targetUserId), [safeUsers, targetUserId]);
 
   const currentEntries = useMemo(() => {
     if (!targetUserId) return [];
-    return allEntries.filter(e => e.userId === targetUserId);
+    return allEntries.filter((e: TimesheetEntry) => e.userId === targetUserId);
   }, [allEntries, targetUserId]);
 
   const selectedUserStats = useMemo(() => {
     // 1. Filtrar lançamentos do mês/ano selecionados
-    const monthEntries = currentEntries.filter(e => {
+    const monthEntries = currentEntries.filter((e: TimesheetEntry) => {
       if (!e.date) return false;
       const [y, m] = e.date.split('-').map(Number);
       return (m - 1) === month && y === year;
@@ -244,13 +246,13 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
 
     // 2. Calcular Saldo de Horas (Diferença de 8h/dia) - APENAS DIAS APONTADOS
     let balanceHours = 0;
-    const entriesByDate = monthEntries.reduce((acc, curr) => {
+    const entriesByDate = monthEntries.reduce((acc: { [key: string]: number }, curr: TimesheetEntry) => {
       const d = curr.date;
       acc[d] = (acc[d] || 0) + (curr.totalHours || 0);
       return acc;
     }, {} as { [key: string]: number });
 
-    Object.entries(entriesByDate).forEach(([dStr, dayTotal]) => {
+    (Object.entries(entriesByDate) as [string, number][]).forEach(([dStr, dayTotal]) => {
       const parts = dStr.split('-');
       const checkDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
       const dayOfWeek = checkDate.getDay();
@@ -271,13 +273,13 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     // 3. Pendências (Dias sem nenhum apontamento)
     let missing = 0;
     if (isAdmin) {
-      const u = processedUsers.find(u => u.id === targetUserId);
-      missing = u ? u.missing : 0;
+      const u = processedUsers.find((u: any) => u.id === targetUserId);
+      missing = u ? (u as any).missing : 0;
     } else {
       missing = calculateDaysMissing(currentUser?.id || '');
     }
 
-    const totalHours = monthEntries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
+    const totalHours = monthEntries.reduce((acc: number, curr: TimesheetEntry) => acc + (curr.totalHours || 0), 0);
 
     return { totalHours, balanceHours, missing };
   }, [currentEntries, year, month, targetUserId, processedUsers, isAdmin, currentUser, today, absences]);
@@ -319,7 +321,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     e.stopPropagation();
     if (!targetUserId) return;
 
-    const entries = currentEntries.filter(ent => ent.date === date);
+    const entries = currentEntries.filter((ent: TimesheetEntry) => ent.date === date);
     if (entries.length === 0) return;
 
     // Find next workday
@@ -400,7 +402,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                 <div>
                   <h2 className="text-base font-black tracking-tight flex items-center gap-2">
                     {isAdmin && <Users className="w-3.5 h-3.5 opacity-60" />}
-                    {isAdmin ? processedUsers.find(u => u.id === targetUserId)?.name || 'Usuário' : 'Meus Lançamentos'}
+                    {isAdmin ? processedUsers.find((u: any) => u.id === targetUserId)?.name || 'Usuário' : 'Meus Lançamentos'}
                   </h2>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-black uppercase tracking-widest text-white/60">
                     <span className="flex items-center gap-1 text-white/90">
@@ -446,7 +448,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                           {searchedUsers.length === 0 ? (
                             <div className="p-4 text-center text-xs italic" style={{ color: 'var(--muted)' }}>Nenhum colaborador...</div>
                           ) : (
-                            searchedUsers.map(user => (
+                            searchedUsers.map((user: any) => (
                               <button
                                 key={user.id}
                                 onClick={() => handleUserSelect(user.id)}
@@ -530,10 +532,10 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const d = i + 1;
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const dayEntries = currentEntries.filter(e => e.date === dateStr);
+                const dayEntries = currentEntries.filter((e: TimesheetEntry) => e.date === dateStr);
 
                 // Recalculate total hours to fix any inconsistencies
-                const totalDayHours = dayEntries.reduce((acc, entry) => acc + (entry.totalHours || 0), 0);
+                const totalDayHours = dayEntries.reduce((acc: number, entry: TimesheetEntry) => acc + (entry.totalHours || 0), 0);
 
                 const hasEntries = dayEntries.length > 0;
                 const isToday = new Date().toISOString().split('T')[0] === dateStr;
@@ -545,7 +547,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                 const holiday = getHoliday(d, month, year);
                 const HolidayIcon = holiday?.icon || Coffee;
 
-                const dayAbsence = (absences || []).find(a => a.userId === targetUserId && dateStr >= a.startDate && dateStr <= a.endDate);
+                const dayAbsence = (absences || []).find((a: Absence) => a.userId === targetUserId && dateStr >= a.startDate && dateStr <= a.endDate);
                 const isMissing = !hasEntries && !isWeekend && !holiday && !dayAbsence && isPast;
 
                 return (
@@ -624,10 +626,10 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                     )}
 
                     <div className="space-y-1.5">
-                      {dayEntries.map(entry => {
-                        const task = safeTasks.find(t => t.id === entry.taskId);
-                        const client = safeClients.find(c => c.id === entry.clientId);
-                        const project = safeProjects.find(p => p.id === entry.projectId);
+                      {dayEntries.map((entry: TimesheetEntry) => {
+                        const task = safeTasks.find((t: Task) => t.id === entry.taskId);
+                        const client = safeClients.find((c: Client) => c.id === entry.clientId);
+                        const project = safeProjects.find((p: Project) => p.id === entry.projectId);
 
                         // Título Inteligente: Tarefa > Descrição > Projeto > "Horas Avulsas"
                         let displayTitle = task?.title;
