@@ -1143,7 +1143,7 @@ const ProjectDetailView: React.FC = () => {
                               <div className="flex justify-between items-center mt-2">
                                 {((project?.horas_vendidas || 0) - (performance?.consumedHours || 0)) > 0 ? (
                                   <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500/50">
-                                    Disponíveis: {formatDecimalToTime((project?.horas_vendidas || 0) - (performance?.consumedHours || 0))}
+                                    Saldo Disp.: {formatDecimalToTime((project?.horas_vendidas || 0) - (performance?.consumedHours || 0))}
                                   </span>
                                 ) : (
                                   <span className="text-[8px] font-black uppercase tracking-widest text-red-500/50">
@@ -1540,7 +1540,7 @@ const ProjectDetailView: React.FC = () => {
 
                                             {/* Difference */}
                                             <div className={`flex flex-col items-center px-2 py-1.5 rounded-lg border ${statusBg} ${statusBorder}`}>
-                                              <p className="text-[6px] font-black uppercase opacity-40 tracking-wider mb-0.5">Diferença</p>
+                                              <p className="text-[6px] font-black uppercase opacity-40 tracking-wider mb-0.5">Saldo Disp.</p>
                                               <p className={`text-[10px] font-black tabular-nums ${statusColor}`}>
                                                 {metrics.deviation > 0 ? '+' : ''}{formatDecimalToTime(metrics.deviation)}
                                               </p>

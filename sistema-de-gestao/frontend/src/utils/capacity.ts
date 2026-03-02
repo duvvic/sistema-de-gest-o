@@ -181,9 +181,8 @@ export const getUserMonthlyAvailability = (
         }
 
         const totalRemainingCapacity = remainingWorkingDays * dailyGoal;
-        // A disponibilidade é o que sobra da capacidade de hoje em diante, descontando o planejado proporcional
-        const monthlyLoad = capacity > 0 ? (allocated / capacity) : 0;
-        currentAvailability = Math.max(0, totalRemainingCapacity * (1 - monthlyLoad));
+        // A disponibilidade é o saldo absoluto entre capacidade total e alocação total do mês
+        currentAvailability = capacity - allocated;
     }
 
     return {

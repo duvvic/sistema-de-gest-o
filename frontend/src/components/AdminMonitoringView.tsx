@@ -522,7 +522,10 @@ const AdminMonitoringView: React.FC = () => {
             let absenceData = undefined;
 
             // Check if absent today
-            const userAbsences = allAbsences.filter(a => a.userId === user.id && a.status === 'finalizada_dp');
+            const userAbsences = allAbsences.filter(a =>
+                a.userId === user.id &&
+                (a.status === 'finalizada_dp' || a.status === 'aprovada_rh')
+            );
             const absentToday = userAbsences.find(a => {
                 const start = new Date(a.startDate + 'T00:00:00');
                 start.setHours(0, 0, 0, 0);

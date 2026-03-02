@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import HolidayManager from '@/components/HolidayManager';
 import AbsenceManager from '@/components/AbsenceManager';
-import AbsenceStatusWidget from '@/components/AbsenceStatusWidget';
+
 
 const RHManagement: React.FC = () => {
     const { isAdmin, currentUser } = useAuth();
@@ -303,8 +303,6 @@ const RHManagement: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* RELATÓRIO DE AUSÊNCIAS */}
-                                <AbsenceStatusWidget />
                             </div>
                         </div>
                     )}

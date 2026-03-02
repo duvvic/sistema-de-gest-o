@@ -1,6 +1,6 @@
 // components/DeveloperProjects.tsx - Simplificado para parecer com AdminProjects
 import React from 'react';
-import AbsenceStatusWidget from "./AbsenceStatusWidget";
+
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
@@ -108,9 +108,6 @@ const DeveloperProjects: React.FC = () => {
         </div>
       </div>
 
-      <div className="mb-10 animate-in fade-in duration-700 delay-300">
-        <AbsenceStatusWidget />
-      </div>
 
       <div className="flex-1 overflow-y-auto">
         {loading ? (

@@ -1008,7 +1008,7 @@ const AdminDashboard: React.FC = () => {
                             <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">ALOCADO</th>
                             <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">REALIZ</th>
                             <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">DISPONÍVEL EM</th>
-                            <th className="py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-right border-b border-[var(--border)]">SALDO</th>
+                            <th className="py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-right border-b border-[var(--border)]">SALDO DISP.</th>
                           </tr>
                         </thead>
                         <tbody>

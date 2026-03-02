@@ -202,8 +202,8 @@ const TimesheetForm: React.FC = () => {
       return;
     }
 
-    // Exceção: se o projeto for 'Treinamento e Capacitação', não exigir descrição
-    if (!isTrainingProject) {
+    // Exceção: se o projeto for 'Treinamento e Capacitação' ou o usuário for da torre 'Planejamento' (PMO), não exigir descrição de 120 carac.
+    if (!isTrainingProject && !isPmoTower) {
       if (!formData.description || formData.description.trim().length < 120) {
         alert("O status é obrigatório e deve ter no mínimo 120 caracteres para descrever bem a atividade.");
         return;
@@ -374,9 +374,9 @@ const TimesheetForm: React.FC = () => {
     // Primeiro filtro: deve pertencer ao projeto selecionado (se houver)
     if (formData.projectId && t.projectId !== formData.projectId) return false;
 
-    // Filtro de status: Apenas "Não Iniciado", "Iniciado" e "Pendente"
+    // Filtro de status: Apenas "Não Iniciado", "Iniciado", "Pendente" e "Teste"
     // E remover tarefas sem título ou inválidas
-    const validStatus = ['Todo', 'In Progress', 'Review'].includes(t.status || '');
+    const validStatus = ['Todo', 'In Progress', 'Review', 'Testing'].includes(t.status || '');
     const validTitle = t.title && t.title !== '(Sem título)' && t.title.trim() !== '';
 
     if (!validStatus || !validTitle) return false;
@@ -402,6 +402,9 @@ const TimesheetForm: React.FC = () => {
   const isTrainingProject = currentProject && currentProject.name &&
     (currentProject.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes('treinamento') ||
       currentProject.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes('capacitacao'));
+
+  const targetUser = users.find(u => u.id === formData.userId);
+  const isPmoTower = targetUser?.torre?.toLowerCase() === 'pmo';
 
   if (!user) return <div className="p-8">Usuário não identificado</div>;
 
@@ -559,10 +562,10 @@ const TimesheetForm: React.FC = () => {
                   <div className="flex-1 flex flex-col min-h-0">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[10px] font-bold flex items-center gap-2 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>
-                        <AlertCircle className="w-3 h-3" /> {isTrainingProject ? 'Status (Opcional)' : 'Status (Mín. 120 carac.) *'}
+                        <AlertCircle className="w-3 h-3" /> {(isTrainingProject || isPmoTower) ? 'Status (Opcional)' : 'Status (Mín. 120 carac.) *'}
                       </label>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${!isTrainingProject && ((formData.description?.length || 0) < 120) ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                        {formData.description?.length || 0} {isTrainingProject ? '' : '/ 120'}
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${(isTrainingProject || isPmoTower) || ((formData.description?.length || 0) >= 120) ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                        {formData.description?.length || 0} {(isTrainingProject || isPmoTower) ? '' : '/ 120'}
                       </span>
                     </div>
                     <textarea
@@ -762,10 +765,10 @@ const TimesheetForm: React.FC = () => {
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[10px] font-bold flex items-center gap-2 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>
-                        <AlertCircle className="w-3 h-3" /> {isTrainingProject ? 'Status (Opcional)' : 'Status (Mín. 120 carac.) *'}
+                        <AlertCircle className="w-3 h-3" /> {(isTrainingProject || isPmoTower) ? 'Status (Opcional)' : 'Status (Mín. 120 carac.) *'}
                       </label>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${!isTrainingProject && ((formData.description?.length || 0) < 120) ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                        {formData.description?.length || 0} {isTrainingProject ? '' : '/ 120'}
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${(isTrainingProject || isPmoTower) || ((formData.description?.length || 0) >= 120) ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                        {formData.description?.length || 0} {(isTrainingProject || isPmoTower) ? '' : '/ 120'}
                       </span>
                     </div>
                     <textarea
@@ -773,7 +776,7 @@ const TimesheetForm: React.FC = () => {
                       onChange={(e) => { markDirty(); setFormData({ ...formData, description: e.target.value }); }}
                       className={`w-full p-3 border rounded-xl outline-none resize-none font-medium text-sm transition-all h-32 focus:ring-1 ${!isTrainingProject && ((formData.description?.length || 0) < 120) ? 'focus:ring-red-500 border-red-500/30' : 'focus:ring-emerald-500 border-emerald-500/30'}`}
                       style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
-                      placeholder={isTrainingProject ? "Opcional: Descreva a atividade de treinamento..." : "Descreva detalhadamente o que foi feito nesta atividade (mínimo 120 caracteres)..."}
+                      placeholder={(isTrainingProject || isPmoTower) ? "Opcional: Descreva a atividade realizada..." : "Descreva detalhadamente o que foi feito nesta atividade (mínimo 120 caracteres)..."}
                     />
                   </div>
                 )}

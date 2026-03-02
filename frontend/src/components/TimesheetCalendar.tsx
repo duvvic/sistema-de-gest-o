@@ -160,8 +160,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       return `${y}-${m}-${d}`;
     };
 
-    const usr = safeUsers.find(u => u.id === uid);
-    if (usr && ['ceo', 'diretoria', 'executive'].includes(usr.role?.toLowerCase() || '')) {
+    if (usr && (['ceo', 'diretoria', 'executive'].includes(usr.role?.toLowerCase() || '') || usr.torre?.toLowerCase() === 'pmo')) {
       return 0; // Diretoria/Executivos não possuem pendência de timesheet
     }
 
