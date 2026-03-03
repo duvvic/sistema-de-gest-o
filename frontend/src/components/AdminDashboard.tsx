@@ -185,7 +185,7 @@ const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navi
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { clients, projects, tasks, error, loading, users, deleteProject, projectMembers, timesheetEntries, holidays, taskMemberAllocations } = useDataController();
+  const { clients, projects, tasks, error, loading, users, deleteProject, projectMembers, timesheetEntries, holidays, taskMemberAllocations, absences } = useDataController();
   const { currentUser, isAdmin } = useAuth();
   const [sortBy, setSortBy] = useState<SortOption>(() => (localStorage.getItem('admin_clients_sort_by') as SortOption) || 'alphabetical');
   const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | 'late' | 'ongoing' | 'done'>('all');
@@ -627,11 +627,11 @@ const AdminDashboard: React.FC = () => {
       }, 0) * 100) / 100;
 
       // 2. Alocado (Previsto - Via Nova Lógica de Projetos e Membros)
-      // Agora espera: user, monthStr, projects, projectMembers, timesheets, tasks, holidays, taskMemberAllocations
-      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations);
+      // Agora espera: user, monthStr, projects, projectMembers, timesheets, tasks, holidays, taskMemberAllocations, absences
+      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences);
 
       // 3. Data de Disponibilidade (Preditivo - Baseado em Backlog Total)
-      const releaseDate = CapacityUtils.calculateIndividualReleaseDate(u, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations);
+      const releaseDate = CapacityUtils.calculateIndividualReleaseDate(u, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences);
 
       return {
         id: u.id,
@@ -645,7 +645,7 @@ const AdminDashboard: React.FC = () => {
         releaseDate
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [users, portfolioTimesheets, capacityMonth, safeTasks, safeProjects, projectMembers, timesheetEntries, holidays, taskMemberAllocations]);
+  }, [users, portfolioTimesheets, capacityMonth, safeTasks, safeProjects, projectMembers, timesheetEntries, holidays, taskMemberAllocations, absences]);
 
   const systemicMetrics = useMemo(() => {
     if (!resourceMetrics || resourceMetrics.length === 0) return null;
@@ -1100,10 +1100,13 @@ const AdminDashboard: React.FC = () => {
                       <thead>
                         <tr className="bg-[var(--surface-2)]">
                           <th className="py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-left border-b border-r border-[var(--border)]">COLABORADOR</th>
-                          <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">OCUP (%)</th>
+                          <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">OCUPAÇÃO</th>
+                          <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">APONTADO</th>
                           <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">ALOCADO</th>
-                          <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">REALIZ</th>
-                          <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">DISPONÍVEL EM</th>
+                          <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">
+                            HORAS MÊS
+                            <InfoTooltip title="Carga Meta Mês" content="Total de horas disponíveis do colaborador no mês selecionado, descontando feriados e ausências/férias." />
+                          </th>
                           <th className="py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-right border-b border-[var(--border)]">SALDO</th>
                         </tr>
                       </thead>
@@ -1127,18 +1130,18 @@ const AdminDashboard: React.FC = () => {
                                 {Math.round(res.load)}%
                               </span>
                             </td>
-                            <td className="py-3 px-2 text-center text-[10px] font-bold text-[var(--text)] border-b border-r border-[var(--border)]">
-                              {formatDecimalToTime(res.assigned)}
-                            </td>
                             <td className="py-3 px-2 text-center text-[10px] font-bold text-blue-500 border-b border-r border-[var(--border)]">
                               {formatDecimalToTime(res.performed)}
                             </td>
+                            <td className="py-3 px-2 text-center text-[10px] font-bold text-blue-500 border-b border-r border-[var(--border)]">
+                              {formatDecimalToTime(res.assigned)}
+                            </td>
                             <td className="py-3 px-2 text-center border-b border-r border-[var(--border)]">
                               <div className="flex flex-col items-center">
-                                <span className={`text-[10px] font-black ${!res.releaseDate ? 'text-[var(--muted)] opacity-40' : res.releaseDate.isSaturated ? 'text-red-500' : 'text-purple-500'}`}>
-                                  {formatDateBR(res.releaseDate?.realistic)}
+                                <span className="text-[10px] font-black text-[var(--text)]">
+                                  {formatDecimalToTime(res.capacity)}
                                 </span>
-                                {res.releaseDate && (
+                                {false && res.releaseDate && (
                                   <div className="flex flex-col gap-0 items-center">
                                     <span className={`text-[7px] font-black uppercase tracking-tighter leading-none ${res.releaseDate.isSaturated ? 'text-red-500' : 'text-amber-500'}`}>
                                       {res.releaseDate.isSaturated ? 'SATURADO' : 'Previsão Realista'}
