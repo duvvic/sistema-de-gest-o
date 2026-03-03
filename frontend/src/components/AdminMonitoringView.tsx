@@ -941,19 +941,19 @@ const AdminMonitoringView: React.FC = () => {
                                                             {hasInProgress && (
                                                                 <div className="flex items-center gap-0.5 shrink-0">
                                                                     <div className="w-1 h-1 2xl:w-1.5 2xl:h-1.5 rounded-full bg-blue-500" />
-                                                                    <span className="text-[7px] 2xl:text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">{projTasks.filter(t => t.status === 'In Progress').length} inI</span>
+                                                                    <span className="text-[7px] 2xl:text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">{projTasks.filter(t => t.status === 'In Progress').length} andamento</span>
                                                                 </div>
                                                             )}
                                                             {hasReview && (
                                                                 <div className="flex items-center gap-0.5 shrink-0">
                                                                     <div className="w-1 h-1 2xl:w-1.5 2xl:h-1.5 rounded-full bg-amber-500" />
-                                                                    <span className="text-[7px] 2xl:text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">{projTasks.filter(t => t.status === 'Review').length} rev</span>
+                                                                    <span className="text-[7px] 2xl:text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">{projTasks.filter(t => t.status === 'Review').length} análise</span>
                                                                 </div>
                                                             )}
                                                             {hasDelay && (
                                                                 <div className="flex items-center gap-0.5 shrink-0">
                                                                     <div className="w-1 h-1 2xl:w-1.5 2xl:h-1.5 rounded-full bg-red-500" />
-                                                                    <span className="text-[7px] 2xl:text-[10px] font-bold text-red-600 uppercase whitespace-nowrap">{projTasks.filter(t => isTaskDelayed(t)).length} atras</span>
+                                                                    <span className="text-[7px] 2xl:text-[10px] font-bold text-red-600 uppercase whitespace-nowrap">{projTasks.filter(t => isTaskDelayed(t)).length} atrasos</span>
                                                                 </div>
                                                             )}
                                                         </div>

@@ -90,6 +90,7 @@ export function formatDateBR(dateStr: string | null | undefined): string {
 }
 
 export function mapDbTaskToTask(row: any, userMap?: Map<string, any>, projectName?: string, clientName?: string): Task {
+    const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
     let developerName = undefined;
     if (row.ID_Colaborador && userMap) {
         const dev = userMap.get(String(row.ID_Colaborador));
@@ -99,15 +100,15 @@ export function mapDbTaskToTask(row: any, userMap?: Map<string, any>, projectNam
     const status = normalizeStatus(row.StatusTarefa);
 
     return {
-        id: String(row.id_tarefa_novo),
+        id: safeString(row.id_tarefa_novo),
         externalId: row.ID_Tarefa || undefined,
         title: (row.Afazer && row.Afazer !== 'null') ? row.Afazer : "(Sem título)",
-        projectId: String(row.ID_Projeto),
+        projectId: safeString(row.ID_Projeto),
         projectName: projectName,
-        clientId: String(row.ID_Cliente),
+        clientId: safeString(row.ID_Cliente),
         clientName: clientName,
         developer: developerName,
-        developerId: row.ID_Colaborador ? String(row.ID_Colaborador) : undefined,
+        developerId: row.ID_Colaborador ? safeString(row.ID_Colaborador) : undefined,
         collaboratorIds: [],
         status: status,
         estimatedDelivery: formatDate(row.entrega_estimada),
@@ -149,22 +150,23 @@ function calculateDaysOverdue(estimated: string | null, actual: string | null, s
 }
 
 export function mapDbTimesheetToEntry(r: any, taskExternalMap?: Map<string, string>): TimesheetEntry {
-    let taskId = String(r.id_tarefa_novo || '');
-    if (taskExternalMap && (!taskId || taskId === 'null' || taskId === '0')) {
-        const extId = String(r.ID_Tarefa || '').toLowerCase();
+    const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
+    let taskId = safeString(r.id_tarefa_novo || '');
+    if (taskExternalMap && (!taskId || taskId === '0')) {
+        const extId = safeString(r.ID_Tarefa || '').toLowerCase();
         if (extId && taskExternalMap.has(extId)) {
             taskId = taskExternalMap.get(extId)!;
         } else {
-            taskId = String(r.ID_Tarefa || '');
+            taskId = safeString(r.ID_Tarefa || '');
         }
     }
 
     return {
-        id: String(r.ID_Horas_Trabalhadas || r.id || ''),
-        userId: String(r.ID_Colaborador || ''),
+        id: safeString(r.ID_Horas_Trabalhadas || r.id || ''),
+        userId: safeString(r.ID_Colaborador || ''),
         userName: r.dim_colaboradores?.NomeColaborador || r.userName || '',
-        clientId: String(r.ID_Cliente || ''),
-        projectId: String(r.ID_Projeto || ''),
+        clientId: safeString(r.ID_Cliente || ''),
+        projectId: safeString(r.ID_Projeto || ''),
         taskId: taskId,
         date: r.Data ? (r.Data.includes('T') ? r.Data.split('T')[0] : r.Data) : formatDate(null),
         startTime: r.Hora_Inicio || '',
@@ -177,11 +179,12 @@ export function mapDbTimesheetToEntry(r: any, taskExternalMap?: Map<string, stri
 }
 
 export function mapDbProjectToProject(row: any): Project {
+    const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
     return {
         id: String(row.ID_Projeto),
         name: row.NomeProjeto || "Sem nome",
-        clientId: String(row.ID_Cliente),
-        partnerId: row.partner_id ? String(row.partner_id) : undefined,
+        clientId: safeString(row.ID_Cliente),
+        partnerId: row.partner_id ? safeString(row.partner_id) : undefined,
         status: row.StatusProjeto || undefined,
         active: row.ativo ?? true,
         budget: row.budget ? Number(row.budget) : undefined,
@@ -190,7 +193,7 @@ export function mapDbProjectToProject(row: any): Project {
         startDate: row.startDate || undefined,
         valor_total_rs: row.valor_total_rs ? Number(row.valor_total_rs) : undefined,
         managerClient: row.manager_client || undefined,
-        responsibleNicLabsId: row.responsible_nic_labs_id ? String(row.responsible_nic_labs_id) : undefined,
+        responsibleNicLabsId: row.responsible_nic_labs_id ? safeString(row.responsible_nic_labs_id) : undefined,
         startDateReal: row.start_date_real || undefined,
         endDateReal: row.end_date_real || undefined,
         risks: row.risks || undefined,
@@ -208,6 +211,7 @@ export function mapDbProjectToProject(row: any): Project {
 }
 
 export function mapDbUserToUser(row: any): User {
+    const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
     const normalizeUserRole = (roleValue: string | null): Role => {
         if (!roleValue) return "developer";
         const p = roleValue.toLowerCase().trim();
@@ -224,7 +228,7 @@ export function mapDbUserToUser(row: any): User {
     };
 
     return {
-        id: String(row.ID_Colaborador),
+        id: safeString(row.ID_Colaborador),
         name: row.NomeColaborador || "Sem nome",
         email: String(row.email || "").trim().toLowerCase(),
         avatarUrl: row.avatar_url || undefined,
@@ -240,9 +244,10 @@ export function mapDbUserToUser(row: any): User {
 }
 
 export function mapDbAbsenceToAbsence(row: any): any {
+    const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
     return {
-        id: String(row.id),
-        userId: String(row.colaborador_id),
+        id: safeString(row.id),
+        userId: safeString(row.colaborador_id),
         type: row.tipo || row.type,
         startDate: row.data_inicio,
         endDate: row.data_fim,

@@ -94,7 +94,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_clientes' }, (payload) => {
                 if (payload.eventType === 'INSERT') {
                     const newItem: Client = { id: String(payload.new.ID_Cliente), name: payload.new.NomeCliente, logoUrl: payload.new.NewLogo, active: payload.new.ativo };
-                    setClients(prev => [...prev, newItem]);
+                    setClients(prev => {
+                        if (prev.some(c => c.id === newItem.id)) return prev;
+                        return [...prev, newItem];
+                    });
                 } else if (payload.eventType === 'UPDATE') {
                     setClients(prev => prev.map(c => c.id === String(payload.new.ID_Cliente)
                         ? { ...c, name: payload.new.NomeCliente, logoUrl: payload.new.NewLogo, active: payload.new.ativo } : c));
@@ -107,9 +110,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                     const project = mapDbProjectToProject(payload.new);
                     setProjects(prev => {
-                        const exists = prev.find(p => p.id === project.id);
+                        const exists = prev.find(p => String(p.id) === String(project.id));
                         const updatedProjects = exists
-                            ? prev.map(p => p.id === project.id ? project : p)
+                            ? prev.map(p => String(p.id) === String(project.id) ? project : p)
                             : [...prev, project];
                         return enrichProjectsWithTaskDates(updatedProjects, tasksRef.current);
                     });
@@ -121,19 +124,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 3. Tarefas (Com Normalização)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'fato_tarefas' }, (payload) => {
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const userMap = new Map((usersRef.current || []).map(u => [u.id, u]));
+                    const userMap = new Map((usersRef.current || []).map(u => [String(u.id), u]));
                     const task = mapDbTaskToTask(payload.new, userMap);
                     setTasks(prev => {
-                        const exists = prev.find(t => t.id === task.id);
+                        const exists = prev.find(t => String(t.id) === String(task.id));
                         const updatedTasks = exists
-                            ? prev.map(t => t.id === task.id ? { ...t, ...task, collaboratorIds: t.collaboratorIds } : t)
+                            ? prev.map(t => String(t.id) === String(task.id) ? { ...t, ...task, collaboratorIds: t.collaboratorIds || [] } : t)
                             : [task, ...prev];
 
-                        // Re-process projects when tasks change to update start dates if needed
-                        setProjects(currentProjects => enrichProjectsWithTaskDates(currentProjects, updatedTasks));
-
+                        // Re-process projects when tasks change to update start dates if needed (evitando loops desnecessários)
+                        // Note: setProjects inside setTasks is slightly risky but common here.
                         return updatedTasks;
                     });
+
+                    // Atualiza datas dos projetos de forma atomizada fora do setTasks anterior se possível, 
+                    // ou garante que o enrich use a lista mais nova.
+                    setProjects(currentProjects => enrichProjectsWithTaskDates(currentProjects, tasksRef.current));
 
                 } else if (payload.eventType === 'DELETE') {
                     setTasks(prev => prev.filter(t => t.id !== String(payload.old.id_tarefa_novo)));
@@ -161,8 +167,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                     const user = mapDbUserToUser(payload.new);
                     setUsers(prev => {
-                        const exists = prev.find(u => u.id === user.id);
-                        if (exists) return prev.map(u => u.id === user.id ? user : u);
+                        const exists = prev.find(u => String(u.id) === String(user.id));
+                        if (exists) return prev.map(u => String(u.id) === String(user.id) ? user : u);
                         return [...prev, user];
                     });
                 }
@@ -172,8 +178,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                     const entry = mapDbTimesheetToEntry(payload.new);
                     setTimesheetEntries(prev => {
-                        const exists = prev.find(e => e.id === entry.id);
-                        if (exists) return prev.map(e => e.id === entry.id ? entry : e);
+                        const exists = prev.find(e => String(e.id) === String(entry.id));
+                        if (exists) return prev.map(e => String(e.id) === String(entry.id) ? entry : e);
                         return [entry, ...prev];
                     });
                 } else if (payload.eventType === 'DELETE') {
@@ -182,7 +188,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             })
             // 6. Membros
             .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                     const newMember: ProjectMember = {
                         id_pc: payload.new.id_pc,
                         id_projeto: payload.new.id_projeto,
@@ -191,9 +197,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         start_date: payload.new.start_date,
                         end_date: payload.new.end_date,
                     };
-                    setProjectMembers(prev => [...prev, newMember]);
+                    setProjectMembers(prev => {
+                        const exists = prev.find(pm => String(pm.id_projeto) === String(newMember.id_projeto) && String(pm.id_colaborador) === String(newMember.id_colaborador));
+                        if (exists) {
+                            return prev.map(pm => (String(pm.id_projeto) === String(newMember.id_projeto) && String(pm.id_colaborador) === String(newMember.id_colaborador)) ? newMember : pm);
+                        }
+                        return [...prev, newMember];
+                    });
                 } else if (payload.eventType === 'DELETE') {
-                    setProjectMembers(prev => prev.filter(pm => !(pm.id_projeto === payload.old.id_projeto && pm.id_colaborador === payload.old.id_colaborador)));
+                    setProjectMembers(prev => prev.filter(pm => !(String(pm.id_projeto) === String(payload.old.id_projeto) && String(pm.id_colaborador) === String(payload.old.id_colaborador))));
                 }
             })
             // 7. Ausências
@@ -201,8 +213,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                     const absence = mapDbAbsenceToAbsence(payload.new);
                     setAbsences(prev => {
-                        const exists = prev.find(a => a.id === absence.id);
-                        if (exists) return prev.map(a => a.id === absence.id ? absence : a);
+                        const exists = prev.find(a => String(a.id) === String(absence.id));
+                        if (exists) return prev.map(a => String(a.id) === String(absence.id) ? absence : a);
                         return [...prev, absence];
                     });
                 } else if (payload.eventType === 'DELETE') {
@@ -221,8 +233,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         observations: h.observacoes
                     };
                     setHolidays(prev => {
-                        const exists = prev.find(item => item.id === holiday.id);
-                        if (exists) return prev.map(item => item.id === holiday.id ? holiday : item);
+                        const exists = prev.find(item => String(item.id) === String(holiday.id));
+                        if (exists) return prev.map(item => String(item.id) === String(holiday.id) ? holiday : item);
                         return [...prev, holiday];
                     });
                 } else if (payload.eventType === 'DELETE') {
@@ -239,8 +251,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         reservedHours: Number(payload.new.reserved_hours)
                     };
                     setTaskMemberAllocations(prev => {
-                        const exists = prev.find(a => a.id === allocation.id);
-                        if (exists) return prev.map(a => a.id === allocation.id ? allocation : a);
+                        const exists = prev.find(a => String(a.id) === String(allocation.id));
+                        if (exists) return prev.map(a => String(a.id) === String(allocation.id) ? allocation : a);
                         return [...prev, allocation];
                     });
                 } else if (payload.eventType === 'DELETE') {

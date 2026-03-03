@@ -282,11 +282,12 @@ export const calculateTaskPredictedEndDate = (
 };
 
 /**
- * MAPA DE OCUPAÇÃO MENSAL
+ * MAPA DE OCUPAÇÃO EM UM INTERVALO DE DATAS (GENÉRICO)
  */
-export const getUserMonthlyAvailability = (
+export const getUserAvailabilityInRange = (
     user: User,
-    monthStr: string, // "YYYY-MM"
+    startDate: string,
+    endDate: string,
     projects: Project[],
     projectMembers: ProjectMember[],
     timesheetEntries: TimesheetEntry[],
@@ -309,18 +310,6 @@ export const getUserMonthlyAvailability = (
         continuous: { id: string; name: string; hours: number }[];
     };
 } => {
-    const [year, month] = monthStr.split('-').map(Number);
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const isCurrentMonth = todayStr.startsWith(monthStr);
-
-    const startDate = `${monthStr}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-
-    // Ocultar Warning unused
-    const _todayStr = todayStr;
-    const _isCurrentMonth = isCurrentMonth;
-
     const dailyGoal = user.dailyAvailableHours || 8;
     const userAbsences = absences.filter(a => String(a.userId) === String(user.id) && a.status === 'aprovada_gestao');
     const workingDays = getWorkingDaysInRange(startDate, endDate, holidays, userAbsences);
@@ -334,13 +323,13 @@ export const getUserMonthlyAvailability = (
 
     tasks.forEach(t => {
         const isOwner = String(t.developerId) === String(user.id) || t.collaboratorIds?.some(id => String(id) === String(user.id));
-        // Permitir que tarefas concluídas (mas não deletadas) entrem no cálculo ALOCADO do mês
+        // Permitir que tarefas concluídas (mas não deletadas) entrem no cálculo ALOCADO do período
         if (!isOwner || !!t.deleted_at) return;
 
         const p = projects.find(proj => proj.id === t.projectId);
         if (!p) return;
 
-        // --- LÓGICA DE ALOCAÇÃO ESPECÍFICA ---
+        // --- LÓGICA DE ESTIMATIVA / ALOCAÇÃO ---
         const specificAllocation = taskMemberAllocations.find(a => String(a.taskId) === String(t.id) && String(a.userId) === String(user.id));
         const hasAnyAllocationInTask = taskMemberAllocations.some(a => String(a.taskId) === String(t.id) && a.reservedHours > 0);
 
@@ -348,54 +337,56 @@ export const getUserMonthlyAvailability = (
         if (specificAllocation && specificAllocation.reservedHours > 0) {
             totalEffort = specificAllocation.reservedHours;
         } else if (!hasAnyAllocationInTask) {
-            // Fallback: Se NINGUÉM tiver alocação manual, divide o esforço total pelo tamanho da equipe
             const teamIds = Array.from(new Set([t.developerId, ...(t.collaboratorIds || [])])).filter(Boolean);
             totalEffort = (Number(t.estimatedHours) || 0) / (teamIds.length || 1);
         } else {
             totalEffort = 0;
         }
 
-        // REGRA DE SALDO: Se a tarefa foi concluída, a alocação real é o que foi apontado (se for menor que o alocado)
-        // Isso libera as horas excedentes de volta para o saldo do usuário.
-        if (t.status === 'Done') {
-            const reportedOnTask = timesheetEntries
-                .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id))
-                .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+        // --- REGRA DE SALDO (DONE RECOUPING) ---
+        // Quando a tarefa é concluída, o que conta para a ocupação do mês é o que foi EFETIVAMENTE apontado.
+        // Se aloquei 100h e fiz em 60h, as 40h restantes voltam para o saldo.
+        const reportedOnTask = timesheetEntries
+            .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id))
+            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
 
-            // A alocação passa a ser o menor entre o planejado original e o executado real
-            totalEffort = Math.min(totalEffort, reportedOnTask);
+        if (t.status === 'Done') {
+            totalEffort = reportedOnTask;
+        } else if (reportedOnTask > totalEffort) {
+            // Se ainda não está pronta mas já gastou mais que o previsto, a ocupação é pelo menos o apontado
+            totalEffort = reportedOnTask;
         }
 
         if (totalEffort <= 0 && t.status !== 'Done') return;
 
         const tStart = t.scheduledStart || t.actualStart || p.startDate || startDate;
-        // Se a tarefa já foi entregue, o esforço real de alocação terminou na data de entrega efetiva
-        const tEnd = t.actualDelivery || t.estimatedDelivery || p.estimatedDelivery || endDate;
+        // Para tarefas não concluídas, a data final para cálculo de distribuição deve ser no mínimo 'hoje'
+        const todayStr = new Date().toISOString().split('T')[0];
+        const nominalEnd = t.actualDelivery || t.estimatedDelivery || p.estimatedDelivery || endDate;
+        const effectiveEnd = (t.status !== 'Done' && nominalEnd < todayStr) ? todayStr : nominalEnd;
+        const effectiveStart = tStart;
 
         // Distribuição teórica linear do Esforço por todos os dias da tarefa
-        const effectiveStart = tStart;
-        const effectiveEnd = tEnd;
-
-        const totalTaskDays = getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays, userAbsences) || 1; // Mínimo 1 dia
+        const totalTaskDays = getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays, userAbsences) || 1;
         const hoursPerDay = totalEffort / totalTaskDays;
 
         const intStart = effectiveStart > startDate ? effectiveStart : startDate;
         const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
 
         if (intStart <= intEnd && intStart <= endDate && intEnd >= startDate) {
-            const bizDaysInMonth = getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
-            const effortInMonth = bizDaysInMonth * hoursPerDay;
+            const bizDaysInPeriod = getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
+            const effortInPeriod = bizDaysInPeriod * hoursPerDay;
 
             if (p.project_type === 'continuous') {
-                continuousHoursTotal += effortInMonth;
+                continuousHoursTotal += effortInPeriod;
                 const existing = continuousProjectsBreakdown.find(pb => pb.id === p.id);
-                if (existing) existing.hours += effortInMonth;
-                else continuousProjectsBreakdown.push({ id: p.id, name: p.name, hours: effortInMonth });
+                if (existing) existing.hours += effortInPeriod;
+                else continuousProjectsBreakdown.push({ id: p.id, name: p.name, hours: effortInPeriod });
             } else {
-                plannedHoursTotal += effortInMonth;
+                plannedHoursTotal += effortInPeriod;
                 const existing = plannedProjectsBreakdown.find(pb => pb.id === p.id);
-                if (existing) existing.hours += effortInMonth;
-                else plannedProjectsBreakdown.push({ id: p.id, name: p.name, hours: effortInMonth });
+                if (existing) existing.hours += effortInPeriod;
+                else plannedProjectsBreakdown.push({ id: p.id, name: p.name, hours: effortInPeriod });
             }
         }
     });
@@ -426,6 +417,38 @@ export const getUserMonthlyAvailability = (
             continuous: continuousProjectsBreakdown
         }
     };
+};
+
+/**
+ * MAPA DE OCUPAÇÃO MENSAL
+ */
+export const getUserMonthlyAvailability = (
+    user: User,
+    monthStr: string, // "YYYY-MM"
+    projects: Project[],
+    projectMembers: ProjectMember[],
+    timesheetEntries: TimesheetEntry[],
+    tasks: Task[],
+    holidays: Holiday[] = [],
+    taskMemberAllocations: TaskMemberAllocation[] = [],
+    absences: Absence[] = []
+): any => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const startDate = `${monthStr}-01`;
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+    return getUserAvailabilityInRange(
+        user,
+        startDate,
+        endDate,
+        projects,
+        projectMembers,
+        timesheetEntries,
+        tasks,
+        holidays,
+        taskMemberAllocations,
+        absences
+    );
 };
 
 /**

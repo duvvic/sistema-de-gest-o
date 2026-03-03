@@ -202,13 +202,8 @@ const TimesheetForm: React.FC = () => {
       return;
     }
 
-    // Exceção: se o projeto for 'Treinamento e Capacitação' ou o usuário for da torre 'Planejamento' (PMO), não exigir descrição de 120 carac.
-    if (!isTrainingProject && !isPmoTower) {
-      if (!formData.description || formData.description.trim().length < 120) {
-        alert("O status é obrigatório e deve ter no mínimo 120 caracteres para descrever bem a atividade.");
-        return;
-      }
-    }
+    // Descrição agora é opcional — sem limite de caracteres
+
 
     // Check for time conflicts
     if (hasTimeConflict) {
@@ -571,9 +566,9 @@ const TimesheetForm: React.FC = () => {
                     <textarea
                       value={formData.description || ''}
                       onChange={(e) => { markDirty(); setFormData({ ...formData, description: e.target.value }); }}
-                      className={`w-full p-3 border rounded-xl outline-none resize-none font-medium text-sm transition-all flex-1 focus:ring-1 ${!isTrainingProject && ((formData.description?.length || 0) < 120) ? 'focus:ring-red-500 border-red-500/30' : 'focus:ring-emerald-500 border-emerald-500/30'}`}
+                      className="w-full p-3 border rounded-xl outline-none resize-none font-medium text-sm transition-all flex-1 focus:ring-1 focus:ring-[var(--primary)] border-[var(--border)]"
                       style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
-                      placeholder={isTrainingProject ? "Opcional: Descreva a atividade de treinamento..." : "Descreva detalhadamente o que foi feito nesta atividade (mínimo 120 caracteres)..."}
+                      placeholder="Descreva a atividade realizada (opcional)..."
                     />
                   </div>
 
@@ -765,18 +760,18 @@ const TimesheetForm: React.FC = () => {
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[10px] font-bold flex items-center gap-2 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>
-                        <AlertCircle className="w-3 h-3" /> {(isTrainingProject || isPmoTower) ? 'Status (Opcional)' : 'Status (Mín. 120 carac.) *'}
+                        <AlertCircle className="w-3 h-3" /> Status (Opcional)
                       </label>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${(isTrainingProject || isPmoTower) || ((formData.description?.length || 0) >= 120) ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                        {formData.description?.length || 0} {(isTrainingProject || isPmoTower) ? '' : '/ 120'}
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500">
+                        {formData.description?.length || 0} carac.
                       </span>
                     </div>
                     <textarea
                       value={formData.description || ''}
                       onChange={(e) => { markDirty(); setFormData({ ...formData, description: e.target.value }); }}
-                      className={`w-full p-3 border rounded-xl outline-none resize-none font-medium text-sm transition-all h-32 focus:ring-1 ${!isTrainingProject && ((formData.description?.length || 0) < 120) ? 'focus:ring-red-500 border-red-500/30' : 'focus:ring-emerald-500 border-emerald-500/30'}`}
+                      className="w-full p-3 border rounded-xl outline-none resize-none font-medium text-sm transition-all h-32 focus:ring-1 focus:ring-[var(--primary)] border-[var(--border)]"
                       style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
-                      placeholder={(isTrainingProject || isPmoTower) ? "Opcional: Descreva a atividade realizada..." : "Descreva detalhadamente o que foi feito nesta atividade (mínimo 120 caracteres)..."}
+                      placeholder="Descreva a atividade realizada (opcional)..."
                     />
                   </div>
                 )}

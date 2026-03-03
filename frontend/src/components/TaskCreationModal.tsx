@@ -30,6 +30,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
     const [status, setStatus] = useState<Status>('Todo');
     const [scheduledStart, setScheduledStart] = useState('');
     const [estimatedDelivery, setEstimatedDelivery] = useState('');
+    const [estimatedHours, setEstimatedHours] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -73,6 +74,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
             const nextWeek = new Date();
             nextWeek.setDate(nextWeek.getDate() + 7);
             setEstimatedDelivery(nextWeek.toISOString().split('T')[0]);
+            setEstimatedHours('');
 
             setError('');
         }
@@ -139,6 +141,14 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
             setError('A data de entrega estimada é obrigatória.');
             return;
         }
+        if (!estimatedHours || Number(estimatedHours) === 0) {
+            setError('As horas estimadas da tarefa são obrigatórias.');
+            return;
+        }
+        if (!estimatedHours || Number(estimatedHours) === 0) {
+            setError('As horas estimadas da tarefa são obrigatórias.');
+            return;
+        }
 
         // Validar intervalo do projeto
         const project = projects.find(p => String(p.id) === String(projectId));
@@ -181,7 +191,8 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                 actualStart: status === 'In Progress' ? new Date().toISOString().split('T')[0] : undefined,
                 actualDelivery: status === 'Done' ? new Date().toISOString().split('T')[0] : undefined,
                 scheduledStart: scheduledStart || undefined,
-                estimatedDelivery: estimatedDelivery || undefined
+                estimatedDelivery: estimatedDelivery || undefined,
+                estimatedHours: Number(estimatedHours) || 0
             });
 
             onClose();
@@ -253,7 +264,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 value={clientId}
                                 onChange={(e) => { setClientId(e.target.value); setProjectId(''); }}
                                 disabled={!!preSelectedClientId}
-                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50"
+                                className={`w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] disabled:opacity-50 transition-colors ${!clientId ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                             >
                                 <option value="">Selecione o Cliente...</option>
                                 {availableClients.map(c => (
@@ -269,7 +280,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 value={projectId}
                                 onChange={(e) => { setProjectId(e.target.value); }}
                                 disabled={!clientId || !!preSelectedProjectId}
-                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50"
+                                className={`w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] disabled:opacity-50 transition-colors ${!projectId ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                             >
                                 <option value="">Selecione o Projeto...</option>
                                 {filteredProjects.map(p => (
@@ -285,7 +296,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 type="button"
                                 onClick={() => setIsCollaboratorsOpen(!isCollaboratorsOpen)}
                                 disabled={!projectId}
-                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm flex items-center justify-between focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50 text-left"
+                                className={`w-full p-2.5 border rounded-lg outline-none font-medium text-sm flex items-center justify-between focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] disabled:opacity-50 text-left transition-colors ${collaboratorIds.length === 0 ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                             >
                                 <span className={collaboratorIds.length === 0 ? 'text-[var(--muted)]' : ''}>
                                     {collaboratorIds.length === 0
@@ -338,7 +349,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 value={developerId}
                                 onChange={(e) => setDeveloperId(e.target.value)}
                                 disabled={collaboratorIds.length === 0}
-                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)] disabled:opacity-50"
+                                className={`w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] disabled:opacity-50 transition-colors ${!developerId ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                             >
                                 <option value="">Selecione o Responsável...</option>
                                 {eligibleUsers
@@ -368,7 +379,7 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="Ex: Criar tela de login"
-                                className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
+                                className={`w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] transition-colors ${!title.trim() ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                             />
                         </div>
 
@@ -409,26 +420,43 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
                         </div>
 
                         {/* Datas e Esforço */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {/* Previsão Início */}
                             <div>
-                                <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Previsão Início *</label>
+                                <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Início *</label>
                                 <input
                                     type="date"
                                     value={scheduledStart}
                                     onChange={(e) => setScheduledStart(e.target.value)}
-                                    className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
+                                    className={`w-full p-2.5 border rounded-lg outline-none font-medium text-[11px] focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] transition-colors ${!scheduledStart ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                                 />
                             </div>
 
                             {/* Entrega Estimada */}
                             <div>
-                                <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Entrega Estimada *</label>
+                                <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70">Entrega *</label>
                                 <input
                                     type="date"
                                     value={estimatedDelivery}
                                     onChange={(e) => setEstimatedDelivery(e.target.value)}
-                                    className="w-full p-2.5 border rounded-lg outline-none font-medium text-sm focus:ring-1 focus:ring-[var(--primary)] bg-[var(--bg)] border-[var(--border)] text-[var(--text)]"
+                                    className={`w-full p-2.5 border rounded-lg outline-none font-medium text-[11px] focus:ring-1 focus:ring-[var(--primary)] text-[var(--text)] transition-colors ${!estimatedDelivery ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
+                                />
+                            </div>
+
+                            {/* Horas Estimadas */}
+                            <div>
+                                <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70 text-purple-400">Horas *</label>
+                                <input
+                                    type="text"
+                                    value={estimatedHours}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(',', '.');
+                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                            setEstimatedHours(val);
+                                        }
+                                    }}
+                                    placeholder="0h"
+                                    className={`w-full p-2.5 border rounded-lg outline-none font-bold text-[11px] focus:ring-1 focus:ring-purple-500/50 text-[var(--text)] transition-colors ${!estimatedHours || Number(estimatedHours) === 0 ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                                 />
                             </div>
                         </div>

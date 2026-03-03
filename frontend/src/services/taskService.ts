@@ -25,6 +25,12 @@ async function getCollaboratorIdByName(name: string | undefined): Promise<number
   return data.ID_Colaborador;
 }
 
+const safeNum = (val: any) => {
+  if (val === null || val === undefined || val === '' || val === 'null' || val === 'undefined') return null;
+  const n = Number(val);
+  return isNaN(n) ? null : n;
+};
+
 // ===========================
 // HELPER: Mapear status do front para o banco
 // ===========================
@@ -71,7 +77,7 @@ function mapImpactToDb(impact: string | undefined): string | null {
 // ===========================
 export async function createTask(data: Partial<Task>): Promise<number> {
   // Prioriza o ID se disponível, senão busca pelo nome (legado/fallback)
-  let collaboratorId: number | null = data.developerId ? Number(data.developerId) : null;
+  let collaboratorId: number | null = safeNum(data.developerId);
 
   if (!collaboratorId && data.developer) {
     collaboratorId = await getCollaboratorIdByName(data.developer);
@@ -79,8 +85,8 @@ export async function createTask(data: Partial<Task>): Promise<number> {
 
   const payload = {
     Afazer: data.title || "(Sem título)",
-    ID_Projeto: Number(data.projectId),
-    ID_Cliente: Number(data.clientId),
+    ID_Projeto: safeNum(data.projectId),
+    ID_Cliente: safeNum(data.clientId),
     ID_Colaborador: collaboratorId,
     StatusTarefa: mapStatusToDb(data.status),
     entrega_estimada: data.estimatedDelivery || null,
@@ -137,7 +143,7 @@ async function updateTaskCollaborators(taskId: number, collaboratorIds: string[]
   if (collaboratorIds.length > 0) {
     const inserts = collaboratorIds.map(id => ({
       id_tarefa: taskId,
-      id_colaborador: Number(id)
+      id_colaborador: safeNum(id)
     }));
 
     const { error } = await supabase
@@ -162,7 +168,7 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
 
   // Prioriza o ID se disponível
   if (data.developerId !== undefined) {
-    payload.ID_Colaborador = data.developerId ? Number(data.developerId) : null;
+    payload.ID_Colaborador = safeNum(data.developerId);
   } else if (data.developer !== undefined) {
     // Fallback apenas se developer (nome) for enviado mas developerId não
     const collaboratorId = await getCollaboratorIdByName(data.developer);
@@ -247,7 +253,7 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
   const { error } = await supabase
     .from("fato_tarefas")
     .update(payload)
-    .eq("id_tarefa_novo", Number(taskId));
+    .eq("id_tarefa_novo", safeNum(taskId)!);
 
   if (error) {
     console.error("Supabase updateTask error:", error);
@@ -257,7 +263,7 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
 
   // Atualiza colaboradores se fornecido
   if (data.collaboratorIds !== undefined) {
-    await updateTaskCollaborators(Number(taskId), data.collaboratorIds);
+    await updateTaskCollaborators(safeNum(taskId)!, data.collaboratorIds);
   }
 }
 

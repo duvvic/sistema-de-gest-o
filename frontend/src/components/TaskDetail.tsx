@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
 import { Task, Status, Priority, Impact } from '@/types';
 import {
-  ArrowLeft, Save, Calendar, Clock, Users, StickyNote, CheckSquare, Plus, Trash2, X, CheckCircle, Activity, Zap, AlertTriangle, Briefcase, Info, Target, LayoutGrid, Shield, FileSpreadsheet, Crown, ExternalLink, Flag
+  ArrowLeft, Save, Calendar, Clock, Users, StickyNote, CheckSquare, Plus, Trash2, X, CheckCircle, Activity, Zap, AlertTriangle, Briefcase, Info, Target, LayoutGrid, Shield, FileSpreadsheet, Crown, ExternalLink, Flag, Lock
 } from 'lucide-react';
 import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt';
 import ConfirmationModal from './ConfirmationModal';
@@ -26,7 +26,7 @@ const TaskDetail: React.FC = () => {
   } = useDataController();
 
   const isNew = !taskId || taskId === 'new';
-  const task = !isNew ? tasks.find(t => t.id === taskId) : undefined;
+  const task = !isNew ? tasks.find((t: any) => t.id === taskId) : undefined;
 
   // Query params for defaults
   const preSelectedClientId = searchParams.get('clientId') || searchParams.get('client');
@@ -115,14 +115,15 @@ const TaskDetail: React.FC = () => {
       return hasTeam && !formData.developerId;
     }
     const value = formData[field as keyof typeof formData];
+    if (field === 'estimatedHours') return !value || Number(value) === 0;
     return !value;
   };
 
-  const selectedClient = clients.find(c => c.id === formData.clientId);
+  const selectedClient = clients.find((c: any) => c.id === formData.clientId);
   const isNicLabs = selectedClient?.name?.toUpperCase().includes('NIC-LABS') || false;
 
   const hasError = (field: string) => {
-    const mandatoryFields = ['projectId', 'clientId', 'title', 'developerId', 'team'];
+    const mandatoryFields = ['projectId', 'clientId', 'title', 'developerId', 'team', 'scheduledStart', 'estimatedDelivery', 'estimatedHours'];
     if (mandatoryFields.includes(field)) return isFieldMissing(field);
     return false;
   };
@@ -155,10 +156,10 @@ const TaskDetail: React.FC = () => {
     } else if (isNew) {
       const qClient = preSelectedClientId as string || '';
       const qProject = preSelectedProjectId as string || '';
-      const proj = qProject ? projects.find(p => p.id === qProject) : null;
+      const proj = qProject ? projects.find((p: any) => p.id === qProject) : null;
       const finalClient = qClient || (proj ? proj.clientId : '');
 
-      setFormData(prev => {
+      setFormData((prev: any) => {
         const newData = {
           ...prev,
           clientId: finalClient || prev.clientId,
@@ -187,9 +188,9 @@ const TaskDetail: React.FC = () => {
   useEffect(() => {
     // Só carrega as alocações da tarefa se não houver edição local em andamento (isDirty)
     if (!isNew && taskId && !isDirty) {
-      const taskAllocations = taskMemberAllocations.filter(a => a.taskId === taskId);
+      const taskAllocations = taskMemberAllocations.filter((a: any) => a.taskId === taskId);
       const allocationMap: Record<string, number> = {};
-      taskAllocations.forEach(a => {
+      taskAllocations.forEach((a: any) => {
         allocationMap[a.userId] = a.reservedHours;
       });
       setLocalTaskAllocations(allocationMap);
@@ -207,7 +208,7 @@ const TaskDetail: React.FC = () => {
 
       const newStatus: Status = today >= start ? 'In Progress' : 'Todo';
       if (formData.status !== newStatus) {
-        setFormData(prev => ({ ...prev, status: newStatus }));
+        setFormData((prev: any) => ({ ...prev, status: newStatus }));
       }
     }
   }, [formData.scheduledStart, formData.status]);
@@ -215,21 +216,21 @@ const TaskDetail: React.FC = () => {
   const actualHoursSpent = useMemo(() => {
     if (isNew) return 0;
     return timesheetEntries
-      .filter(entry => entry.taskId === taskId)
-      .reduce((sum, entry) => sum + (Number(entry.totalHours) || 0), 0);
+      .filter((entry: any) => entry.taskId === taskId)
+      .reduce((sum: number, entry: any) => sum + (Number(entry.totalHours) || 0), 0);
   }, [timesheetEntries, taskId, isNew]);
 
   const actualStartDate = useMemo(() => {
     if (isNew || !taskId) return null;
-    const taskHours = timesheetEntries.filter(e => e.taskId === taskId);
+    const taskHours = timesheetEntries.filter((e: any) => e.taskId === taskId);
     if (taskHours.length === 0) return null;
     // Usa T12:00:00 para evitar off-by-one de fuso horário
-    return new Date(Math.min(...taskHours.map(e => new Date(e.date + 'T12:00:00').getTime())));
+    return new Date(Math.min(...taskHours.map((e: any) => new Date(e.date + 'T12:00:00').getTime())));
   }, [timesheetEntries, taskId, isNew]);
 
 
   const taskWeight = useMemo(() => {
-    const project = projects.find(p => p.id === formData.projectId);
+    const project = projects.find((p: any) => p.id === formData.projectId);
     if (!project || !project.startDate || !project.estimatedDelivery) return { weight: 0 };
 
     const projectWorkingDays = CapacityUtils.getWorkingDaysInRange(project.startDate, project.estimatedDelivery, holidays);
@@ -255,6 +256,19 @@ const TaskDetail: React.FC = () => {
   };
   const daysDelayed = getDelayDays();
 
+  const missingFields = useMemo(() => {
+    const fields = [];
+    if (isFieldMissing('projectId')) fields.push('Projeto');
+    if (isFieldMissing('clientId')) fields.push('Cliente');
+    if (isFieldMissing('title')) fields.push('Título');
+    if (isFieldMissing('developerId')) fields.push('Responsável');
+    if (isFieldMissing('team')) fields.push('Equipe Alocada');
+    if (isFieldMissing('scheduledStart')) fields.push('Data de Início');
+    if (isFieldMissing('estimatedDelivery')) fields.push('Data de Entrega');
+    if (isFieldMissing('estimatedHours')) fields.push('Horas Estimadas');
+    return fields;
+  }, [formData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: string[] = [];
@@ -263,6 +277,9 @@ const TaskDetail: React.FC = () => {
     if (isFieldMissing('title')) errors.push('title');
     if (isFieldMissing('team')) errors.push('team');
     if (isFieldMissing('developerId')) errors.push('developerId');
+    if (isFieldMissing('scheduledStart')) errors.push('scheduledStart');
+    if (isFieldMissing('estimatedDelivery')) errors.push('estimatedDelivery');
+    if (isFieldMissing('estimatedHours')) errors.push('estimatedHours');
 
     if (errors.length > 0) {
       const missingFields = errors.map(e => {
@@ -272,6 +289,9 @@ const TaskDetail: React.FC = () => {
           case 'title': return 'Título';
           case 'developerId': return 'Responsável';
           case 'team': return 'Equipe Alocada';
+          case 'scheduledStart': return 'Data de Início';
+          case 'estimatedDelivery': return 'Data de Entrega';
+          case 'estimatedHours': return 'Horas Estimadas';
           default: return e;
         }
       });
@@ -280,7 +300,7 @@ const TaskDetail: React.FC = () => {
     }
 
     // Validação de intervalo do projeto
-    const project = projects.find(p => String(p.id) === String(formData.projectId));
+    const project = projects.find((p: any) => String(p.id) === String(formData.projectId));
     if (project) {
       const parseSafeDate = (d: string | null | undefined) => {
         if (!d) return null;
@@ -356,13 +376,9 @@ const TaskDetail: React.FC = () => {
             reservedHours: hours
           }));
         }
-        const savedAllocs = await allocationService.saveTaskAllocations(finalTaskId, allocationsToSave);
-        if (setTaskMemberAllocations) {
-          setTaskMemberAllocations((prev: any[]) => {
-            const others = prev.filter(a => String(a.taskId) !== String(finalTaskId));
-            return [...others, ...savedAllocs];
-          });
-        }
+        // const savedAllocs = await allocationService.saveTaskAllocations(finalTaskId, allocationsToSave);
+        await allocationService.saveTaskAllocations(finalTaskId, allocationsToSave);
+        // Removido manual update: Realtime cuida disso
       }
 
       discardChanges();
@@ -372,8 +388,8 @@ const TaskDetail: React.FC = () => {
     } finally { setLoading(false); }
   };
 
-  const taskHours = timesheetEntries.filter(e => e.taskId === taskId);
-  const totalTaskHours = taskHours.reduce((acc, current) => acc + current.totalHours, 0);
+  const taskHours = timesheetEntries.filter((e: any) => e.taskId === taskId);
+  const totalTaskHours = taskHours.reduce((acc: number, current: any) => acc + current.totalHours, 0);
 
   const performDelete = async () => {
     if (!taskId || !deleteConfirmation) return;
@@ -423,14 +439,14 @@ const TaskDetail: React.FC = () => {
 
   const responsibleUsers = useMemo(() => {
     if (!formData.projectId) return [];
-    const membersIds = projectMembers.filter(pm => String(pm.id_projeto) === formData.projectId).map(pm => String(pm.id_colaborador));
-    return users.filter(u => u.active !== false && (membersIds.includes(u.id) || u.id === formData.developerId));
+    const membersIds = projectMembers.filter((pm: any) => String(pm.id_projeto) === formData.projectId).map((pm: any) => String(pm.id_colaborador));
+    return users.filter((u: any) => u.active !== false && (membersIds.includes(u.id) || u.id === formData.developerId));
   }, [users, projectMembers, formData.projectId, formData.developerId]);
 
   if (!isNew && !task) return <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>Tarefa não encontrada.</div>;
 
-  const taskProject = projects.find(p => p.id === (task?.projectId || formData.projectId));
-  const taskClient = clients.find(c => c.id === (task?.clientId || formData.clientId || taskProject?.clientId));
+  const taskProject = projects.find((p: any) => p.id === (task?.projectId || formData.projectId));
+  const taskClient = clients.find((c: any) => c.id === (task?.clientId || formData.clientId || taskProject?.clientId));
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg)] overflow-hidden">
@@ -492,6 +508,27 @@ const TaskDetail: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto p-8">
         <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
+          <AnimatePresence>
+            {missingFields.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="p-4 bg-yellow-400/10 border border-yellow-400/50 rounded-2xl flex items-center gap-3"
+              >
+                <div className="w-8 h-8 rounded-xl bg-yellow-400 flex items-center justify-center shrink-0 shadow-lg shadow-yellow-400/20">
+                  <AlertTriangle size={18} className="text-black" />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-yellow-500">Campos Obrigatórios Faltando</p>
+                  <p className="text-[10px] font-bold opacity-70" style={{ color: 'var(--text)' }}>
+                    Por favor, preencha: {missingFields.join(', ')}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Card 1: Identificação */}
             <div className="p-4 rounded-[24px] border shadow-sm flex flex-col h-[290px] group hover:shadow-md transition-all duration-300" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
@@ -658,7 +695,7 @@ const TaskDetail: React.FC = () => {
             </div>
 
             {/* CARD 4: TIMELINE */}
-            <div className="p-4 rounded-[24px] border shadow-sm flex flex-col justify-between h-[290px] group hover:shadow-md transition-all duration-300" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className={`p-4 rounded-[24px] border shadow-sm flex flex-col justify-between h-[290px] group hover:shadow-md transition-all duration-300 ${hasError('timeline') ? 'bg-yellow-400/10 border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.1)]' : ''}`} style={{ backgroundColor: hasError('timeline') ? undefined : 'var(--surface)', borderColor: hasError('timeline') ? undefined : 'var(--border)' }}>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 text-blue-500 font-black text-[10px] uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">
@@ -683,8 +720,8 @@ const TaskDetail: React.FC = () => {
                           className="w-full bg-transparent text-xs font-black text-[var(--text)] outline-none border-none p-0"
                         />
                       </div>
-                      <div className="p-2.5 rounded-2xl bg-[var(--surface-hover)] border border-[var(--border)] group/date focus-within:border-blue-500/50 transition-colors">
-                        <label className="text-[8px] font-black uppercase opacity-40 tracking-[0.2em] mb-1 block group-focus-within/date:text-blue-500 transition-colors">Entrega</label>
+                      <div className={`p-2.5 rounded-2xl border group/date focus-within:border-blue-500/50 transition-colors ${!formData.estimatedDelivery ? 'bg-yellow-400/20 border-yellow-400/50 shadow-[0_0_10px_rgba(250,204,21,0.1)]' : 'bg-[var(--surface-hover)] border-[var(--border)]'}`}>
+                        <label className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 block group-focus-within/date:text-blue-500 transition-colors ${!formData.estimatedDelivery ? 'text-yellow-500' : 'opacity-40'}`}>Entrega *</label>
                         <input
                           type="date"
                           value={formData.estimatedDelivery || ''}
@@ -694,14 +731,13 @@ const TaskDetail: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className={`p-3 rounded-2xl border group/fc focus-within:border-blue-500/50 transition-colors mt-2 ${!formData.estimatedHours ? 'bg-yellow-400/20 border-yellow-400/50 shadow-[0_0_10px_rgba(250,204,21,0.1)]' : 'bg-[var(--surface-hover)] border-[var(--border)] relative z-10'}`}>
-                      <label className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 block group-focus-within/fc:text-blue-500 transition-colors ${!formData.estimatedHours ? 'text-yellow-500' : 'opacity-40'}`}>horas da tarefa *</label>
+                    <div className={`p-3 rounded-2xl border group/fc focus-within:border-blue-500/50 transition-colors mt-2 ${!formData.estimatedHours ? 'bg-yellow-400/20 border-yellow-400/50 shadow-[0_0_10px_rgba(250,204,21,0.1)]' : 'bg-[var(--surface-hover)] border-[var(--border)]'}`}>
+                      <label className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 block group-focus-within/fc:text-blue-500 transition-colors ${!formData.estimatedHours ? 'text-yellow-500' : 'opacity-40'}`}>Horas da Tarefa *</label>
                       <input
                         type="text"
                         value={editingMainHours !== null ? editingMainHours : formatDecimalToTime(formData.estimatedHours || 0)}
                         onChange={(e) => {
                           const val = e.target.value;
-                          // Allow numbers and decimal/time separators
                           if (!/^[0-9:.,]*$/.test(val)) return;
                           setEditingMainHours(val);
                           markDirty();
@@ -709,7 +745,7 @@ const TaskDetail: React.FC = () => {
                         onBlur={() => {
                           if (editingMainHours !== null) {
                             const dec = parseTimeToDecimal(editingMainHours);
-                            setFormData(prev => ({ ...prev, estimatedHours: dec }));
+                            setFormData((prev: any) => ({ ...prev, estimatedHours: dec }));
                             setEditingMainHours(null);
                           }
                         }}
@@ -724,7 +760,7 @@ const TaskDetail: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-auto pt-2 border-t border-dashed border-[var(--border)]">
+              <div className="pt-2 border-t border-dashed border-[var(--border)] mt-2">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                   <span className="text-[9px] font-black uppercase text-emerald-500 tracking-widest">Executado</span>
@@ -735,14 +771,14 @@ const TaskDetail: React.FC = () => {
                       <Zap size={10} className="text-emerald-500" />
                       <span className="text-[8px] font-bold text-emerald-600/60 uppercase">Início</span>
                     </div>
-                    <span className="text-[10px] font-black">{actualStartDate ? actualStartDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '...'}</span>
+                    <span className="text-[10px] font-black" style={{ color: 'var(--text)' }}>{actualStartDate ? actualStartDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '...'}</span>
                   </div>
                   <div className="px-2.5 py-1.5 rounded-xl bg-slate-500/5 border border-[var(--border)] flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <CheckSquare size={10} className="opacity-30" />
-                      <span className="text-[8px] font-bold opacity-30 uppercase">Entrega</span>
+                      <CheckSquare size={10} className="opacity-30" style={{ color: 'var(--text)' }} />
+                      <span className="text-[8px] font-bold opacity-30 uppercase" style={{ color: 'var(--text)' }}>Entrega</span>
                     </div>
-                    <span className="text-[10px] font-black ml-auto opacity-30">{formData.actualDelivery ? new Date(formData.actualDelivery + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '...'}</span>
+                    <span className="text-[10px] font-black ml-auto opacity-30" style={{ color: 'var(--text)' }}>{formData.actualDelivery ? new Date(formData.actualDelivery + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '...'}</span>
                   </div>
                 </div>
               </div>
@@ -862,64 +898,32 @@ const TaskDetail: React.FC = () => {
                     if (!u) return null;
 
 
-                    // Lógica de Disponibilidade no Período
+                    // Lógica de Disponibilidade no Período (Novo: Alinhado com Quadro de Capacidade)
                     const tStart = formData.scheduledStart || '';
                     const tEnd = formData.estimatedDelivery || '';
-
-                    // Início efetivo: máx(hoje, início da tarefa)
                     const todayStr = new Date().toISOString().split('T')[0];
                     const effectiveStart = tStart && tStart > todayStr ? tStart : todayStr;
 
-                    const workingDaysInPeriod = CapacityUtils.getWorkingDaysInRange(effectiveStart, tEnd, holidays);
-                    const dailyCap = u.dailyAvailableHours || 8;
-                    const continuousCommitment = CapacityUtils.getUserContinuousCommitment(id, projects, projectMembers, dailyCap);
+                    // 1. Saldo no Período (Distribuído)
+                    let periodAvailability = 0;
+                    if (tEnd && effectiveStart <= tEnd) {
+                      const availData = CapacityUtils.getUserAvailabilityInRange(
+                        u, effectiveStart, tEnd, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences
+                      );
+                      periodAvailability = availData.balance;
+                    }
 
-                    // Capacidade bruta no período (já descontando compromisso contínuo)
-                    const grossAvailability = Math.max(0, dailyCap - continuousCommitment) * workingDaysInPeriod;
-
-                    // Horas reservadas em OUTRAS tarefas que se sobrepõem a esse período
-                    const otherTasksReserved = tasks
-                      .filter(t =>
-                        t.id !== (isNew ? undefined : taskId) &&
-                        !t.deleted_at &&
-                        t.status !== 'Done' &&
-                        (String(t.developerId) === String(id) || t.collaboratorIds?.some(cid => String(cid) === String(id)))
-                      )
-                      .reduce((sum, t) => {
-                        const otherStart = t.scheduledStart || t.actualStart || '';
-                        const otherEnd = t.estimatedDelivery || '';
-                        // Verifica se há sobreposição com o período desta tarefa
-                        if (!otherEnd || (tEnd && otherStart > tEnd) || (effectiveStart && otherEnd < effectiveStart)) return sum;
-                        // Busca horas apontadas pelo usuário na outra tarefa
-                        const reportedOnOther = timesheetEntries
-                          .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(id))
-                          .reduce((s, e) => s + (Number(e.totalHours) || 0), 0);
-
-                        // Busca alocação específica desse membro nessa tarefa
-                        let allocation = 0;
-                        const alloc = taskMemberAllocations.find(a => String(a.taskId) === String(t.id) && String(a.userId) === String(id));
-                        if (alloc) {
-                          allocation = alloc.reservedHours;
-                        } else {
-                          // Fallback: divide igualmente entre membros
-                          const teamSize = Array.from(new Set([t.developerId, ...(t.collaboratorIds || [])])).filter(Boolean).length || 1;
-                          allocation = (Number(t.estimatedHours) || 0) / teamSize;
-                        }
-
-                        // Considera apenas o esforço restante
-                        return sum + Math.max(0, allocation - reportedOnOther);
-                      }, 0);
-
-                    let periodAvailability = Math.max(0, grossAvailability - otherTasksReserved);
+                    // 2. Saldo Mensal (Referência absoluta do Quadro de Capacidade)
+                    const currentMonthStr = todayStr.substring(0, 7);
+                    const monthlyData = CapacityUtils.getUserMonthlyAvailability(
+                      u, currentMonthStr, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences
+                    );
+                    const monthlyBalance = monthlyData.balance;
 
                     // REGRA DE ATRASO: Se a tarefa já passou da data de entrega, está atrasada e não concluída,
-                    // mostramos o Saldo Disponível do Mês inteiro como salva-guarda, já que o período (dias úteis) zerou.
+                    // mostramos o Saldo Disponível do Mês inteiro como salva-guarda.
                     if (tEnd && tEnd < todayStr && formData.status !== 'Done') {
-                      const currentMonthStr = todayStr.substring(0, 7);
-                      const monthlyData = CapacityUtils.getUserMonthlyAvailability(
-                        u, currentMonthStr, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences
-                      );
-                      periodAvailability = monthlyData.balance;
+                      periodAvailability = monthlyBalance;
                     }
 
                     const teamCount = Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])])).filter(Boolean).length;
@@ -934,7 +938,7 @@ const TaskDetail: React.FC = () => {
                       currentForecast = totalTaskHours / teamCount;
                     }
 
-                    const memberRealHours = taskHours.filter(h => h.userId === id).reduce((sum, h) => sum + (Number(h.totalHours) || 0), 0);
+                    const memberRealHours = taskHours.filter((h: any) => h.userId === id).reduce((sum: number, h: any) => sum + (Number(h.totalHours) || 0), 0);
                     const distributionPercent = totalTaskHours > 0 ? (currentForecast / totalTaskHours) * 100 : 0;
                     return (
                       <div key={id} className="flex flex-col gap-1.5 p-3 rounded-xl border bg-[var(--bg)] border-[var(--border)] group/member relative">
@@ -959,31 +963,41 @@ const TaskDetail: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 border-t border-[var(--border)] pt-2 border-dashed">
-                          {/* Saldo Disponível no Período */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-2 border-t border-[var(--border)] pt-2 border-dashed">
+                          {/* Saldo no Período */}
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black uppercase opacity-40">Saldo Disp.</span>
+                            <span className="text-[9px] font-black uppercase opacity-40">Saldo Período</span>
                             {formData.status === 'Done' ? (
                               <span className="text-[10px] font-black text-[var(--muted)] opacity-50 tabular-nums">
                                 --
                               </span>
                             ) : (
-                              <span className={`text-[10px] font-black tabular-nums ${periodAvailability < currentForecast ? 'text-red-500' : 'text-indigo-500'}`}>
+                              <span className={`text-[10px] font-black tabular-nums ${periodAvailability < 0 ? 'text-red-500' : 'text-indigo-500'}`}>
                                 {formatDecimalToTime(periodAvailability)}
                               </span>
                             )}
                           </div>
 
-                          {/* Distribuição de Carga */}
+                          {/* Saldo Mensal (Fixo do Quadro) */}
                           <div className="flex flex-col border-l border-[var(--border)] pl-3">
-                            <span className="text-[9px] font-black uppercase opacity-40">Distribuição</span>
+                            <span className="text-[9px] font-black uppercase opacity-40 flex items-center gap-1">
+                              <Lock size={8} className="opacity-40" /> Saldo Mensal
+                            </span>
+                            <span className={`text-[10px] font-black tabular-nums ${(monthlyBalance ?? 0) < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                              {monthlyBalance !== null ? formatDecimalToTime(monthlyBalance) : '--'}
+                            </span>
+                          </div>
+
+                          {/* Alocação na Tarefa */}
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black uppercase opacity-40">Alocação Tarefa</span>
                             <span className="text-[10px] font-black text-amber-500 tabular-nums">
                               {distributionPercent.toFixed(1)}%
                             </span>
                           </div>
 
                           {/* Allocation Input */}
-                          <div className="flex flex-col group/alloc">
+                          <div className="flex flex-col border-l border-[var(--border)] pl-3 group/alloc">
                             <span className="text-[9px] font-black uppercase group-focus-within/alloc:text-blue-500 transition-colors">
                               <span className="opacity-40">Horas Tarefa</span>
                               <span className="opacity-20 ml-1">/ {formatDecimalToTime(totalTaskHours)}</span>
@@ -1001,8 +1015,8 @@ const TaskDetail: React.FC = () => {
                                 onBlur={() => {
                                   if (editingMemberHours[id] !== undefined) {
                                     const dec = parseTimeToDecimal(editingMemberHours[id]);
-                                    setLocalTaskAllocations(prev => ({ ...prev, [id]: dec }));
-                                    setEditingMemberHours(prev => {
+                                    setLocalTaskAllocations((prev: any) => ({ ...prev, [id]: dec }));
+                                    setEditingMemberHours((prev: any) => {
                                       const next = { ...prev };
                                       delete next[id];
                                       return next;
@@ -1018,11 +1032,16 @@ const TaskDetail: React.FC = () => {
                           </div>
 
                           {/* Real Execution */}
-                          <div className="flex flex-col border-l border-[var(--border)] pl-3">
-                            <span className="text-[9px] font-black uppercase opacity-40">Real Exec.</span>
-                            <span className={`text-[10px] font-black tabular-nums ${memberRealHours > currentForecast && currentForecast > 0 ? 'text-red-500' : memberRealHours > 0 ? 'text-emerald-500' : 'opacity-30'}`}>
-                              {formatDecimalToTime(memberRealHours)}
-                            </span>
+                          <div className="flex flex-col col-span-2 border-t border-[var(--border)] pt-2 border-dotted mt-1">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[9px] font-black uppercase opacity-40">Execução Real</span>
+                              <span className={`text-[10px] font-black tabular-nums ${memberRealHours > currentForecast && currentForecast > 0 ? 'text-red-500' : memberRealHours > 0 ? 'text-emerald-500' : 'opacity-30'}`}>
+                                {formatDecimalToTime(memberRealHours)}
+                              </span>
+                            </div>
+                            {memberRealHours > currentForecast && currentForecast > 0 && (
+                              <p className="text-[7px] font-black text-red-500 uppercase mt-0.5 animate-pulse">Excedeu alocação!</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1082,8 +1101,8 @@ const TaskDetail: React.FC = () => {
                             <td className="py-5 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[var(--bg)] border border-[var(--border)] overflow-hidden flex items-center justify-center text-[11px] font-black shadow-sm">
-                                  {users.find(u => u.id === entry.userId)?.avatarUrl ? (
-                                    <img src={users.find(u => u.id === entry.userId)?.avatarUrl} className="w-full h-full object-cover" />
+                                  {users.find((u: any) => u.id === entry.userId)?.avatarUrl ? (
+                                    <img src={users.find((u: any) => u.id === entry.userId)?.avatarUrl} className="w-full h-full object-cover" />
                                   ) : (
                                     <span style={{ color: 'var(--muted)' }}>{entry.userName?.substring(0, 2).toUpperCase()}</span>
                                   )}
@@ -1133,7 +1152,7 @@ const TaskDetail: React.FC = () => {
                   ATENÇÃO: Foram encontrados {taskHours.length} apontamentos ({totalTaskHours}h total).
                 </p>
                 <div className="max-h-32 overflow-y-auto space-y-2 mb-4 scrollbar-hide">
-                  {taskHours.map(h => (
+                  {taskHours.map((h: any) => (
                     <div key={h.id} className="text-[10px] flex justify-between items-center p-2 bg-white dark:bg-black/20 rounded-lg">
                       <span className="font-bold">{new Date(h.date).toLocaleDateString()}</span>
                       <span className="opacity-70">{h.userName}</span>
@@ -1205,8 +1224,8 @@ const TaskDetail: React.FC = () => {
                 <button onClick={() => setIsAddMemberOpen(false)}><X size={18} /></button>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {users.filter(u => u.active !== false && projectMembers.some(pm => String(pm.id_projeto) === formData.projectId && String(pm.id_colaborador) === u.id) && u.id !== formData.developerId && !formData.collaboratorIds?.includes(u.id)).map(u => (
-                  <button key={u.id} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--surface-hover)]" onClick={() => { setFormData({ ...formData, collaboratorIds: [...(formData.collaboratorIds || []), u.id] }); setIsAddMemberOpen(false); markDirty(); }}>
+                {users.filter((u: any) => u.active !== false && projectMembers.some((pm: any) => String(pm.id_projeto) === formData.projectId && String(pm.id_colaborador) === u.id) && u.id !== formData.developerId && !formData.collaboratorIds?.includes(u.id)).map((u: any) => (
+                  <button key={u.id} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--surface-hover)]" onClick={() => { setFormData((prev: any) => ({ ...prev, collaboratorIds: [...(prev.collaboratorIds || []), u.id] })); setIsAddMemberOpen(false); markDirty(); }}>
                     <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] flex items-center justify-center font-bold text-xs">{u.name[0]}</div>
                     <div className="text-left font-bold text-xs uppercase">{u.name}</div>
                   </button>

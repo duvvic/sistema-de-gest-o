@@ -1,12 +1,12 @@
 // ProjectDetailView.tsx - Dashboard Unificado do Projeto
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import {
   ArrowLeft, Plus, Edit, CheckSquare, Clock, Filter, ChevronDown, Check,
   Trash2, LayoutGrid, Target, ShieldAlert, Link as LinkIcon, Users,
   Calendar, Info, Zap, RefreshCw, AlertTriangle, StickyNote, DollarSign,
-  TrendingUp, BarChart2, Save, FileText, Settings, Shield, AlertCircle, Archive
+  TrendingUp, BarChart2, Save, FileText, Settings, Shield, AlertCircle, Archive, X
 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +28,7 @@ const ONE_DAY = 86400000;
 
 const ProjectDetailView: React.FC = () => {
   const { projectId, clientId: paramClientId } = useParams<{ projectId: string; clientId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const isNew = projectId === 'new' || location.pathname.endsWith('/new');
@@ -41,10 +42,22 @@ const ProjectDetailView: React.FC = () => {
 
   const { currentUser, isAdmin } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'tasks' | 'technical'>('technical');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'technical'>(() => {
+    // URL param tem prioridade máxima
+    const queryTab = searchParams.get('tab');
+    if (queryTab === 'tasks' || queryTab === 'technical') return queryTab as 'tasks' | 'technical';
+    // Admins sempre abrem na Visão Geral; colaboradores sempre na aba Tarefas
+    return isAdmin ? 'technical' : 'tasks';
+  });
+
+  const handleTabChange = (tab: 'tasks' | 'technical') => {
+    setActiveTab(tab);
+    setSearchParams({ tab }, { replace: true });
+  };
   const [isEditing, setIsEditing] = useState(isNew || isEditingRoute);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'project', force?: boolean } | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,12 +86,11 @@ const ProjectDetailView: React.FC = () => {
     }
   };
 
-  // Redirecionar colaboradores para aba de tarefas
   useEffect(() => {
-    if (!isAdmin) {
-      setActiveTab('tasks');
+    if (projectId && projectId !== 'new') {
+      localStorage.setItem(`project_last_tab_${projectId}`, activeTab);
     }
-  }, [isAdmin]);
+  }, [activeTab, projectId]);
 
   const project = projects.find((p: Project) => p.id === projectId);
   const client = project ? clients.find((c: Client) => c.id === project.clientId) : (paramClientId ? clients.find((c: Client) => c.id === paramClientId) : null);
@@ -92,7 +104,7 @@ const ProjectDetailView: React.FC = () => {
     description: '',
     managerClient: '',
     responsibleNicLabsId: '',
-    startDate: '',
+    startDate: new Date().toISOString().split('T')[0],
     estimatedDelivery: '',
     startDateReal: '',
     endDateReal: '',
@@ -120,19 +132,17 @@ const ProjectDetailView: React.FC = () => {
 
   // balanceAllocations removido (cálculos nas tarefas)
 
+  // --- AUTOMATION: Fill End Date based on Start Date if empty ---
   useEffect(() => {
-    const fetchMembers = async () => {
-      if (!projectId || isNew) return;
-      try {
-        const m = await getProjectMembers(projectId);
-        const ids = m.map((p: ProjectMember) => String(p.id_colaborador));
-        setSelectedUsers(ids);
-      } catch (err: any) {
-        console.error('Erro ao buscar membros:', err);
-      }
-    };
-    fetchMembers();
+    if (formData.startDate && !formData.estimatedDelivery) {
+      const [y, m] = formData.startDate.split('-').map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const endOfMonth = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      setFormData(prev => ({ ...prev, estimatedDelivery: endOfMonth }));
+    }
+  }, [formData.startDate, formData.estimatedDelivery]);
 
+  useEffect(() => {
     if (project) {
       setFormData({
         name: project.name || '',
@@ -182,6 +192,9 @@ const ProjectDetailView: React.FC = () => {
       }
     } else if (isNew) {
       // Reset form for new project
+      const today = new Date();
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
       setFormData({
         name: '',
         clientId: paramClientId || '',
@@ -190,8 +203,8 @@ const ProjectDetailView: React.FC = () => {
         description: '',
         managerClient: '',
         responsibleNicLabsId: '',
-        startDate: new Date().toISOString().split('T')[0],
-        estimatedDelivery: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+        startDate: today.toISOString().split('T')[0],
+        estimatedDelivery: lastDayOfMonth.toISOString().split('T')[0],
         startDateReal: '',
         endDateReal: '',
         criticalDate: '',
@@ -211,6 +224,15 @@ const ProjectDetailView: React.FC = () => {
       setMemberAllocations({});
     }
   }, [project, projectId, projectMembers, isNew, paramClientId]);
+
+  // --- AUTOMATION: Default Delivery Date to End of Month if empty ---
+  useEffect(() => {
+    if (isEditing && formData.startDate && !formData.estimatedDelivery) {
+      const d = new Date(formData.startDate + 'T12:00:00');
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      setFormData(prev => ({ ...prev, estimatedDelivery: lastDay.toISOString().split('T')[0] }));
+    }
+  }, [formData.startDate, formData.estimatedDelivery, isEditing]);
 
   const projectTasks = useMemo(() => {
     const pTasks = tasks.filter((t: Task) => t.projectId === projectId);
@@ -266,15 +288,19 @@ const ProjectDetailView: React.FC = () => {
       : 1;
 
     const projectFactors = projectTasks.map((t: Task) => {
-      const taskDays = (t.startDate && t.endDate)
-        ? getBusinessDays(t.startDate.split('T')[0], t.endDate.split('T')[0])
+      const start = t.scheduledStart || t.actualStart;
+      const end = t.estimatedDelivery;
+      const taskDays = (start && end)
+        ? getBusinessDays(start.split('T')[0], end.split('T')[0])
         : 1;
       const factor = taskDays / projectDays;
       return { id: t.id, factor, progress: t.progress || 0 };
     });
     const totalFactor = projectFactors.reduce((acc: number, f: any) => acc + f.factor, 0);
 
-    const weightedProgress = CapacityUtils.calculateProjectWeightedProgress(projectId!, projectTasks);
+    const weightedProgress = totalFactor > 0
+      ? (projectFactors.reduce((acc: number, f: any) => acc + (f.factor * f.progress), 0) / totalFactor)
+      : 0;
 
     let plannedProgress = 0;
     if (project.startDate && project.estimatedDelivery) {
@@ -297,13 +323,13 @@ const ProjectDetailView: React.FC = () => {
       }
     }
 
-    const memberTimesheets = pTimesheets.filter(e => memberIds.has(String(e.userId)));
+    const memberTimesheets = pTimesheets.filter((e: TimesheetEntry) => memberIds.has(String(e.userId)));
 
     const realStartDate = memberTimesheets.length > 0
       ? new Date(Math.min(...memberTimesheets.map((e: TimesheetEntry) => new Date(e.date + 'T12:00:00').getTime())))
       : null;
 
-    const allTasksDone = projectTasks.length > 0 && projectTasks.every(t => t.status === 'Done');
+    const allTasksDone = projectTasks.length > 0 && projectTasks.every((t: Task) => t.status === 'Done');
     const realEndDate = allTasksDone && memberTimesheets.length > 0
       ? new Date(Math.max(...memberTimesheets.map((e: TimesheetEntry) => new Date(e.date + 'T12:00:00').getTime())))
       : null;
@@ -313,7 +339,7 @@ const ProjectDetailView: React.FC = () => {
       taskEntries.map((e: TimesheetEntry) => e.date.substring(0, 7))
     )).sort();
 
-    const burnedByMonth = months.map((month: string) => {
+    const monthlyAllocation = (months as string[]).map((month: string) => {
       const hours = taskEntries
         .filter((e: TimesheetEntry) => e.date.startsWith(month))
         .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
@@ -353,7 +379,53 @@ const ProjectDetailView: React.FC = () => {
       continuousPlannedValue = businessDays * ((project as any).valor_diario || 0);
     }
 
-    return { committedCost, consumedHours, weightedProgress, totalEstimated, plannedProgress, projection, realStartDate, realEndDate, projectFactors, totalFactor, continuousPlannedValue };
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const tasksDelayed = projectTasks.filter((t: Task) => {
+      if (t.status === 'Done') return false;
+      if (!t.estimatedDelivery) return false;
+      const deliveryDate = new Date(t.estimatedDelivery + 'T23:59:59');
+      return now > deliveryDate;
+    });
+
+    const tasksDueToday = projectTasks.filter((t: Task) => {
+      if (t.status === 'Done') return false;
+      if (!t.estimatedDelivery) return false;
+      const deliveryDate = new Date(t.estimatedDelivery + 'T12:00:00').toISOString().split('T')[0];
+      const todayStr = now.toISOString().split('T')[0];
+      return deliveryDate === todayStr;
+    });
+
+    const tasksOvertime = projectTasks.filter((t: Task) => {
+      const reported = timesheetEntries
+        .filter((e: TimesheetEntry) => e.taskId === t.id)
+        .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
+      return (Number(t.estimatedHours) || 0) > 0 && reported > (Number(t.estimatedHours) || 0);
+    });
+
+    const hasCriticalTask = tasksDelayed.length > 0 || tasksOvertime.length > 0;
+    const hasTodayTask = tasksDueToday.length > 0;
+
+    return {
+      committedCost,
+      consumedHours,
+      weightedProgress,
+      totalEstimated,
+      plannedProgress,
+      projection,
+      realStartDate,
+      realEndDate,
+      projectFactors,
+      totalFactor,
+      continuousPlannedValue,
+      hasCriticalTask,
+      hasTodayTask,
+      tasksDelayedCount: tasksDelayed.length,
+      tasksOvertimeCount: tasksOvertime.length,
+      tasksDueTodayCount: tasksDueToday.length,
+      projectDays
+    };
   }, [project, projectTasks, timesheetEntries, users, projectId, projectMembers, holidays]);
 
   const teamOperationalBalance = useMemo(() => {
@@ -381,7 +453,7 @@ const ProjectDetailView: React.FC = () => {
             // A alocação real consumida é o que foi apontado (no máximo o estimado)
             const actualOnTask = timesheetEntries
               .filter((e: TimesheetEntry) => String(e.taskId) === String(t.id) && String(e.userId) === userId)
-              .reduce((s, e) => s + (Number(e.totalHours) || 0), 0);
+              .reduce((s: number, e: TimesheetEntry) => s + (Number(e.totalHours) || 0), 0);
             return sum + Math.min(estimated, actualOnTask);
           }
 
@@ -457,19 +529,19 @@ const ProjectDetailView: React.FC = () => {
   // --- AUTOMATION: Auto-start project if there is activity ---
   useEffect(() => {
     if (!projectId || !isAdmin || isNew) return;
-    const projectToCheck = projects.find(p => p.id === projectId);
+    const projectToCheck = projects.find((p: Project) => p.id === projectId);
     if (!projectToCheck) return;
 
     // Only check if currently "Not Started"
     if (projectToCheck.status === 'Não Iniciado') {
       const hasProgress = (performance?.weightedProgress || 0) > 0;
-      const hasActiveTasks = projectTasks.some(t => t.status === 'In Progress' || t.status === 'Review' || t.status === 'Done');
-      const hasHours = timesheetEntries.some(e => e.projectId === projectId);
+      const hasActiveTasks = projectTasks.some((t: Task) => t.status === 'In Progress' || t.status === 'Review' || t.status === 'Done');
+      const reported = timesheetEntries.filter((s: TimesheetEntry) => s.projectId === projectId).reduce((acc: number, e: TimesheetEntry) => acc + (Number(e.totalHours) || 0), 0);
 
-      if (hasProgress || hasActiveTasks || hasHours) {
+      if (hasProgress || hasActiveTasks || reported > 0) {
         // Auto-update to "In Progress"
         updateProject(projectId, { status: 'Em Andamento' } as any)
-          .catch(err => console.error("Falha ao iniciar projeto automaticamente:", err));
+          .catch((err: any) => console.error("Falha ao iniciar projeto automaticamente:", err));
       }
     }
   }, [project, projectId, performance, projectTasks, timesheetEntries, updateProject, isAdmin]);
@@ -483,6 +555,21 @@ const ProjectDetailView: React.FC = () => {
     //   return;
     // }
 
+
+    const errors: string[] = [];
+    if (!formData.name) errors.push('Nome do Projeto');
+    if (!formData.startDate) errors.push('Data de Início');
+    if (!formData.estimatedDelivery) errors.push('Data de Entrega');
+    if (Number(formData.horas_vendidas) <= 0) errors.push('Horas Vendidas');
+    if (selectedUsers.length === 0) errors.push('Pelo menos um membro na Equipe');
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setValidationErrors([]);
 
     setLoading(true);
     try {
@@ -530,7 +617,7 @@ const ProjectDetailView: React.FC = () => {
 
       // Remover membros que não estão mais na lista
       if (!isNew) {
-        const toRemove = initialMembers.filter(uid => !selectedUsers.includes(uid));
+        const toRemove = initialMembers.filter((uid: string) => !selectedUsers.includes(uid));
         for (const userId of toRemove) await removeProjectMember(targetProjectId, userId);
       }
 
@@ -553,19 +640,19 @@ const ProjectDetailView: React.FC = () => {
 
     // Filtro principal: Ocultar o que é arquivado ou fora do fluxo por padrão
     if (!showArchived) {
-      t = t.filter(task => !task.fora_do_fluxo);
+      t = t.filter((task: Task) => !task.fora_do_fluxo);
 
       // Se não houver filtro de status específico para 'Done', oculta os concluídos
       if (selectedStatus !== 'Done') {
-        t = t.filter(task => task.status !== 'Done');
+        t = t.filter((task: Task) => task.status !== 'Done');
       }
     }
 
     if (selectedStatus !== 'Todos') {
-      t = t.filter(task => task.status === selectedStatus);
+      t = t.filter((task: Task) => task.status === selectedStatus);
     }
 
-    return t.sort((a, b) => {
+    return t.sort((a: Task, b: Task) => {
       const dateA = a.estimatedDelivery ? new Date(a.estimatedDelivery).getTime() : 2147483647000;
       const dateB = b.estimatedDelivery ? new Date(b.estimatedDelivery).getTime() : 2147483647000;
       return dateA - dateB;
@@ -578,16 +665,16 @@ const ProjectDetailView: React.FC = () => {
     if (!project || !projectId) return {};
     const metrics: Record<string, { reported: number; remaining: number }> = {};
 
-    const projectMems = projectMembers.filter(pm => String(pm.id_projeto) === projectId);
+    const projectMems = projectMembers.filter((pm: ProjectMember) => String(pm.id_projeto) === projectId);
 
-    projectMems.forEach(pm => {
+    projectMems.forEach((pm: ProjectMember) => {
       const userId = String(pm.id_colaborador);
       const reported = timesheetEntries
-        .filter(e => e.projectId === projectId && e.userId === userId)
-        .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+        .filter((e: TimesheetEntry) => e.projectId === projectId && e.userId === userId)
+        .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
 
-      const userTasks = tasks.filter(t => t.projectId === projectId && (t.developerId === userId || t.collaboratorIds?.includes(userId)));
-      const estimated = userTasks.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0);
+      const userTasks = tasks.filter((t: Task) => t.projectId === projectId && (t.developerId === userId || t.collaboratorIds?.includes(userId)));
+      const estimated = userTasks.reduce((sum: number, t: Task) => sum + (Number(t.estimatedHours) || 0), 0);
       const remaining = Math.max(0, estimated - reported);
 
       metrics[userId] = { reported, remaining };
@@ -600,6 +687,28 @@ const ProjectDetailView: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+      {/* BANNER DE VALIDAÇÃO */}
+      {validationErrors.length > 0 && isEditing && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 p-4 sticky top-0 z-[60] backdrop-blur-md">
+          <div className="max-w-[1400px] mx-auto flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+              <AlertTriangle className="text-yellow-600" size={24} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-yellow-800 uppercase tracking-widest leading-none mb-1">Campos Obrigatórios Pendentes</h3>
+              <p className="text-xs font-bold text-yellow-700 opacity-80 leading-relaxed">
+                Por favor, preencha os seguintes campos destacados em amarelo: <span className="font-black text-yellow-900">{validationErrors.join(', ')}</span>
+              </p>
+            </div>
+            <button
+              onClick={() => setValidationErrors([])}
+              className="ml-auto p-2 hover:bg-yellow-500/10 rounded-lg transition-colors text-yellow-700"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
       {/* HEADER */}
       <div className="px-8 py-6 bg-gradient-to-r from-[#1e1b4b] to-[#4c1d95] shadow-lg flex items-center justify-between text-white z-20">
         <div className="flex items-center gap-6">
@@ -611,22 +720,42 @@ const ProjectDetailView: React.FC = () => {
                 {isEditing ? (
                   <input
                     value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
                     onKeyDown={handleKeyDown}
-                    className="bg-white/10 border-b border-white outline-none px-2 py-1 text-xl font-bold rounded transition-colors min-w-[300px]"
+                    className={`border-b outline-none px-2 py-1 text-xl font-bold rounded transition-colors min-w-[300px] ${!formData.name ? 'bg-yellow-500/20 border-yellow-500' : 'bg-white/10 border-white text-white'}`}
                   />
                 ) : (
                   <h1 className="text-xl font-bold">{project?.name || 'Novo Projeto'}</h1>
                 )}
 
                 <div className="flex items-center gap-2">
-                  {isAdmin && performance && ((performance?.weightedProgress || 0) < (performance?.plannedProgress || 0) - 5) && (
-                    <span
-                      className="text-[10px] font-black uppercase bg-red-500 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg shadow-red-500/20 animate-pulse"
-                      title="Projeto com progresso abaixo do planejado."
-                    >
-                      <Clock size={12} /> ATR
-                    </span>
+                  {isAdmin && (performance?.hasCriticalTask || performance?.hasTodayTask) && (
+                    <div className="flex items-center gap-2">
+                      {performance.tasksDelayedCount > 0 && (
+                        <span
+                          className="text-[10px] font-black uppercase bg-red-500 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg shadow-red-500/20 animate-pulse"
+                          title={`${performance.tasksDelayedCount} tarefas atrasadas.`}
+                        >
+                          <Clock size={12} /> ATRASADO
+                        </span>
+                      )}
+                      {performance.tasksDelayedCount === 0 && performance.tasksOvertimeCount > 0 && (
+                        <span
+                          className="text-[10px] font-black uppercase bg-orange-500 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg shadow-orange-500/20"
+                          title={`${performance.tasksOvertimeCount} tarefas com horas excedidas.`}
+                        >
+                          <Clock size={12} /> HORAS EXCEDIDAS
+                        </span>
+                      )}
+                      {performance.tasksDueTodayCount > 0 && (
+                        <span
+                          className="text-[10px] font-black uppercase bg-amber-500 text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg shadow-amber-500/20"
+                          title={`${performance.tasksDueTodayCount} tarefas vencendo hoje.`}
+                        >
+                          <Calendar size={12} /> HOJE
+                        </span>
+                      )}
+                    </div>
                   )}
                   <span className="text-[10px] font-black uppercase bg-white/20 px-2.5 py-1 rounded-lg tracking-widest border border-white/10">
                     {project ? getProjectStatusByTimeline(project) : 'Draft'}
@@ -670,14 +799,14 @@ const ProjectDetailView: React.FC = () => {
           <div className="hidden md:flex bg-black/20 p-1 rounded-2xl gap-1">
             {isAdmin && (
               <button
-                onClick={() => setActiveTab('technical')}
+                onClick={() => handleTabChange('technical')}
                 className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'technical' ? 'bg-white text-purple-900 shadow-sm' : 'text-white/60 hover:text-white'}`}
               >
                 Visão Geral
               </button>
             )}
             <button
-              onClick={() => setActiveTab('tasks')}
+              onClick={() => handleTabChange('tasks')}
               className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'tasks' ? 'bg-white text-purple-900 shadow-sm' : 'text-white/60 hover:text-white'}`}
             >
               Tarefas
@@ -707,8 +836,29 @@ const ProjectDetailView: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto space-y-5">
 
+          {/* VALIDATION BANNER FOR MANDATORY FIELDS - only show if fields are actually missing */}
+          {isEditing && (
+            (!formData.name || !formData.startDate || !formData.estimatedDelivery)
+          ) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="p-4 rounded-[2rem] border bg-yellow-500/10 border-yellow-500/50 flex flex-col gap-2"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="text-yellow-600" size={20} />
+                  <h3 className="text-xs font-black uppercase text-yellow-700">Campos Obrigatórios Pendentes</h3>
+                </div>
+                <ul className="text-[10px] font-bold text-yellow-700/80 list-disc ml-8 grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {!formData.name && <li>Nome do Projeto</li>}
+                  {!formData.startDate && <li>Data de Início</li>}
+                  {!formData.estimatedDelivery && <li>Data Limite de Entrega</li>}
+                </ul>
+              </motion.div>
+            )}
+
           {/* CRITICAL STATUS BANNER */}
-          {isAdmin && (((performance?.weightedProgress || 0) < (performance?.plannedProgress || 0) - 5) || ((performance?.consumedHours || 0) > (project?.horas_vendidas || 0) && (project?.horas_vendidas || 0) > 0)) && (
+          {isAdmin && performance?.hasCriticalTask && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -723,7 +873,7 @@ const ProjectDetailView: React.FC = () => {
                     Atenção: Indicadores Críticos
                   </h3>
                   <p className="text-[10px] font-bold opacity-70 text-red-700">
-                    {`Este projeto apresenta ${((performance?.weightedProgress || 0) < (performance?.plannedProgress || 0) - 5) ? 'atraso no cronograma' : ''}${((performance?.weightedProgress || 0) < (performance?.plannedProgress || 0) - 5) && ((performance?.consumedHours || 0) > (project?.horas_vendidas || 0)) ? ' e ' : ''}${((performance?.consumedHours || 0) > (project?.horas_vendidas || 0)) ? 'estouro de orçamento de horas' : ''}.`}
+                    {`Este projeto apresenta ${performance.tasksDelayedCount > 0 ? `${performance.tasksDelayedCount} tarefas em atraso` : ''}${performance.tasksDelayedCount > 0 && performance.tasksOvertimeCount > 0 ? ' e ' : ''}${performance.tasksOvertimeCount > 0 ? `${performance.tasksOvertimeCount} tarefas com horas excedidas` : ''}.`}
                   </p>
                 </div>
               </div>
@@ -752,9 +902,16 @@ const ProjectDetailView: React.FC = () => {
                 {/* KPI ROW */}
                 <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
                   {/* Resumo do Planejamento - Cronograma & Peso */}
-                  <div className="p-4 rounded-[32px] border shadow-sm relative overflow-hidden transition-all hover:shadow-md flex flex-col" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', height: '350px' }}>
-                    <div className="flex items-center justify-between mb-2 shrink-0">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--muted)' }}>TAREFAS</h4>
+                  <div className="p-4 rounded-[32px] border shadow-sm relative overflow-hidden transition-all hover:shadow-md flex flex-col" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', height: '280px' }}>
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--muted)' }}>Cronograma e Peso</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-black text-purple-600/80 bg-purple-500/5 px-2 py-0.5 rounded-full border border-purple-500/10 uppercase tracking-tighter">
+                            {formData.startDate ? new Date(formData.startDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'S/D'} → {formData.estimatedDelivery ? new Date(formData.estimatedDelivery + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : 'S/D'}
+                          </span>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2">
                         <motion.button
                           whileHover={{ scale: 1.1 }}
@@ -796,7 +953,7 @@ const ProjectDetailView: React.FC = () => {
                           const deliveryDate = task.estimatedDelivery ? new Date(task.estimatedDelivery + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : null;
 
                           // Peso = duração da tarefa / soma de todas as durações (= mesma fórmula do TaskDetail)
-                          const taskFactor = performance?.projectFactors?.find(f => f.id === task.id)?.factor || 0;
+                          const taskFactor = performance?.projectFactors?.find((f: { id: string; factor: number }) => f.id === task.id)?.factor || 0;
                           const weight = (performance?.totalFactor || 0) > 0 ? (taskFactor / performance!.totalFactor) * 100 : 0;
 
                           const taskSoldHours = (project?.horas_vendidas || 0) > 0 ? (weight / 100) * project!.horas_vendidas : (Number(task.estimatedHours) || 0);
@@ -838,11 +995,11 @@ const ProjectDetailView: React.FC = () => {
                                         task.status === 'In Progress' ? 'Andamento' :
                                           task.status === 'Testing' ? 'Teste' : 'Concluído'}
                                   </span>
-                                  <span className={`px-1 py-px rounded shrink-0 ${task.progress === 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                  <span className={`px-1.5 py-0.5 rounded-lg shrink-0 font-black text-[10px] tabular-nums ${task.progress === 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-600'}`}>
                                     {task.progress}%
                                   </span>
-                                  <span className="opacity-20 tabular-nums truncate">
-                                    {startDate} → {deliveryDate || '--/--'}
+                                  <span className="flex items-center gap-1.5 bg-slate-500/5 px-2 py-0.5 rounded-lg border border-slate-500/10 tabular-nums truncate font-black text-[9px] text-purple-600">
+                                    <Calendar size={8} /> {startDate} → {deliveryDate || '--/--'}
                                   </span>
                                   {collaboratorCount > 1 && (
                                     <span className="bg-amber-500/10 text-amber-600 px-1 py-px rounded flex items-center gap-0.5 shrink-0" title={`${collaboratorCount} colaboradores`}>
@@ -873,6 +1030,38 @@ const ProjectDetailView: React.FC = () => {
                           <p className="text-[9px] font-bold uppercase">Sem tarefas</p>
                         </div>
                       )}
+                    </div>
+
+                    {/* Footer com Totais do Cronograma */}
+                    <div className="mt-4 pt-4 border-t border-dashed shrink-0" style={{ borderColor: 'var(--border)' }}>
+                      <div className="flex items-center justify-between px-2 gap-4">
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black uppercase opacity-40 tracking-wider">Total Pesos</span>
+                          <span className="text-[14px] font-black text-purple-600">
+                            {(() => {
+                              // Soma de pesos de TODAS as tarefas do projeto para garantir consistência
+                              const rawSum = projectTasks.reduce((acc: number, t: Task) => {
+                                const f = performance?.projectFactors?.find((pf: any) => pf.id === t.id)?.factor || 0;
+                                return acc + ((performance?.totalFactor || 0) > 0 ? (f / performance!.totalFactor) * 100 : 0);
+                              }, 0);
+                              const sum = Math.min(100, rawSum);
+                              return Math.round(sum) + '%';
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex flex-col text-center">
+                          <span className="text-[8px] font-black uppercase opacity-40 tracking-wider">Capacidade</span>
+                          <span className="text-[14px] font-black text-amber-500">
+                            {((performance?.projectDays || 0) * 8)}h
+                          </span>
+                        </div>
+                        <div className="flex flex-col text-right">
+                          <span className="text-[8px] font-black uppercase opacity-40 tracking-wider">Horas Vendidas</span>
+                          <span className="text-[14px] font-black" style={{ color: 'var(--text)' }}>
+                            {formatDecimalToTime(project?.horas_vendidas || 0)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -974,7 +1163,7 @@ const ProjectDetailView: React.FC = () => {
                               <input
                                 type="number"
                                 value={formData.valor_diario || ''}
-                                onChange={e => setFormData({ ...formData, valor_diario: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, valor_diario: e.target.value === '' ? 0 : Number(e.target.value) })}
                                 onKeyDown={handleKeyDown}
                                 className="text-xs p-2 rounded w-full border outline-none font-bold transition-colors bg-[var(--bg)] border-[var(--border)]"
                                 style={{ color: 'var(--text)' }}
@@ -986,7 +1175,7 @@ const ProjectDetailView: React.FC = () => {
                                 <input
                                   type="number"
                                   value={formData.valor_total_rs || ''}
-                                  onChange={e => setFormData({ ...formData, valor_total_rs: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, valor_total_rs: e.target.value === '' ? 0 : Number(e.target.value) })}
                                   onKeyDown={handleKeyDown}
                                   className="text-xs p-2 rounded w-full border outline-none font-bold transition-colors bg-[var(--bg)] border-[var(--border)]"
                                   style={{ color: 'var(--text)' }}
@@ -997,9 +1186,9 @@ const ProjectDetailView: React.FC = () => {
                                 <input
                                   type="number"
                                   value={formData.horas_vendidas || ''}
-                                  onChange={e => setFormData({ ...formData, horas_vendidas: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, horas_vendidas: e.target.value === '' ? 0 : Number(e.target.value) })}
                                   onKeyDown={handleKeyDown}
-                                  className="text-xs p-2 rounded w-full border outline-none font-bold transition-colors bg-[var(--bg)] border-[var(--border)]"
+                                  className={`text-xs p-2 rounded w-full border outline-none font-bold transition-colors ${Number(formData.horas_vendidas) <= 0 ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                                   style={{ color: 'var(--text)' }}
                                 />
                               </div>
@@ -1035,19 +1224,25 @@ const ProjectDetailView: React.FC = () => {
                   )}
 
                   {/* Timeline do Projeto */}
-                  <div className="p-5 rounded-[32px] border shadow-sm relative transition-all hover:shadow-md h-[350px] flex flex-col" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--muted)' }}>Timeline do Projeto</h4>
+                  <div className="p-5 rounded-[32px] border shadow-sm relative transition-all hover:shadow-md" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--muted)' }}>Timeline do Projeto</h4>
+                      <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <Calendar size={14} />
+                      </div>
+                    </div>
+
                     {isEditing ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-[9px] font-black uppercase mb-1 block" style={{ color: 'var(--muted)' }}>Data de Início</label>
                             <input
                               type="date"
                               value={formData.startDate}
-                              onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, startDate: e.target.value })}
                               onKeyDown={handleKeyDown}
-                              className="text-xs p-2 rounded w-full border outline-none font-bold transition-colors bg-[var(--bg)] border-[var(--border)]"
+                              className={`text-xs p-2 rounded w-full border outline-none font-bold transition-colors ${!formData.startDate ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                               style={{ color: 'var(--text)' }}
                             />
                           </div>
@@ -1056,70 +1251,85 @@ const ProjectDetailView: React.FC = () => {
                             <input
                               type="date"
                               value={formData.estimatedDelivery}
-                              onChange={e => setFormData({ ...formData, estimatedDelivery: e.target.value })}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, estimatedDelivery: e.target.value })}
                               onKeyDown={handleKeyDown}
-                              className="text-xs p-2 rounded w-full border outline-none font-bold transition-colors bg-[var(--bg)] border-[var(--border)]"
+                              className={`text-xs p-2 rounded w-full border outline-none font-bold transition-colors ${!formData.estimatedDelivery ? 'bg-yellow-500/20 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}
                               style={{ color: 'var(--text)' }}
                             />
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex-1 flex flex-col justify-between space-y-8 py-2">
-                        <div className="space-y-8">
-                          <div className="grid grid-cols-2 gap-8">
-                            <div>
-                              <p className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: 'var(--muted)' }}>Data de Início</p>
-                              <p className="text-sm font-black" style={{ color: 'var(--text)' }}>
-                                {project?.startDate ? project?.startDate.split('T')[0].split('-').reverse().join('/') : '--'}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: 'var(--muted)' }}>Início Real</p>
-                              <p className={`text-sm font-black ${performance?.realStartDate ? 'text-emerald-500' : 'opacity-30'}`}>
-                                {performance?.realStartDate ? performance?.realStartDate.toLocaleDateString('pt-BR') : '--'}
-                              </p>
-                            </div>
+                      <div className="flex flex-col gap-3">
+                        {/* Linha de datas: Data de Início + Início Real */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-1">
+                            <p className="text-[8px] font-black uppercase tracking-widest opacity-40">Data de Início</p>
+                            <p className="text-base font-black tracking-tight" style={{ color: 'var(--text)' }}>
+                              {project?.startDate ? project.startDate.split('T')[0].split('-').reverse().join('/') : '--'}
+                            </p>
                           </div>
-
-                          {project?.startDate && project?.estimatedDelivery && (
-                            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-center">
-                              <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest">DATA FIM</p>
-                              <p className="text-sm font-black mt-1" style={{ color: 'var(--text)' }}>
-                                {project.estimatedDelivery.split('T')[0].split('-').reverse().join('/')}
-                              </p>
-                              <p className="text-[8px] font-bold opacity-30 mt-1 uppercase">Baseado no período planejado</p>
-
-                              <div className="mt-3 pt-3 border-t border-amber-500/10">
-                                <p className="text-[12px] font-black text-amber-600">
-                                  {(() => {
-                                    const start = new Date(project.startDate + 'T12:00:00');
-                                    const end = new Date(project.estimatedDelivery + 'T12:00:00');
-                                    let businessDays = 0;
-                                    const current = new Date(start);
-                                    while (current <= end) {
-                                      const day = current.getDay();
-                                      if (day !== 0 && day !== 6) {
-                                        const dateStr = current.toISOString().split('T')[0];
-                                        const isHoliday = holidays.some(h => {
-                                          const hStart = h.date;
-                                          const hEnd = h.endDate || h.date;
-                                          return dateStr >= hStart && dateStr <= hEnd;
-                                        });
-                                        if (!isHoliday) businessDays++;
-                                      }
-                                      current.setDate(current.getDate() + 1);
-                                    }
-                                    return `${businessDays} dias úteis (${businessDays * 8}h totais)`;
-                                  })()}
-                                </p>
-                              </div>
-                            </div>
-                          )}
+                          <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-1">
+                            <p className="text-[8px] font-black uppercase tracking-widest opacity-40">Início Real</p>
+                            <p className={`text-base font-black tracking-tight ${performance?.realStartDate ? 'text-emerald-500' : 'opacity-20'}`}>
+                              {performance?.realStartDate ? performance.realStartDate.toLocaleDateString('pt-BR') : '--'}
+                            </p>
+                          </div>
                         </div>
+
+                        {/* Card de Entrega Estimada */}
+                        {project?.estimatedDelivery ? (
+                          <div className="p-4 rounded-[24px] bg-gradient-to-br from-amber-500/10 via-amber-500/[0.02] to-transparent border border-amber-500/20 relative overflow-hidden group">
+                            <div className="absolute -top-3 -right-3 opacity-[0.04] group-hover:opacity-[0.08] transition-all">
+                              <Clock size={80} />
+                            </div>
+                            <p className="text-[9px] font-black uppercase text-amber-600/60 tracking-[0.3em] mb-1 text-center">Entrega Estimada</p>
+                            <p className="text-3xl font-black tracking-tighter text-white text-center mb-3">
+                              {project.estimatedDelivery.split('T')[0].split('-').reverse().join('/')}
+                            </p>
+                            {project.startDate && (() => {
+                              const start = new Date(project.startDate + 'T12:00:00');
+                              const end = new Date(project.estimatedDelivery + 'T12:00:00');
+                              const today = new Date();
+                              today.setHours(12, 0, 0, 0);
+                              let remaining = 0;
+                              const current = new Date(today > start ? today : start);
+                              while (current <= end) {
+                                const day = current.getDay();
+                                if (day !== 0 && day !== 6) {
+                                  const dateStr = current.toISOString().split('T')[0];
+                                  const isHoliday = holidays.some((h: Holiday) => {
+                                    const hEnd = h.endDate || h.date;
+                                    return dateStr >= h.date && dateStr <= hEnd;
+                                  });
+                                  if (!isHoliday) remaining++;
+                                }
+                                current.setDate(current.getDate() + 1);
+                              }
+                              return (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-amber-500 flex items-center justify-center gap-2">
+                                    <Clock size={11} />
+                                    {remaining} dias úteis disponíveis
+                                  </p>
+                                  <p className="text-[9px] font-bold text-white/40 text-center uppercase tracking-widest">
+                                    Capacidade Período: {(performance?.projectDays || 0) * 8}h ({(performance?.projectDays || 0)} dias úteis)
+                                  </p>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="p-4 rounded-[24px] border border-dashed border-amber-500/20 flex items-center justify-center">
+                            <p className="text-[10px] font-bold opacity-30">Sem data de entrega definida</p>
+                          </div>
+                        )}
+
+
                       </div>
                     )}
                   </div>
+
                 </div>
 
                 {/* MAIN GRID */}
@@ -1141,15 +1351,15 @@ const ProjectDetailView: React.FC = () => {
                                   {isEditing ? (
                                     <select
                                       value={formData.clientId}
-                                      onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+                                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, clientId: e.target.value })}
                                       onKeyDown={handleKeyDown}
                                       className={`w-full p-1 rounded vertical-select text-[10px] font-bold outline-none mt-1 border transition-colors bg-[var(--bg)] border-[var(--border)]`}
                                       style={{ color: 'var(--text)' }}
                                     >
                                       <option value="">Selecione...</option>
-                                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                      {clients.map((c: Client) => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
-                                  ) : <p className="text-xs font-black truncate" style={{ color: 'var(--text)' }}>{clients.find(c => c.id === project?.clientId)?.name || '--'}</p>}
+                                  ) : <p className="text-xs font-black truncate" style={{ color: 'var(--text)' }}>{clients.find((c: Client) => c.id === project?.clientId)?.name || '--'}</p>}
                                 </div>
                                 <div className="w-px h-5 bg-[var(--border)] opacity-20" />
                                 <div className="flex-1 min-w-0">
@@ -1157,16 +1367,16 @@ const ProjectDetailView: React.FC = () => {
                                   {isEditing ? (
                                     <select
                                       value={formData.partnerId}
-                                      onChange={e => setFormData({ ...formData, partnerId: e.target.value })}
+                                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, partnerId: e.target.value })}
                                       onKeyDown={handleKeyDown}
                                       className={`w-full p-1 rounded vertical-select text-[10px] font-bold outline-none mt-1 border transition-colors bg-[var(--bg)] border-[var(--border)]`}
                                       style={{ color: 'var(--text)' }}
                                     >
                                       <option value="">Selecione...</option>
                                       <option value="direto">Direto (Sem Parceiro)</option>
-                                      {clients.filter(c => c.tipo_cliente === 'parceiro').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                      {clients.filter((c: Client) => c.tipo_cliente === 'parceiro').map((c: Client) => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
-                                  ) : <p className="text-xs font-black truncate" style={{ color: 'var(--text)' }}>{clients.find(c => c.id === project?.partnerId)?.name || 'Nic-Labs'}</p>}
+                                  ) : <p className="text-xs font-black truncate" style={{ color: 'var(--text)' }}>{clients.find((c: Client) => c.id === project?.partnerId)?.name || 'Nic-Labs'}</p>}
                                 </div>
                               </div>
                             </div>
@@ -1178,15 +1388,15 @@ const ProjectDetailView: React.FC = () => {
                               {isEditing ? (
                                 <select
                                   value={formData.responsibleNicLabsId}
-                                  onChange={e => setFormData({ ...formData, responsibleNicLabsId: e.target.value })}
+                                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, responsibleNicLabsId: e.target.value })}
                                   onKeyDown={handleKeyDown}
                                   className={`w-full p-1.5 rounded-lg text-xs font-bold border transition-colors bg-[var(--bg)] border-[var(--border)]`}
                                   style={{ color: 'var(--text)' }}
                                 >
                                   <option value="">Selecione...</option>
-                                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                  {users.map((u: User) => <option key={u.id} value={u.id}>{u.name}</option>)}
                                 </select>
-                              ) : <p className="text-xs font-black" style={{ color: 'var(--text)' }}>{users.find(u => u.id === project?.responsibleNicLabsId)?.name || '--'}</p>}
+                              ) : <p className="text-xs font-black" style={{ color: 'var(--text)' }}>{users.find((u: User) => u.id === project?.responsibleNicLabsId)?.name || '--'}</p>}
                             </div>
 
                             <div>
@@ -1196,7 +1406,7 @@ const ProjectDetailView: React.FC = () => {
                               {isEditing ? (
                                 <input
                                   value={formData.managerClient}
-                                  onChange={e => setFormData({ ...formData, managerClient: e.target.value })}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, managerClient: e.target.value })}
                                   onKeyDown={handleKeyDown}
                                   className={`w-full p-1.5 rounded-lg text-xs font-bold border transition-colors bg-[var(--bg)] border-[var(--border)]`}
                                   style={{ color: 'var(--text)' }}
@@ -1212,7 +1422,7 @@ const ProjectDetailView: React.FC = () => {
                             <Calendar size={10} className="text-orange-500" /> Feriados
                           </p>
                           <div className="space-y-1.5 flex-1 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
-                            {projectHolidays.length > 0 ? projectHolidays.map(h => (
+                            {projectHolidays.length > 0 ? projectHolidays.map((h: Holiday) => (
                               <div key={h.id} className="p-2 rounded-xl border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors">
                                 <p className="text-[10px] font-black uppercase truncate" style={{ color: 'var(--text)' }}>{h.name}</p>
                                 <div className="flex items-center gap-1 text-[9px] font-bold mt-0.5" style={{ color: 'var(--muted)' }}>
@@ -1235,8 +1445,8 @@ const ProjectDetailView: React.FC = () => {
                             <Clock size={10} className="text-indigo-500" /> Ausências (Time)
                           </p>
                           <div className="space-y-1.5 flex-1 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
-                            {projectAbsences.length > 0 ? projectAbsences.map(a => {
-                              const user = users.find(u => u.id === String(a.userId));
+                            {projectAbsences.length > 0 ? projectAbsences.map((a: Absence) => {
+                              const user = users.find((u: User) => u.id === String(a.userId));
                               return (
                                 <div key={a.id} className="p-2 rounded-xl border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors">
                                   <div className="flex justify-between items-start mb-0.5">
@@ -1261,7 +1471,7 @@ const ProjectDetailView: React.FC = () => {
                       {(isEditing || project?.description) && (
                         <div>
                           <p className="text-[10px] font-black uppercase mb-3" style={{ color: 'var(--muted)' }}>Visão de Escopo</p>
-                          {isEditing ? <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-32 p-4 rounded-2xl border outline-none text-sm" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} /> : <p className="text-sm leading-relaxed italic p-5 rounded-2xl border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text-2)' }}>{project?.description}</p>}
+                          {isEditing ? <textarea value={formData.description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })} className="w-full h-32 p-4 rounded-2xl border outline-none text-sm" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} /> : <p className="text-sm leading-relaxed italic p-5 rounded-2xl border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text-2)' }}>{project?.description}</p>}
                         </div>
                       )}
                       {isEditing && (
@@ -1270,7 +1480,7 @@ const ProjectDetailView: React.FC = () => {
                             <input
                               type="checkbox"
                               checked={formData.fora_do_fluxo}
-                              onChange={e => setFormData({ ...formData, fora_do_fluxo: e.target.checked })}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, fora_do_fluxo: e.target.checked })}
                               className="w-4 h-4 rounded border-[var(--border)] text-purple-600 focus:ring-purple-500"
                             />
                             <div>
@@ -1297,7 +1507,7 @@ const ProjectDetailView: React.FC = () => {
                             <div>
                               <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Resumo da Semana</p>
                               {isEditing ? (
-                                <textarea value={formData.weeklyStatusReport} onChange={e => setFormData({ ...formData, weeklyStatusReport: e.target.value })} className="w-full h-20 p-2 rounded text-xs border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="O que aconteceu esta semana?" />
+                                <textarea value={formData.weeklyStatusReport} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, weeklyStatusReport: e.target.value })} className="w-full h-20 p-2 rounded text-xs border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="O que aconteceu esta semana?" />
                               ) : <p className="text-xs border-l-2 pl-3 py-1 rounded-r-lg" style={{ borderColor: 'var(--warning)', backgroundColor: 'var(--bg)', color: 'var(--text-2)' }}>{project?.weeklyStatusReport}</p>}
                             </div>
                           )}
@@ -1305,7 +1515,7 @@ const ProjectDetailView: React.FC = () => {
                             <div>
                               <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Problemas e Bloqueios</p>
                               {isEditing ? (
-                                <textarea value={formData.gapsIssues} onChange={e => setFormData({ ...formData, gapsIssues: e.target.value })} className="w-full h-20 p-2 rounded text-xs border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="Ex: Acesso bloqueado, falta de doc..." />
+                                <textarea value={formData.gapsIssues} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, gapsIssues: e.target.value })} className="w-full h-20 p-2 rounded text-xs border" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="Ex: Acesso bloqueado, falta de doc..." />
                               ) : <p className="text-xs font-medium" style={{ color: 'var(--danger)' }}>{project?.gapsIssues}</p>}
                             </div>
                           )}
@@ -1324,12 +1534,12 @@ const ProjectDetailView: React.FC = () => {
                       <div className="space-y-2">
                         {isEditing ? (
                           <div className={`border rounded-2xl p-4 max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar shadow-inner transition-colors ${selectedUsers.length === 0 ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-[var(--bg)] border-[var(--border)]'}`}>
-                            {users.filter(u => u.active !== false && u.torre !== 'N/A').sort((a, b) => a.name.localeCompare(b.name)).map(user => (
+                            {users.filter((u: User) => u.active !== false && u.torre !== 'N/A').sort((a: User, b: User) => a.name.localeCompare(b.name)).map((user: User) => (
                               <label key={user.id} className={`flex items-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] p-2 rounded-xl transition-all border ${selectedUsers.includes(user.id) ? 'border-purple-500/30 bg-purple-500/5' : 'border-transparent opacity-60'}`}>
                                 <input
                                   type="checkbox"
                                   checked={selectedUsers.includes(user.id)}
-                                  onChange={(e) => {
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                     if (e.target.checked) {
                                       const next = [...selectedUsers, user.id];
                                       setSelectedUsers(next);
@@ -1366,8 +1576,8 @@ const ProjectDetailView: React.FC = () => {
                           </div>
                         ) : (
                           <>
-                            {projectMembers.filter(pm => String(pm.id_projeto) === projectId).map(pm => {
-                              const u = users.find(user => user.id === String(pm.id_colaborador));
+                            {projectMembers.filter((pm: ProjectMember) => String(pm.id_projeto) === projectId).map((pm: ProjectMember) => {
+                              const u = users.find((user: User) => user.id === String(pm.id_colaborador));
                               return u ? (
                                 <div key={u.id} className="px-3 py-2.5 rounded-xl border transition-all" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
                                   {/* Header with User Info */}
@@ -1389,8 +1599,8 @@ const ProjectDetailView: React.FC = () => {
                                     const metrics = teamOperationalBalance?.memberMetrics[u.id];
                                     const allocatedHours = metrics?.allocatedHours ?? 0;
                                     const reported = timesheetEntries
-                                      .filter(e => e.projectId === projectId && e.userId === u.id)
-                                      .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+                                      .filter((e: TimesheetEntry) => e.projectId === projectId && e.userId === u.id)
+                                      .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
                                     const actualHours = metrics?.actualHours ?? reported;
 
                                     return (
@@ -1413,12 +1623,12 @@ const ProjectDetailView: React.FC = () => {
 
                             {/* EX-COLABORADORES (Com horas mas sem vínculo atual) */}
                             {(() => {
-                              const currentMemberIds = new Set(projectMembers.filter(pm => String(pm.id_projeto) === projectId).map(pm => String(pm.id_colaborador)));
-                              const formerMembersWithHours = Array.from(new Set(
+                              const currentMemberIds = new Set(projectMembers.filter((pm: ProjectMember) => String(pm.id_projeto) === projectId).map((pm: ProjectMember) => String(pm.id_colaborador)));
+                              const formerMembersWithHours = (Array.from(new Set<string>(
                                 timesheetEntries
-                                  .filter(e => e.projectId === projectId && !currentMemberIds.has(String(e.userId)))
-                                  .map(e => String(e.userId))
-                              )).map(userId => users.find(u => String(u.id) === userId)).filter(Boolean);
+                                  .filter((e: TimesheetEntry) => e.projectId === projectId && !currentMemberIds.has(String(e.userId)))
+                                  .map((e: TimesheetEntry) => String(e.userId))
+                              )) as string[]).map((userId: string) => users.find((u: User) => String(u.id) === userId)).filter(Boolean) as User[];
 
                               if (formerMembersWithHours.length === 0) return null;
 
@@ -1428,7 +1638,7 @@ const ProjectDetailView: React.FC = () => {
                                     <Archive size={12} className="opacity-30" style={{ color: 'var(--text)' }} />
                                     <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Histórico de Contribuição</p>
                                   </div>
-                                  {formerMembersWithHours.map(u => u && (
+                                  {formerMembersWithHours.map((u: User) => u && (
                                     <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl border border-dashed transition-all opacity-70" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
                                       <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                                         {u.avatarUrl ? <img src={u.avatarUrl} className="w-full h-full object-cover opacity-60" /> : <div className="w-full h-full flex items-center justify-center text-[9px] font-black opacity-40" style={{ color: 'var(--muted)' }}>{u.name.substring(0, 2).toUpperCase()}</div>}
@@ -1444,8 +1654,8 @@ const ProjectDetailView: React.FC = () => {
                                           <div>
                                             {(() => {
                                               const reported = timesheetEntries
-                                                .filter(e => e.projectId === projectId && e.userId === u.id)
-                                                .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+                                                .filter((e: TimesheetEntry) => e.projectId === projectId && e.userId === u.id)
+                                                .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
                                               return (
                                                 <div className="flex items-center gap-3">
                                                   <p className="text-[7px] font-black uppercase opacity-40">Total Apontado</p>
@@ -1471,7 +1681,7 @@ const ProjectDetailView: React.FC = () => {
                         <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: 'var(--text)' }}><FileText size={16} /> Documentação</h3>
                         {isEditing ? (
                           <div className="space-y-3">
-                            <input value={formData.docLink} onChange={e => setFormData({ ...formData, docLink: e.target.value })} className="w-full text-[11px] p-2 rounded border outline-none" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="Link do Sharepoint/OneDrive" />
+                            <input value={formData.docLink} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, docLink: e.target.value })} className="w-full text-[11px] p-2 rounded border outline-none" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} placeholder="Link do Sharepoint/OneDrive" />
                           </div>
                         ) : (
                           <a href={project?.docLink || '#'} target="_blank" className="flex items-center justify-between p-3 rounded-2xl border transition-all" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info-text)', borderColor: 'var(--info)' }}>
@@ -1485,7 +1695,7 @@ const ProjectDetailView: React.FC = () => {
                     {isEditing && (
                       <button
                         onClick={() => {
-                          const projectTasks = tasks.filter(t => t.projectId === projectId);
+                          const projectTasks = tasks.filter((t: Task) => t.projectId === projectId);
                           const hasTasks = projectTasks.length > 0;
                           setItemToDelete({ id: projectId!, type: 'project', force: hasTasks });
                         }}
@@ -1521,7 +1731,7 @@ const ProjectDetailView: React.FC = () => {
                     >
                       <Archive size={14} className={showArchived ? "fill-amber-500/30" : ""} />
                       {(() => {
-                        const archivedCount = projectTasks.filter(t => t.status === 'Done' || t.fora_do_fluxo).length;
+                        const archivedCount = projectTasks.filter((t: Task) => t.status === 'Done' || t.fora_do_fluxo).length;
                         return showArchived ? `Ocultar ${archivedCount} Arquivadas` : `Ver ${archivedCount} Arquivadas`;
                       })()}
                     </button>
@@ -1553,7 +1763,7 @@ const ProjectDetailView: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredTasks.length > 0 ? (
-                    filteredTasks.map(task => (
+                    filteredTasks.map((task: Task) => (
                       <ProjectTaskCard
                         key={task.id}
                         project={project}
@@ -1612,7 +1822,7 @@ const ProjectDetailView: React.FC = () => {
                   <input
                     type="text"
                     value={deleteConfirmText}
-                    onChange={e => setDeleteConfirmText(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeleteConfirmText(e.target.value)}
                     placeholder={project?.name}
                     className="w-full p-3 rounded-xl border-2 border-red-500/30 outline-none focus:border-red-500 text-xs font-black bg-red-500/5 text-red-600"
                   />
@@ -1625,7 +1835,7 @@ const ProjectDetailView: React.FC = () => {
         confirmText={itemToDelete?.force ? "EXCLUIR TUDO" : "Confirmar"}
         onConfirm={async () => {
           if (itemToDelete?.type === 'project') {
-            // Validações de segurança para delete forçado
+            // Validações de segurança para delete forçada
             if (itemToDelete.force) {
               if (currentUser?.role !== 'system_admin') {
                 alert('Apenas Administradores do Sistema podem excluir projetos com dados ativos.');
@@ -1666,194 +1876,192 @@ const ProjectDetailView: React.FC = () => {
 
 // SUBCOMPONENT
 const ProjectTaskCard: React.FC<{
-  project: any,
-  task: any,
-  users: any[],
-  timesheetEntries: any[],
-  tasks: any[],
-  holidays: any[],
-  absences: any[],
+  project: Project,
+  task: Task,
+  users: User[],
+  timesheetEntries: TimesheetEntry[],
+  tasks: Task[],
+  holidays: Holiday[],
+  absences: Absence[],
   isAdmin: boolean,
   currentUserId?: string,
   onClick: () => void
 }> = ({ project, task, users, timesheetEntries, tasks, holidays, absences, isAdmin, currentUserId, onClick }) => {
   const navigate = useNavigate();
-  const dev = users.find(u => u.id === task.developerId);
-  const actualHours = timesheetEntries.filter(e => e.taskId === task.id).reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
-
-  const distributedHours = useMemo(() => {
-    const pStartTs = parseSafeDate(project?.startDate);
-    const pEndTs = parseSafeDate(project?.estimatedDelivery);
-    const tStartTs = parseSafeDate(task.scheduledStart || task.actualStart);
-    const tEndTs = parseSafeDate(task.estimatedDelivery);
-
-    if (!pStartTs || !pEndTs || !tStartTs || !tEndTs) return 0;
-
-    const projectDurationTs = Math.max(0, pEndTs - pStartTs) + ONE_DAY;
-    const taskDurationTs = Math.max(0, tEndTs - tStartTs) + ONE_DAY;
-
-    if (projectDurationTs <= 0 || taskDurationTs <= 0) return 0;
-    const weight = (taskDurationTs / projectDurationTs);
-    return weight * (project?.horas_vendidas || 0);
-  }, [project, task]);
+  const dev = users.find((u: User) => u.id === task.developerId);
+  const taskEntries = timesheetEntries.filter((e: TimesheetEntry) => e.taskId === task.id);
+  const totalActualHours = taskEntries.reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
+  const totalAllocatedHours = Number(task.estimatedHours) || 0;
 
   const statusMap: Record<string, { label: string, color: string, bg: string }> = {
-    'Todo': { label: 'Pré-Projeto', color: 'text-slate-500', bg: 'bg-slate-500/10' },
-    'In Progress': { label: 'Andamento', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    'Review': { label: 'Análise', color: 'text-yellow-600', bg: 'bg-yellow-500/10' },
-    'Testing': { label: 'Teste', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    'Done': { label: 'Concluído', color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+    'Todo': { label: 'PRÉ-PROJETO', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    'In Progress': { label: 'ANDAMENTO', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    'Review': { label: 'ANÁLISE', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+    'Testing': { label: 'TESTE', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+    'Done': { label: 'CONCLUÍDO', color: 'text-emerald-400', bg: 'bg-emerald-500/10' }
   };
 
-  const statusInfo = statusMap[task.status] || { label: task.status, color: 'text-slate-400', bg: 'bg-slate-400/10' };
+  const statusInfo = statusMap[task.status] || { label: String(task.status).toUpperCase(), color: 'text-slate-400', bg: 'bg-slate-400/10' };
   const deadlineTime = task.estimatedDelivery ? parseSafeDate(task.estimatedDelivery) : null;
   const today = new Date();
   today.setHours(12, 0, 0, 0);
-  const todayTime = today.getTime();
-  const isLate = task.status !== 'Done' && deadlineTime && deadlineTime < todayTime;
+  const isLate = task.status !== 'Done' && deadlineTime && deadlineTime < today.getTime();
+  const isToday = task.status !== 'Done' && deadlineTime && new Date(deadlineTime).toISOString().split('T')[0] === today.toISOString().split('T')[0];
 
-  // Cálculo do Saldo Disponível
-  const userMetrics = CapacityUtils.calculateUserCapacity(
-    dev?.id || '',
-    new Date(),
-    tasks,
-    holidays,
-    absences
-  );
+  // Membros individuais da tarefa (Responsável + Colaboradores)
+  const taskMemberIds = Array.from(new Set([
+    task.developerId,
+    ...(task.collaboratorIds || [])
+  ])).filter(Boolean).map(String);
 
-  // Se a tarefa estiver em atraso, mostramos o saldo cheio do mês (ignorando alocações)
-  const displayBalance = isLate ? userMetrics.monthlyCapacity : userMetrics.availableBalance;
+  const teamMembers = users.filter(u => taskMemberIds.includes(String(u.id)));
 
-  const startDate = task.scheduledStart ? new Date(task.scheduledStart + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '--/--';
-  const deliveryDate = task.estimatedDelivery ? new Date(task.estimatedDelivery + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '--/--';
+  // Horas do responsável principal
+  const devActualHours = taskEntries
+    .filter(e => String(e.userId) === String(task.developerId))
+    .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+
+  // Formatação de datas
+  const deliveryDateFormatted = task.estimatedDelivery ? new Date(task.estimatedDelivery + 'T12:00:00').toLocaleDateString('pt-BR') : '--/--/----';
 
   return (
     <motion.div
-      whileHover={{ y: -5, scale: 1.01 }}
+      whileHover={{ y: -8, scale: 1.02 }}
       onClick={onClick}
-      className="cursor-pointer p-6 rounded-[32px] border transition-all relative overflow-hidden group shadow-sm hover:shadow-xl"
-      style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+      className="cursor-pointer p-8 rounded-[40px] border transition-all relative overflow-hidden group shadow-xl hover:shadow-2xl flex flex-col gap-6"
+      style={{
+        backgroundColor: 'rgba(30, 27, 75, 0.4)',
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(12px)'
+      }}
     >
-      <div className="absolute top-0 left-0 w-1.5 h-full bg-purple-600 opacity-0 group-hover:opacity-100 transition-all" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-all" />
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <span className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest ${statusInfo.bg} ${statusInfo.color}`}>
-            {statusInfo.label}
+      {/* HEADER: BADGES */}
+      <div className="flex items-center gap-2">
+        <span className={`text-[10px] font-black px-4 py-2 rounded-xl tracking-widest ${statusInfo.bg} ${statusInfo.color}`}>
+          {statusInfo.label}
+        </span>
+        {isToday && (
+          <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-100 bg-amber-500/20 px-4 py-2 rounded-xl tracking-widest border border-amber-500/30">
+            <Zap size={14} className="text-amber-400" /> HOJE
           </span>
-          {isLate && (
-            <span className="flex items-center gap-1.5 text-[9px] font-black text-white bg-red-500 px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse shadow-lg shadow-red-500/20">
-              <Clock size={12} /> ATRASADA
-            </span>
-          )}
+        )}
+        {isLate && !isToday && (
+          <span className="flex items-center gap-1.5 text-[10px] font-black text-rose-100 bg-rose-500/20 px-4 py-2 rounded-xl tracking-widest border border-rose-500/30">
+            <Clock size={14} className="text-rose-400" /> ATRASADA
+          </span>
+        )}
+        {totalActualHours > totalAllocatedHours && totalAllocatedHours > 0 && (
+          <span className="flex items-center gap-1.5 text-[10px] font-black text-red-100 bg-red-600/20 px-4 py-2 rounded-xl tracking-widest border border-red-500/30 animate-pulse">
+            <Zap size={14} className="text-red-400" /> HORAS EXCEDIDAS
+          </span>
+        )}
+        {task.fora_do_fluxo && (
+          <span className="text-[10px] font-black bg-white/10 text-white/60 px-4 py-2 rounded-xl border border-white/10 uppercase tracking-widest">FORA DO FLUXO</span>
+        )}
+      </div>
+
+      {/* TITLE */}
+      <h3 className="font-black text-2xl leading-tight text-white tracking-tight group-hover:text-purple-300 transition-colors line-clamp-2">
+        {task.title}
+      </h3>
+
+      {/* INFO ROW GRID */}
+      <div className="grid grid-cols-2 gap-4 p-5 rounded-3xl bg-white/5 border border-white/5">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
+            <Calendar size={12} /> Prazo Final
+          </p>
+          <p className={`text-sm font-black ${isLate ? 'text-rose-400' : 'text-white'}`}>
+            {deliveryDateFormatted}
+          </p>
         </div>
-        <div className="flex flex-col items-end">
-          <p className="text-[8px] font-black uppercase opacity-40 tracking-widest" style={{ color: 'var(--muted)' }}>Capacidade Disp.</p>
-          <p className={`text-xs font-black ${displayBalance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-            {formatDecimalToTime(displayBalance)}
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
+            <Clock size={12} /> Alocado vs Real
+          </p>
+          <p className="text-sm font-black text-white">
+            {formatDecimalToTime(totalAllocatedHours)} <span className="text-white/20 mx-1">/</span> {formatDecimalToTime(totalActualHours)}
           </p>
         </div>
       </div>
 
-      <div className="mb-2">
-        {task.fora_do_fluxo && (
-          <span className="text-[8px] font-black bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full border border-amber-500/20 uppercase tracking-tighter">Fora do Fluxo</span>
+      {/* EVOLUÇÃO (Progress) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase text-white/40 tracking-widest">Evolução</span>
+          <span className="text-xs font-black text-purple-400">{task.progress}%</span>
+        </div>
+        <div className="h-2 rounded-full bg-white/5 border border-white/5 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${task.progress}%` }}
+            className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+          />
+        </div>
+      </div>
+
+      {/* MAIN RESPONSIBLE */}
+      <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/10 p-0.5 bg-white/5 shadow-inner">
+            {dev?.avatarUrl ? (
+              <img src={dev.avatarUrl} className="w-full h-full object-cover rounded-[10px]" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-sm font-black text-white/40">
+                {task.developer?.substring(0, 2).toUpperCase() || '??'}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <p className="font-black text-white text-base tracking-tight">{task.developer || 'Sem responsável'}</p>
+            <p className="text-[10px] font-black uppercase text-white/30 tracking-widest">Responsável</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-black text-white">
+            {formatDecimalToTime(totalAllocatedHours)} <span className="text-white/20">/</span> {formatDecimalToTime(devActualHours)}
+          </p>
+        </div>
+      </div>
+
+      {/* TEAM FOOTER SUMMARY */}
+      <div className="mt-auto p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-3">
+            {teamMembers.slice(0, 3).map((m, idx) => (
+              <div key={m.id} className="w-7 h-7 rounded-lg border-2 border-[#1e1b4b] bg-slate-800 overflow-hidden ring-1 ring-white/10" title={m.name}>
+                {m.avatarUrl ? <img src={m.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-white/50">{m.name.charAt(0)}</div>}
+              </div>
+            ))}
+            {teamMembers.length > 3 && (
+              <div className="w-7 h-7 rounded-lg border-2 border-[#1e1b4b] bg-[#4c1d95] flex items-center justify-center text-[8px] font-black text-white ring-1 ring-white/10">
+                +{teamMembers.length - 3}
+              </div>
+            )}
+          </div>
+          <span className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-1">Equipe</span>
+        </div>
+        <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+          {teamMembers.length} {teamMembers.length === 1 ? 'membro' : 'membros'}
+        </span>
+      </div>
+
+      {/* QUICK ACTION BUTTON (Only for concerned devs) */}
+      {task.status !== 'Done' && !isAdmin && (
+        task.developerId === currentUserId || (task.collaboratorIds || []).includes(currentUserId || '')
+      ) && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/timesheet/new?taskId=${task.id}&projectId=${task.projectId}&clientId=${task.clientId}&date=${new Date().toISOString().split('T')[0]}`);
+            }}
+            className="w-full py-4 bg-white text-indigo-950 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-500 hover:text-white transition-all shadow-xl active:scale-95"
+          >
+            Apontar Horas
+          </button>
         )}
-      </div>
-
-      <h3 className="font-bold text-lg leading-tight mb-8 line-clamp-2 min-h-[50px] group-hover:text-purple-600 transition-colors" style={{ color: 'var(--text)' }}>
-        {task.title}
-      </h3>
-
-      <div className="space-y-6">
-        <div className="flex items-center justify-between p-4 rounded-2xl border bg-[var(--bg)]" style={{ borderColor: 'var(--border)' }}>
-          <div className="flex flex-col">
-            <p className="text-[8px] font-black uppercase opacity-60 tracking-widest mb-1.5 flex items-center gap-1" style={{ color: 'var(--muted)' }}>
-              <Calendar size={10} /> Prazo de Entrega
-            </p>
-            <p className={`text-xs font-black flex items-center gap-2 ${isLate ? 'text-red-500' : 'text-[var(--text)]'}`}>
-              <span className="opacity-40">{startDate}</span>
-              <span className="opacity-20">→</span>
-              <span>{deliveryDate}</span>
-            </p>
-          </div>
-          <div className="flex flex-col items-end">
-            <p className="text-[8px] font-black uppercase opacity-60 tracking-widest mb-1.5" style={{ color: 'var(--muted)' }}>Peso Estimado</p>
-            <p className="text-xs font-black" style={{ color: 'var(--text)' }}>
-              {distributedHours.toFixed(1)}h
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <div className="flex justify-between text-[10px] font-black uppercase mb-2" style={{ color: 'var(--muted)' }}>
-            <span className="tracking-widest">Evolução</span>
-            <span style={{ color: 'var(--primary)' }}>{task.progress}%</span>
-          </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${task.progress}%` }}
-              className="h-full bg-gradient-to-r from-purple-600 to-indigo-600"
-            />
-          </div>
-        </div>
-
-        {task.status !== 'Done' && !isAdmin && (
-          task.developerId === currentUserId ||
-          (task.collaboratorIds || []).includes(currentUserId || '')
-        ) && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const url = `/timesheet/new?taskId=${task.id}&projectId=${task.projectId}&clientId=${task.clientId}&date=${new Date().toISOString().split('T')[0]}`;
-                navigate(url);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl transition-all text-[10px] font-black border uppercase tracking-widest"
-              style={{
-                backgroundColor: 'var(--surface)',
-                borderColor: 'var(--primary)',
-                color: 'var(--primary)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--primary)';
-                e.currentTarget.style.color = 'white';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--surface)';
-                e.currentTarget.style.color = 'var(--primary)';
-              }}
-            >
-              <Clock size={12} />
-              Apontar Tarefa
-            </button>
-          )}
-
-        <div className="flex items-center justify-between pt-6 border-t" style={{ borderColor: 'var(--bg)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden border-2 shadow-sm" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--surface)' }}>
-              {dev?.avatarUrl ? <img src={dev.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-black uppercase" style={{ color: 'var(--muted)' }}>{task.developer?.substring(0, 2) || '??'}</div>}
-            </div>
-            <div>
-              <p className="text-[11px] font-bold" style={{ color: 'var(--text)' }}>{task.developer || 'Sem resp.'}</p>
-              <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>Responsável</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="flex items-center gap-1 justify-end">
-              <span className="text-sm font-black tabular-nums" style={{ color: 'var(--text)' }}>{formatDecimalToTime(actualHours)}</span>
-              {isAdmin && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] font-black opacity-70" style={{ color: 'var(--muted)' }}>
-                    / {formatDecimalToTime(distributedHours)}
-                  </span>
-                </div>
-              )}
-            </div>
-            <p className="text-[7px] font-black uppercase opacity-40" style={{ color: 'var(--muted)' }}>Horas Reportadas</p>
-          </div>
-        </div>
-      </div>
     </motion.div>
   );
 };

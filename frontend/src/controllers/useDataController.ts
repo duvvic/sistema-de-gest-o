@@ -26,6 +26,18 @@ export const useDataController = () => {
 
     const { currentUser } = useAuth();
 
+    // === HELPERS ===
+    const safeNum = (val: any) => {
+        if (val === null || val === undefined || val === '' || val === 'null' || val === 'undefined') return null;
+        const n = Number(val);
+        return isNaN(n) ? null : n;
+    };
+
+    const safeString = (val: any) => {
+        if (val === null || val === undefined || val === '' || val === 'null' || val === 'undefined') return '';
+        return String(val);
+    };
+
 
     // === CLIENT CONTROLLERS ===
 
@@ -58,16 +70,16 @@ export const useDataController = () => {
 
         if (row) {
             const newClient: Client = {
-                id: String(row.ID_Cliente),
+                id: safeString(row.ID_Cliente),
                 name: row.NomeCliente,
                 logoUrl: row.NewLogo,
                 active: row.ativo ?? true,
                 cnpj: row.cnpj,
                 telefone: row.telefone,
                 tipo_cliente: row.tipo_cliente,
-                partner_id: row.partner_id ? String(row.partner_id) : undefined
+                partner_id: row.partner_id ? safeString(row.partner_id) : undefined
             };
-            setClients(prev => [...prev, newClient]);
+            // setClients(prev => [...prev, newClient]); // Removido: Realtime cuida disso
         }
 
         return String(newId);
@@ -80,29 +92,31 @@ export const useDataController = () => {
                 NomeCliente: updates.name,
                 NewLogo: updates.logoUrl,
                 tipo_cliente: updates.tipo_cliente,
-                partner_id: updates.partner_id ? Number(updates.partner_id) : null
+                partner_id: safeNum(updates.partner_id)
             })
-            .eq('ID_Cliente', Number(clientId));
+            .eq('ID_Cliente', safeNum(clientId)!);
 
         if (error) throw error;
-        setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updates } : c));
+        // setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updates } : c)); // Removido
     };
 
     const deactivateClient = async (clientId: string, reason: string): Promise<void> => {
         const { error } = await supabase
             .from('dim_clientes')
             .update({ ativo: false, Desativado: reason })
-            .eq('ID_Cliente', Number(clientId));
+            .eq('ID_Cliente', safeNum(clientId)!);
 
         if (error) throw error;
+        /* Removido
         setClients(prev => prev.map(c =>
             c.id === clientId ? { ...c, active: false, Desativado: reason } as any : c
         ));
+        */
     };
 
     const deleteClient = async (clientId: string): Promise<void> => {
         await clientService.deleteClient(clientId);
-        setClients(prev => prev.filter(c => c.id !== clientId));
+        // setClients(prev => prev.filter(c => c.id !== clientId)); // Removido
     };
 
     // === PROJECT CONTROLLERS ===
@@ -120,21 +134,21 @@ export const useDataController = () => {
         const newProject = {
             project_type: 'continuous',
             ...projectData,
-            id: String(newId)
+            id: safeString(newId)
         } as Project;
-        setProjects(prev => enrichProjectsWithTaskDates([...prev, newProject], tasks));
+        // setProjects(prev => enrichProjectsWithTaskDates([...prev, newProject], tasks)); // Removido: Realtime cuida disso
 
-        return String(newId);
+        return safeString(newId);
     };
 
     const updateProject = async (projectId: string, updates: Partial<Project>): Promise<void> => {
         await projectService.updateProject(projectId, updates);
-        setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+        // setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p)); // Removido
     };
 
     const deleteProject = async (projectId: string, force: boolean = false): Promise<void> => {
         await projectService.deleteProject(projectId, force);
-        setProjects(prev => prev.filter(p => p.id !== projectId));
+        // setProjects(prev => prev.filter(p => p.id !== projectId)); // Removido
     };
 
     // === TASK CONTROLLERS ===
@@ -153,8 +167,8 @@ export const useDataController = () => {
 
     const createTask = async (taskData: Partial<Task>): Promise<string> => {
         const newId = await taskService.createTask(taskData);
-        const newTask = { ...taskData, id: String(newId) } as Task;
-        setTasks(prev => [newTask, ...prev]);
+        const newTask = { ...taskData, id: safeString(newId) } as Task;
+        // setTasks(prev => [newTask, ...prev]); // Removido: Realtime cuida disso
 
         // Auto-update project real start if task is created in progress
         if (taskData.status === 'In Progress' || taskData.status === 'Done') {
@@ -165,13 +179,13 @@ export const useDataController = () => {
             }
         }
 
-        return String(newId);
+        return safeString(newId);
     };
 
     const updateTask = async (taskId: string, updates: Partial<Task>): Promise<void> => {
         const oldTask = tasks.find(t => t.id === taskId);
         await taskService.updateTask(taskId, updates);
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+        // setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t)); // Removido
 
         // Auto-update project real start when first task starts
         if (updates.status === 'In Progress' && oldTask?.status !== 'In Progress') {
@@ -196,10 +210,7 @@ export const useDataController = () => {
 
     const deleteTask = async (taskId: string, force: boolean = false, deleteHours: boolean = false): Promise<void> => {
         await taskService.deleteTask(taskId, force, deleteHours);
-        setTasks(prev => prev.filter(t => t.id !== taskId));
-        if (deleteHours) {
-            setTimesheetEntries(prev => prev.filter(e => e.taskId !== taskId));
-        }
+        // setTimesheetEntries(prev => prev.filter(e => e.taskId !== taskId)); // Removido
     };
 
     // === TIMESHEET CONTROLLERS ===
@@ -216,11 +227,11 @@ export const useDataController = () => {
         const { data, error } = await supabase
             .from('horas_trabalhadas')
             .insert({
-                ID_Horas_Trabalhadas: uniqueId,
-                ID_Colaborador: Number(entry.userId),
-                ID_Cliente: Number(entry.clientId),
-                ID_Projeto: Number(entry.projectId),
-                id_tarefa_novo: Number(entry.taskId),
+                ID_Horas_Trabalhadas: safeString(uniqueId),
+                ID_Colaborador: safeNum(entry.userId),
+                ID_Cliente: safeNum(entry.clientId),
+                ID_Projeto: safeNum(entry.projectId),
+                id_tarefa_novo: safeNum(entry.taskId),
                 Data: entry.date,
                 Horas_Trabalhadas: entry.totalHours,
                 Hora_Inicio: entry.startTime,
@@ -232,18 +243,18 @@ export const useDataController = () => {
             .single();
 
         if (error) throw error;
-        if (data) entry.id = String(data.ID_Horas_Trabalhadas);
-        setTimesheetEntries(prev => [entry, ...prev]);
+        // if (data) entry.id = String(data.ID_Horas_Trabalhadas);
+        // setTimesheetEntries(prev => [entry, ...prev]); // Removido: Realtime cuida disso
     };
 
     const updateTimesheet = async (entry: TimesheetEntry): Promise<void> => {
         const { error } = await supabase
             .from('horas_trabalhadas')
             .update({
-                ID_Colaborador: Number(entry.userId),
-                ID_Cliente: Number(entry.clientId),
-                ID_Projeto: Number(entry.projectId),
-                id_tarefa_novo: Number(entry.taskId),
+                ID_Colaborador: safeNum(entry.userId),
+                ID_Cliente: safeNum(entry.clientId),
+                ID_Projeto: safeNum(entry.projectId),
+                id_tarefa_novo: safeNum(entry.taskId),
                 Data: entry.date,
                 Horas_Trabalhadas: entry.totalHours,
                 Hora_Inicio: entry.startTime,
@@ -251,19 +262,19 @@ export const useDataController = () => {
                 Almoco_Deduzido: entry.lunchDeduction,
                 Descricao: entry.description
             })
-            .eq('ID_Horas_Trabalhadas', entry.id);
+            .eq('ID_Horas_Trabalhadas', safeString(entry.id));
 
         if (error) throw error;
-        setTimesheetEntries(prev => prev.map(e => e.id === entry.id ? entry : e));
+        // setTimesheetEntries(prev => prev.map(e => e.id === entry.id ? entry : e)); // Removido
     };
 
     const deleteTimesheet = async (entryId: string): Promise<void> => {
         const { error } = await supabase
             .from('horas_trabalhadas')
             .delete()
-            .eq('ID_Horas_Trabalhadas', entryId);
+            .eq('ID_Horas_Trabalhadas', safeString(entryId));
         if (error) throw error;
-        setTimesheetEntries(prev => prev.filter(e => e.id !== entryId));
+        // setTimesheetEntries(prev => prev.filter(e => e.id !== entryId)); // Removido
     };
 
     // === USER CONTROLLERS ===
@@ -293,7 +304,7 @@ export const useDataController = () => {
             .select('ID_Colaborador')
             .single();
         if (error) throw error;
-        return String(data.ID_Colaborador);
+        return safeString(data.ID_Colaborador);
     };
 
     const updateUser = async (userId: string, updates: Partial<User>): Promise<void> => {
@@ -312,7 +323,7 @@ export const useDataController = () => {
         const { error } = await supabase
             .from('dim_colaboradores')
             .update(payload)
-            .eq('ID_Colaborador', Number(userId));
+            .eq('ID_Colaborador', safeNum(userId)!);
         if (error) throw error;
     };
 
@@ -320,58 +331,43 @@ export const useDataController = () => {
         const { error } = await supabase
             .from('dim_colaboradores')
             .update({ ativo: false })
-            .eq('ID_Colaborador', Number(userId));
+            .eq('ID_Colaborador', safeNum(userId)!);
         if (error) throw error;
     };
 
     // === MEMBER CONTROLLERS ===
 
     const getProjectMembers = (projectId: string): string[] => {
-        return projectMembers.filter(pm => String(pm.id_projeto) === projectId).map(pm => String(pm.id_colaborador));
+        return projectMembers.filter(pm => safeString(pm.id_projeto) === projectId).map(pm => safeString(pm.id_colaborador));
     };
 
     const addProjectMember = async (projectId: string, userId: string, allocationPercentage: number = 100): Promise<void> => {
         const { error } = await supabase
             .from('project_members')
             .upsert({
-                id_projeto: Number(projectId),
-                id_colaborador: Number(userId),
+                id_projeto: safeNum(projectId),
+                id_colaborador: safeNum(userId),
                 allocation_percentage: allocationPercentage
             }, { onConflict: 'id_projeto, id_colaborador' });
 
         if (error) throw error;
 
-        setProjectMembers(prev => {
-            const exists = prev.find(pm => String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId);
-            if (exists) {
-                return prev.map(pm =>
-                    String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId
-                        ? { ...pm, allocation_percentage: allocationPercentage }
-                        : pm
-                );
-            }
-            return [...prev, {
-                id_pc: -1, // Temporary
-                id_projeto: Number(projectId),
-                id_colaborador: Number(userId),
-                allocation_percentage: allocationPercentage
-            }];
-        });
+        // setProjectMembers(prev => { ... }); // Removido: Realtime cuida disso
     };
 
     const removeProjectMember = async (projectId: string, userId: string): Promise<void> => {
         const { error } = await supabase
             .from('project_members')
             .delete()
-            .match({ id_projeto: Number(projectId), id_colaborador: Number(userId) });
+            .match({ id_projeto: safeNum(projectId), id_colaborador: safeNum(userId) });
         if (error) throw error;
-        setProjectMembers(prev => prev.filter(pm => !(String(pm.id_projeto) === projectId && String(pm.id_colaborador) === userId)));
+        setProjectMembers(prev => prev.filter(pm => !(safeString(pm.id_projeto) === projectId && safeString(pm.id_colaborador) === userId)));
 
         // --- LÓGICA AUTOMÁTICA: Remover membro das tarefas onde ele NÃO é o responsável principal ---
         const relatedTasks = tasks.filter(t => t.projectId === projectId);
         for (const task of relatedTasks) {
             // Se ele for o responsável (developerId), MANTÉM ele na tarefa (e por consequência ele precisará ser removido manualmente se for o caso)
-            if (String(task.developerId) === String(userId)) {
+            if (safeString(task.developerId) === safeString(userId)) {
                 console.log(`[DataController] Mantendo responsável na tarefa ${task.id}`);
                 continue;
             }
@@ -391,7 +387,7 @@ export const useDataController = () => {
         const { data: row, error } = await supabase
             .from('colaborador_ausencias')
             .insert({
-                colaborador_id: Number(data.userId),
+                colaborador_id: safeNum(data.userId),
                 tipo: data.type,
                 data_inicio: data.startDate,
                 data_fim: data.endDate,
@@ -405,6 +401,7 @@ export const useDataController = () => {
 
         if (error) throw error;
 
+        /* Removido: Realtime cuida disso
         const newAbsence: Absence = {
             id: String(row.id),
             userId: data.userId!,
@@ -417,8 +414,9 @@ export const useDataController = () => {
             endTime: data.endTime
         };
         setAbsences(prev => [...prev, newAbsence]);
+        */
 
-        return String(row.id);
+        return safeString(row.id);
     };
 
     const updateAbsence = async (id: string, updates: Partial<Absence>): Promise<void> => {
@@ -433,20 +431,20 @@ export const useDataController = () => {
                 periodo: updates.period,
                 hora_fim: updates.endTime
             })
-            .eq('id', Number(id));
+            .eq('id', safeNum(id)!);
 
         if (error) throw error;
-        setAbsences(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+        // setAbsences(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a)); // Removido
     };
 
     const deleteAbsence = async (id: string): Promise<void> => {
         const { error } = await supabase
             .from('colaborador_ausencias')
             .delete()
-            .eq('id', Number(id));
+            .eq('id', safeNum(id)!);
 
         if (error) throw error;
-        setAbsences(prev => prev.filter(a => a.id !== id));
+        // setAbsences(prev => prev.filter(a => a.id !== id)); // Removido
     };
 
     // === HOLIDAY CONTROLLERS ===
@@ -468,6 +466,7 @@ export const useDataController = () => {
 
         if (error) throw error;
 
+        /* Removido: Realtime cuida disso
         const newHoliday: Holiday = {
             id: String(row.id),
             name: data.name!,
@@ -479,8 +478,9 @@ export const useDataController = () => {
             endTime: data.endTime
         };
         setHolidays(prev => [...prev, newHoliday]);
+        */
 
-        return String(row.id);
+        return safeString(row.id);
     };
 
     const updateHoliday = async (id: string, updates: Partial<Holiday>): Promise<void> => {
@@ -495,20 +495,20 @@ export const useDataController = () => {
                 periodo: updates.period,
                 hora_fim: updates.endTime
             })
-            .eq('id', Number(id));
+            .eq('id', safeNum(id)!);
 
         if (error) throw error;
-        setHolidays(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
+        // setHolidays(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h)); // Removido
     };
 
     const deleteHoliday = async (id: string): Promise<void> => {
         const { error } = await supabase
             .from('feriados')
             .delete()
-            .eq('id', Number(id));
+            .eq('id', safeNum(id)!);
 
         if (error) throw error;
-        setHolidays(prev => prev.filter(h => h.id !== id));
+        // setHolidays(prev => prev.filter(h => h.id !== id)); // Removido
     };
 
     return {

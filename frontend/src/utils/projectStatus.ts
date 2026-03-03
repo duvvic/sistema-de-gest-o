@@ -9,16 +9,25 @@ export const getProjectStatusByTimeline = (p: Project, tasks?: Task[]) => {
         return 'CONCLUÍDO';
     }
 
+    // Status ATRASADO agora depende de TAREFAS (Request 3)
+    if (tasks && tasks.length > 0) {
+        const hasDelayedTask = tasks.some(t => {
+            if (t.status === 'Done') return false;
+            if (!t.estimatedDelivery) return false;
+            const deliveryDate = new Date(t.estimatedDelivery + 'T23:59:59');
+            return deliveryDate < new Date();
+        });
+
+        // O usuário mencionou que status atrasado tem relação a status da tarefa
+        if (hasDelayedTask) return 'ATRASADO';
+    }
+
     if (p.startDateReal && p.startDateReal.trim() !== "") return 'EM ANDAMENTO';
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
-    if (p.estimatedDelivery && p.estimatedDelivery.trim() !== "") {
-        const endP = new Date(p.estimatedDelivery + 'T12:00:00');
-        if (now > endP) return 'ATRASADO';
-    }
-
+    // Se não tem tarefas atrasadas, checamos se o projeto já iniciou ou se está no prazo
     if (p.startDate && p.startDate.trim() !== "") {
         const startP = new Date(p.startDate + 'T12:00:00');
         if (now >= startP) return 'INICIADO';
