@@ -5,7 +5,7 @@ export function normalizeStatus(raw: string | null): Status {
     if (!raw) return "Todo";
     const s = raw.toLowerCase().trim();
     if (s.includes("pré-projeto") || s.includes("projeto") || s.includes("não iniciado")) return "Todo";
-    if (s.includes("conclu") || s.includes("done") || s.includes("finaliz")) return "Done";
+    if (s.includes("conclu") || s.includes("done") || s.includes("finaliz") || s.includes("entregue")) return "Done";
     if (s.includes("analise") || s.includes("análise") || s.includes("revis") || s.includes("review") || s.includes("valida") || s.includes("pendente")) return "Review";
     if (s.includes("teste") || s.includes("testing")) return "Testing";
     if (s.includes("andamento") || s.includes("progresso") || s.includes("progress") || s.includes("execu") || s.includes("iniciado") || s.includes("trabalhando")) return "In Progress";

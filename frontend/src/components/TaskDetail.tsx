@@ -197,21 +197,9 @@ const TaskDetail: React.FC = () => {
     }
   }, [taskId, isNew, taskMemberAllocations, isDirty]);
 
-  useEffect(() => {
-    if (formData.status === 'In Progress' || formData.status === 'Review' || formData.status === 'Testing' || formData.status === 'Done') return;
-
-    if (formData.scheduledStart) {
-      const startParts = formData.scheduledStart.split('-');
-      const start = new Date(Number(startParts[0]), Number(startParts[1]) - 1, Number(startParts[2]));
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const newStatus: Status = today >= start ? 'In Progress' : 'Todo';
-      if (formData.status !== newStatus) {
-        setFormData((prev: any) => ({ ...prev, status: newStatus }));
-      }
-    }
-  }, [formData.scheduledStart, formData.status]);
+  // Automatização de status removida a pedido do usuário: 
+  // O status não deve mudar sozinho para 'Andamento' quando a data chegar.
+  // Deve permanecer como estava e ser alterado apenas manualmente.
 
   const actualHoursSpent = useMemo(() => {
     if (isNew) return 0;
@@ -450,7 +438,7 @@ const TaskDetail: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg)] overflow-hidden">
-      <div className="px-8 py-5 shadow-lg flex items-center justify-between text-white z-20" style={{ background: 'linear-gradient(to right, #1e1b4b, #4c1d95)' }}>
+      <div className="px-8 py-5 shadow-lg flex items-center justify-between text-white z-20" style={{ background: 'linear-gradient(to right, var(--sidebar-bg), var(--primary))' }}>
         <div className="flex items-center gap-4">
           {/* Botão Voltar com estilo explícito para garantir visibilidade */}
           <button

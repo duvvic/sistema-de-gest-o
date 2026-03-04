@@ -10,74 +10,117 @@
      ============================================ */
 
   /* Core Backgrounds - Clear layering with depth perception */
-  --bg: #F0F4F8;              /* Cool gray-blue - Soft main background */
-  --bg-elevated: #F7F9FB;      /* Slightly lighter - App container */
-  --surface: #FFFFFF;          /* Pure white - Primary cards (clearly elevated) */
-  --surface-elevated: #FFFFFF; /* Pure white - Modals, dropdowns (highest elevation) */
-  --surface-2: #F8FAFB;        /* Very light blue-gray - Nested sections within cards */
-  --surface-3: #F0F3F7;        /* Light blue-gray - Input fields & subtle containers */
-  --surface-hover: #F7F9FC;    /* Subtle blue tint - Hover states */
-  --surface-pressed: #EDF1F5;  /* Slightly darker - Pressed states */
+  --bg: #F4F7FA;
+  /* Very light blue-gray - Modern dashboard base */
+  --bg-elevated: #F9FAFB;
+  /* App container background */
+  --surface: #FFFFFF;
+  /* Primary cards */
+  --surface-elevated: #FFFFFF;
+  /* Modals, dropdowns */
+  --surface-2: #F8FAFC;
+  /* Nested sections within cards */
+  --surface-3: #F1F5F9;
+  /* Input fields */
+  --surface-hover: #F8FAFC;
+  /* Hover states */
+  --surface-pressed: #F1F5F9;
+  /* Pressed states */
 
   /* Input & Form Elements */
-  --input-bg: #F8FAFB;         /* Soft background for inputs */
-  --input-bg-focus: #FFFFFF;   /* Pure white on focus for clarity */
-  --input-border: #D5DBE1;     /* Medium gray - Visible but not harsh */
-  --input-border-focus: #A0AEC0; /* Darker on focus for emphasis */
-  --input-disabled: #F0F3F7;   /* Muted for disabled state */
+  --input-bg: #FFFFFF;
+  --input-bg-focus: #FFFFFF;
+  --input-border: #E2E8F0;
+  /* Slate 200 */
+  --input-border-focus: #A5B4FC;
+  /* Indigo 300 - subtle brand focus */
+  --input-disabled: #F1F5F9;
 
   /* Sidebar & Brand */
-  --sidebar-bg: #4C1D95;       /* Purple 900 */
-  --sidebar-bg-2: #5B21B6;     /* Purple 800 */
-  --sidebar-hover: #6D28D9;    /* Purple 700 */
-  --primary: #7C3AED;          /* Purple 600 */
-  --primary-hover: #6D28D9;    /* Purple 700 */
-  --primary-soft: #F5F3FF;     /* Purple 50 */
-  --primary-muted: #EDE9FE;    /* Purple 100 */
+  --sidebar-bg: #1E1E2D;
+  /* Metronic Navy - Extremely professional */
+  --sidebar-bg-2: #2B2B40;
+  /* Slightly lighter */
+  --sidebar-hover: #212130;
+  --primary: #6366F1;
+  /* Indigo 500 */
+  --primary-hover: #4F46E5;
+  /* Indigo 600 */
+  --primary-soft: #F5F3FF;
+  /* Indigo 50 */
+  --primary-muted: #EEF2FF;
+  /* Indigo 100 */
 
-  /* Text Hierarchy - Strong readability */
-  --text: #1A202C;             /* Deep slate - Primary text (softer than pure black) */
-  --text-2: #2D3748;           /* Slate 800 - Secondary text */
-  --text-3: #4A5568;           /* Slate 600 - Tertiary text */
-  --text-muted: #718096;       /* Slate 500 - Muted text */
-  --text-placeholder: #A0AEC0; /* Slate 400 - Placeholders */
+  /* Text Hierarchy - Enterprise Readability */
+  --text: #1E1E2D;
+  /* Deep navy - Almost black but softer */
+  --text-2: #4B5563;
+  /* Gray 600 - Body text */
+  --text-3: #6B7280;
+  /* Gray 500 - Secondary text */
+  --text-muted: #9CA3AF;
+  /* Gray 400 - Muted text */
+  --text-placeholder: #D1D5DB;
+  /* Gray 300 - Placeholders */
 
-  /* Borders & Dividers - Clear separation */
-  --border: #D5DBE1;           /* Medium gray - Clearly visible borders */
-  --border-strong: #B8C1CC;    /* Darker gray - Emphasized borders */
-  --border-muted: #E8ECF0;     /* Very light - Subtle dividers */
-  --divider: #E2E8F0;          /* Light gray - Section dividers */
+  /* Borders & Dividers */
+  --border: #E5E7EB;
+  /* Gray 200 - Very clean */
+  --border-strong: #D1D5DB;
+  /* Gray 300 */
+  --border-muted: #F3F4F6;
+  /* Gray 100 - Subtle lines */
+  --divider: #F3F4F6;
 
-  /* Interactive States */
-  --hover-overlay: rgba(0, 0, 0, 0.03);
-  --pressed-overlay: rgba(0, 0, 0, 0.06);
-  --focus-ring: rgba(124, 58, 237, 0.25);
+  /* Status Colors - Refined for professional use */
+  --success: #10B981;
+  /* Emerald 500 */
+  --success-bg: #ECFDF5;
+  /* Emerald 50 */
+  --success-text: #059669;
+  /* Emerald 600 */
+  --warning: #F59E0B;
+  /* Amber 500 */
+  --warning-bg: #FFFBEB;
+  /* Amber 50 */
+  --warning-text: #D97706;
+  /* Amber 600 */
+  --danger: #EF4444;
+  /* Red 500 */
+  --danger-bg: #FEF2F2;
+  /* Red 50 */
+  --danger-text: #DC2626;
+  /* Red 600 */
+  --info: #3B82F6;
+  /* Blue 500 */
+  --info-bg: #EFF6FF;
+  /* Blue 50 */
+  --info-text: #2563EB;
+  /* Blue 600 */
 
-  /* Status Colors */
-  --success: #10B981;          /* Emerald 500 */
-  --success-bg: #D1FAE5;       /* Emerald 100 - More visible */
-  --success-text: #047857;     /* Emerald 700 - Better contrast */
-  --warning: #F59E0B;          /* Amber 500 */
-  --warning-bg: #FEF3C7;       /* Amber 100 - More visible */
-  --warning-text: #B45309;     /* Amber 700 - Better contrast */
-  --danger: #EF4444;           /* Red 500 */
-  --danger-bg: #FEE2E2;        /* Red 100 - More visible */
-  --danger-text: #B91C1C;      /* Red 700 - Better contrast */
-  --info: #3B82F6;             /* Blue 500 */
-  --info-bg: #DBEAFE;          /* Blue 100 - More visible */
-  --info-text: #1E40AF;        /* Blue 800 */
+  /* Status Capacity Map - Light Mode */
+  --status-occupied: #3B82F6;
+  /* Modern Blue */
+  --status-occupied-bg: rgba(59, 130, 246, 0.12);
+  --status-free: #10B981;
+  /* Modern Emerald */
+  --status-free-bg: rgba(16, 185, 129, 0.1);
+  --status-absent: #F97316;
+  /* Modern Orange */
+  --status-absent-bg: rgba(249, 115, 22, 0.1);
 
-  /* Shadows - Enhanced for depth perception */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.08);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.18);
-  --shadow-card: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.06);
+  /* Shadows - Premium Soft Shadow System */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --shadow-card: 0 20px 25px -5px rgba(0, 0, 0, 0.04), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
 
   /* Overlay & Modal */
-  --overlay: rgba(15, 23, 42, 0.45);   /* Slightly stronger for better modal focus */
+  --overlay: rgba(15, 23, 42, 0.45);
+  /* Slightly stronger for better modal focus */
   --modal-bg: #FFFFFF;
 
   /* Kanban Specific - Light Mode */
@@ -86,11 +129,14 @@
   --status-progress: rgba(14, 165, 233, 0.08);
   --status-testing: rgba(139, 92, 246, 0.08);
   --status-done: rgba(16, 185, 129, 0.08);
-  
+
   /* Card Status Colors */
-  --card-delayed: #dc2626;        /* Red 600 - Urgent */
-  --card-impediment: #ea580c;     /* Orange 600 - Blocked (darker than Análise) */
-  --card-study: #eab308;          /* Yellow 500 - Learning */
+  --card-delayed: #dc2626;
+  /* Red 600 - Urgent */
+  --card-impediment: #ea580c;
+  /* Orange 600 - Blocked (darker than Análise) */
+  --card-study: #eab308;
+  /* Yellow 500 - Learning */
   --card-delayed-bg: rgba(220, 38, 38, 0.06);
   --card-impediment-bg: rgba(234, 88, 12, 0.06);
   --card-study-bg: rgba(234, 179, 8, 0.06);
@@ -127,42 +173,68 @@ html.dark {
      ============================================ */
 
   /* Core Backgrounds - Deep layering with proper depth */
-  --bg: #0A0A0F;               /* Very dark base - almost black */
-  --bg-elevated: #13121C;      /* Slightly elevated */
-  --surface: #1A1825;          /* Card backgrounds - clearly elevated */
-  --surface-elevated: #211E30; /* Modals, dropdowns - even more elevated */
-  --surface-2: #100E18;        /* Nested sections - darker than surface */
-  --surface-3: #0D0B13;        /* Input fields - darker still */
-  --surface-hover: #252233;    /* Hover states - lighter */
-  --surface-pressed: #1E1B2E;  /* Pressed states */
+  --bg: #0A0A0F;
+  /* Very dark base - almost black */
+  --bg-elevated: #13121C;
+  /* Slightly elevated */
+  --surface: #1A1825;
+  /* Card backgrounds - clearly elevated */
+  --surface-elevated: #211E30;
+  /* Modals, dropdowns - even more elevated */
+  --surface-2: #100E18;
+  /* Nested sections - darker than surface */
+  --surface-3: #0D0B13;
+  /* Input fields - darker still */
+  --surface-hover: #252233;
+  /* Hover states - lighter */
+  --surface-pressed: #1E1B2E;
+  /* Pressed states */
 
   /* Input & Form Elements */
-  --input-bg: #13121C;         /* Darker for depth */
-  --input-bg-focus: #1A1825;   /* Slightly lighter on focus */
-  --input-border: #2D2839;     /* Subtle border */
-  --input-border-focus: #3D3750; /* More visible on focus */
-  --input-disabled: #0D0B13;   /* Very dark when disabled */
+  --input-bg: #13121C;
+  /* Darker for depth */
+  --input-bg-focus: #1A1825;
+  /* Slightly lighter on focus */
+  --input-border: #2D2839;
+  /* Subtle border */
+  --input-border-focus: #3D3750;
+  /* More visible on focus */
+  --input-disabled: #0D0B13;
+  /* Very dark when disabled */
 
   /* Sidebar & Brand */
-  --sidebar-bg: #13101C;       /* Very dark purple-tinted */
-  --sidebar-bg-2: #1A1625;     /* Slightly lighter */
-  --sidebar-hover: #252040;    /* Hover state */
-  --primary: #8B5CF6;          /* Purple 500 - brighter for dark mode */
-  --primary-hover: #A78BFA;    /* Purple 400 - even brighter on hover */
+  --sidebar-bg: #13101C;
+  /* Very dark purple-tinted */
+  --sidebar-bg-2: #1A1625;
+  /* Slightly lighter */
+  --sidebar-hover: #252040;
+  /* Hover state */
+  --primary: #8B5CF6;
+  /* Purple 500 - brighter for dark mode */
+  --primary-hover: #A78BFA;
+  /* Purple 400 - even brighter on hover */
   --primary-soft: rgba(139, 92, 246, 0.12);
   --primary-muted: rgba(139, 92, 246, 0.2);
 
   /* Text Hierarchy - Adjusted for dark backgrounds */
-  --text: #F1F5F9;             /* Slate 100 - Very light */
-  --text-2: #CBD5E1;           /* Slate 300 - Secondary */
-  --text-3: #94A3B8;           /* Slate 400 - Tertiary */
-  --text-muted: #64748B;       /* Slate 500 - Muted */
-  --text-placeholder: #475569; /* Slate 600 - Placeholders */
+  --text: #F1F5F9;
+  /* Slate 100 - Very light */
+  --text-2: #CBD5E1;
+  /* Slate 300 - Secondary */
+  --text-3: #94A3B8;
+  /* Slate 400 - Tertiary */
+  --text-muted: #64748B;
+  /* Slate 500 - Muted */
+  --text-placeholder: #475569;
+  /* Slate 600 - Placeholders */
 
   /* Borders & Dividers */
-  --border: #2D2839;           /* Subtle purple-tinted border */
-  --border-strong: #3D3750;    /* More visible borders */
-  --border-muted: #1E1B2E;     /* Very subtle dividers */
+  --border: #2D2839;
+  /* Subtle purple-tinted border */
+  --border-strong: #3D3750;
+  /* More visible borders */
+  --border-muted: #1E1B2E;
+  /* Very subtle dividers */
   --divider: #252233;
 
   /* Interactive States */
@@ -171,18 +243,26 @@ html.dark {
   --focus-ring: rgba(139, 92, 246, 0.3);
 
   /* Status Colors - Adjusted brightness for dark mode */
-  --success: #34D399;          /* Emerald 400 - brighter */
+  --success: #34D399;
+  /* Emerald 400 - brighter */
   --success-bg: rgba(52, 211, 153, 0.15);
-  --success-text: #6EE7B7;     /* Emerald 300 */
-  --warning: #FBBF24;          /* Amber 400 - brighter */
+  --success-text: #6EE7B7;
+  /* Emerald 300 */
+  --warning: #FBBF24;
+  /* Amber 400 - brighter */
   --warning-bg: rgba(251, 191, 36, 0.15);
-  --warning-text: #FCD34D;     /* Amber 300 */
-  --danger: #F87171;           /* Red 400 - brighter */
+  --warning-text: #FCD34D;
+  /* Amber 300 */
+  --danger: #F87171;
+  /* Red 400 - brighter */
   --danger-bg: rgba(248, 113, 113, 0.15);
-  --danger-text: #FCA5A5;      /* Red 300 */
-  --info: #60A5FA;             /* Blue 400 - brighter */
+  --danger-text: #FCA5A5;
+  /* Red 300 */
+  --info: #60A5FA;
+  /* Blue 400 - brighter */
   --info-bg: rgba(96, 165, 250, 0.15);
-  --info-text: #93C5FD;        /* Blue 300 */
+  --info-text: #93C5FD;
+  /* Blue 300 */
 
   /* Shadows - Stronger in Dark Mode for depth */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
@@ -198,16 +278,30 @@ html.dark {
   --modal-bg: #1A1825;
 
   /* Kanban Specific - Dark Mode */
-  --status-todo: rgba(100, 116, 139, 0.12);
-  --status-review: rgba(245, 158, 11, 0.15);
-  --status-progress: rgba(14, 165, 233, 0.15);
-  --status-testing: rgba(139, 92, 246, 0.15);
-  --status-done: rgba(52, 211, 153, 0.15);
-  
+  --status-todo: rgba(148, 163, 184, 0.1);
+  --status-review: rgba(251, 191, 36, 0.1);
+  --status-progress: rgba(56, 189, 248, 0.1);
+  --status-testing: rgba(167, 139, 250, 0.1);
+  --status-done: rgba(52, 211, 153, 0.1);
+
+  /* Status Capacity Map - Dark Mode Professional Set */
+  --status-occupied: #60A5FA;
+  /* Brighter Blue for Dark Mode */
+  --status-occupied-bg: rgba(96, 165, 250, 0.25);
+  --status-free: #34D399;
+  /* Brighter Emerald */
+  --status-free-bg: rgba(52, 211, 153, 0.2);
+  --status-absent: #FB923C;
+  /* Brighter Orange */
+  --status-absent-bg: rgba(251, 146, 60, 0.2);
+
   /* Card Status Colors - Dark Mode */
-  --card-delayed: #ef4444;        /* Red 500 - Brighter for dark */
-  --card-impediment: #f97316;     /* Orange 500 - Brighter but distinct */
-  --card-study: #fbbf24;          /* Yellow 400 - Brighter */
+  --card-delayed: #ef4444;
+  /* Red 500 - Brighter for dark */
+  --card-impediment: #f97316;
+  /* Orange 500 - Brighter but distinct */
+  --card-study: #fbbf24;
+  /* Yellow 400 - Brighter */
   --card-delayed-bg: rgba(239, 68, 68, 0.12);
   --card-impediment-bg: rgba(249, 115, 22, 0.12);
   --card-study-bg: rgba(251, 191, 36, 0.12);
@@ -374,6 +468,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(16, 185, 129, 0.06);
   border-color: rgba(16, 185, 129, 0.2);
 }
+
 html.dark .surface-tinted-emerald {
   background-color: rgba(52, 211, 153, 0.1);
   border-color: rgba(52, 211, 153, 0.2);
@@ -383,6 +478,7 @@ html.dark .surface-tinted-emerald {
   background-color: rgba(59, 130, 246, 0.06);
   border-color: rgba(59, 130, 246, 0.2);
 }
+
 html.dark .surface-tinted-blue {
   background-color: rgba(96, 165, 250, 0.1);
   border-color: rgba(96, 165, 250, 0.2);
@@ -392,6 +488,7 @@ html.dark .surface-tinted-blue {
   background-color: rgba(245, 158, 11, 0.06);
   border-color: rgba(245, 158, 11, 0.2);
 }
+
 html.dark .surface-tinted-amber {
   background-color: rgba(251, 191, 36, 0.1);
   border-color: rgba(251, 191, 36, 0.2);
@@ -401,6 +498,7 @@ html.dark .surface-tinted-amber {
   background-color: rgba(124, 58, 237, 0.06);
   border-color: rgba(124, 58, 237, 0.2);
 }
+
 html.dark .surface-tinted-purple {
   background-color: rgba(139, 92, 246, 0.1);
   border-color: rgba(139, 92, 246, 0.2);
@@ -410,6 +508,7 @@ html.dark .surface-tinted-purple {
   background-color: rgba(239, 68, 68, 0.06);
   border-color: rgba(239, 68, 68, 0.2);
 }
+
 html.dark .surface-tinted-red {
   background-color: rgba(248, 113, 113, 0.1);
   border-color: rgba(248, 113, 113, 0.2);
@@ -439,25 +538,30 @@ input[type=number] {
 
 /* Light Mode Adjustments */
 :root:not(.dark) {
+
   /* Text Colors - Updated for better hierarchy */
   .text-slate-400,
   .text-gray-400 {
-    color: #718096 !important; /* Slate 500 - more visible */
+    color: #718096 !important;
+    /* Slate 500 - more visible */
   }
 
   .text-slate-500,
   .text-gray-500 {
-    color: #4A5568 !important; /* Slate 600 - stronger */
+    color: #4A5568 !important;
+    /* Slate 600 - stronger */
   }
 
   .text-slate-600,
   .text-gray-600 {
-    color: #2D3748 !important; /* Slate 800 - more contrast */
+    color: #2D3748 !important;
+    /* Slate 800 - more contrast */
   }
 
   .text-slate-700,
   .text-gray-700 {
-    color: #1A202C !important; /* Deep slate - strong text */
+    color: #1A202C !important;
+    /* Deep slate - strong text */
   }
 
   /* Background Colors - New tones for depth */

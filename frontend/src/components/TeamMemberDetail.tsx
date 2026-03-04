@@ -247,20 +247,31 @@ const TeamMemberDetail: React.FC = () => {
 
          if (!isResponsible && !isCollaborator) return false;
 
-         // Verificar se a tarefa cai no mês selecionado (mesmo critério de horas alocadas)
-         const startDate = `${capacityMonth}-01`;
-         const [year, month] = capacityMonth.split('-').map(Number);
-         const lastDay = new Date(year, month, 0).getDate();
-         const endDate = `${capacityMonth}-${String(lastDay).padStart(2, '0')}`;
+         // Identificar apontamentos desta tarefa para o colaborador atual na vida toda
+         const taskTimesheets = timesheetEntries.filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id));
+         const totalReportedOnTask = taskTimesheets.reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
 
-         const p = projects.find(proj => proj.id === t.projectId);
-         const effectiveStart = t.scheduledStart || t.actualStart || p?.startDate || startDate;
-         const effectiveEnd = t.actualDelivery || t.estimatedDelivery || p?.estimatedDelivery || endDate;
+         if (totalReportedOnTask > 0) {
+            // Regra: Se a tarefa teve algum apontamento na vida, 
+            // ela só aparece no mês caso tenha tido apontamento > 0 no MÊS SELECIONADO.
+            const reportedInMonth = taskTimesheets
+               .filter(e => e.date.startsWith(capacityMonth))
+               .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
 
-         const intStart = effectiveStart > startDate ? effectiveStart : startDate;
-         const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
+            return reportedInMonth > 0;
+         } else {
+            // Regra Fallback: Se NUNCA teve nenhum apontamento, 
+            // ela cai no mês em que o usuário preencheu a entrega programada ou real (preferencia real do front)
+            const startDate = `${capacityMonth}-01`;
+            const [year, month] = capacityMonth.split('-').map(Number);
+            const lastDay = new Date(year, month, 0).getDate();
+            const endDate = `${capacityMonth}-${String(lastDay).padStart(2, '0')}`;
 
-         return (intStart <= intEnd && intStart <= endDate && intEnd >= startDate);
+            const p = projects.find(proj => proj.id === t.projectId);
+            const deliveryDate = t.actualDelivery || t.estimatedDelivery || p?.estimatedDelivery || endDate; // Fallback para manter consistencia
+
+            return deliveryDate >= startDate && deliveryDate <= endDate;
+         }
       })
       .sort((a, b) => {
          const dateA = a.actualDelivery ? new Date(a.actualDelivery).getTime() : 0;
@@ -401,14 +412,14 @@ const TeamMemberDetail: React.FC = () => {
                               </div>
                            </div>
 
-                            {capData && (
-                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                                  {/* Status Card */}
-                                  <div className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
-                                     <div className="flex items-center justify-between mb-1.5">
-                                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Status de Carga</p>
-                                        <InfoTooltip title="Ocupação Total" content="Soma das horas de projetos Planejados + Contínuos em relação à sua meta mensal." />
-                                     </div>
+                           {capData && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                                 {/* Status Card */}
+                                 <div className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Status de Carga</p>
+                                       <InfoTooltip title="Ocupação Total" content="Soma das horas de projetos Planejados + Contínuos em relação à sua meta mensal." />
+                                    </div>
                                     <div className="flex items-end gap-2">
                                        <span className={`text-2xl font-black tabular-nums transition-colors ${capData.status === 'Sobrecarregado' ? 'text-red-500' : capData.status === 'Alto' ? 'text-amber-500' : 'text-emerald-500'}`}>
                                           {Math.round(capData.occupancyRate)}%
@@ -417,19 +428,19 @@ const TeamMemberDetail: React.FC = () => {
                                           {capData.status}
                                        </div>
                                     </div>
-                                     <div className="w-full h-1.5 bg-[var(--surface-3)] rounded-full mt-3 overflow-hidden">
-                                        <div
-                                           className={`h-full transition-all duration-1000 ${capData.status === 'Sobrecarregado' ? 'bg-red-500' : capData.status === 'Alto' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                           style={{ width: `${Math.min(100, capData.occupancyRate)}%` }}
-                                        />
-                                     </div>
+                                    <div className="w-full h-1.5 bg-[var(--surface-3)] rounded-full mt-3 overflow-hidden">
+                                       <div
+                                          className={`h-full transition-all duration-1000 ${capData.status === 'Sobrecarregado' ? 'bg-red-500' : capData.status === 'Alto' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                          style={{ width: `${Math.min(100, capData.occupancyRate)}%` }}
+                                       />
+                                    </div>
                                  </div>
 
-                                  {/* Planejado Card */}
-                                  <div
-                                     onClick={() => setShowBreakdown('planned')}
-                                     className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-[var(--primary)] hover:scale-[1.02] transition-all group/card"
-                                  >
+                                 {/* Planejado Card */}
+                                 <div
+                                    onClick={() => setShowBreakdown('planned')}
+                                    className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-[var(--primary)] hover:scale-[1.02] transition-all group/card"
+                                 >
                                     <div className="flex items-center justify-between mb-1.5">
                                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Planejado (Prioritário)</p>
                                        <div className="flex items-center gap-2">
@@ -445,11 +456,11 @@ const TeamMemberDetail: React.FC = () => {
                                     </p>
                                  </div>
 
-                                  {/* Continuo Card */}
-                                  <div
-                                     onClick={() => setShowBreakdown('continuous')}
-                                     className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-amber-400 hover:scale-[1.02] transition-all group/card"
-                                  >
+                                 {/* Continuo Card */}
+                                 <div
+                                    onClick={() => setShowBreakdown('continuous')}
+                                    className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-amber-400 hover:scale-[1.02] transition-all group/card"
+                                 >
                                     <div className="flex items-center justify-between mb-1.5">
                                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Reserva Técnica</p>
                                        <div className="flex items-center gap-2">
@@ -465,8 +476,8 @@ const TeamMemberDetail: React.FC = () => {
                                     </p>
                                  </div>
 
-                                  {/* Saldo/Buffer Card */}
-                                  <div className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
+                                 {/* Saldo/Buffer Card */}
+                                 <div className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
                                     <div className="flex items-center justify-between mb-1.5">
                                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Disponível p/ Planejado</p>
                                        <InfoTooltip title="Buffer" content="Capacidade livre que pode ser utilizada para novas tarefas planejadas sem comprometer a reserva contínua." />
@@ -479,11 +490,11 @@ const TeamMemberDetail: React.FC = () => {
                                     </p>
                                  </div>
 
-                                  {/* Release Date Card */}
-                                  <div
-                                     onClick={() => setActiveTab('tasks')}
-                                     className="p-5 rounded-3xl bg-[var(--surface-elevated)] border border-[var(--border)] shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden"
-                                  >
+                                 {/* Release Date Card */}
+                                 <div
+                                    onClick={() => setActiveTab('tasks')}
+                                    className="p-5 rounded-3xl bg-[var(--surface-elevated)] border border-[var(--border)] shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden"
+                                 >
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all">
                                        <Zap className="w-12 h-12 text-purple-500" />
                                     </div>
@@ -495,22 +506,22 @@ const TeamMemberDetail: React.FC = () => {
                                        />
                                     </div>
 
-                                     <div className="relative z-10">
-                                        <div className="flex items-center gap-2">
-                                           <p className={`text-xl font-black font-mono transition-all ${releaseDate?.isSaturated ? 'text-red-500' : releaseDate?.realistic ? 'text-purple-400' : 'text-[var(--text-3)]'}`}>
-                                              {releaseDate?.realistic || 'N/A'}
-                                           </p>
+                                    <div className="relative z-10">
+                                       <div className="flex items-center gap-2">
+                                          <p className={`text-xl font-black font-mono transition-all`} style={{ color: releaseDate?.isSaturated ? 'var(--danger)' : releaseDate?.realistic ? 'var(--primary)' : 'var(--text-3)' }}>
+                                             {releaseDate?.realistic || 'N/A'}
+                                          </p>
                                           {releaseDate?.isSaturated && (
-                                             <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white animate-pulse">SOBRECARGA</span>
+                                             <span className="text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse" style={{ backgroundColor: 'var(--danger)', color: 'white' }}>SOBRECARGA</span>
                                           )}
                                        </div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                           <span className={`text-[8px] font-black px-1 py-0.5 rounded uppercase tracking-tighter ${releaseDate?.isSaturated ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'}`}>Realista</span>
-                                           {releaseDate && releaseDate.ideal !== releaseDate.realistic && (
-                                              <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">
-                                                 Ideal: <span className="text-[var(--text-3)]">{releaseDate.ideal}</span>
-                                              </span>
-                                           )}
+                                       <div className="flex items-center gap-2 mt-1">
+                                          <span className={`text-[8px] font-black px-1 py-0.5 rounded uppercase tracking-tighter`} style={{ backgroundColor: releaseDate?.isSaturated ? 'var(--danger-bg)' : 'var(--primary-soft)', color: releaseDate?.isSaturated ? 'var(--danger)' : 'var(--primary)' }}>Realista</span>
+                                          {releaseDate && releaseDate.ideal !== releaseDate.realistic && (
+                                             <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">
+                                                Ideal: <span className="text-[var(--text-3)]">{releaseDate.ideal}</span>
+                                             </span>
+                                          )}
                                        </div>
                                     </div>
 
@@ -519,30 +530,26 @@ const TeamMemberDetail: React.FC = () => {
                               </div>
                            )}
 
-                           {/* NOVO: MAPA DE OCUPAÇÃO DIÁRIA (HEATMAP STYLE) */}
                            <div className="mt-10 pt-8 border-t border-[var(--border)]">
                               <div className="flex items-center justify-between mb-6">
                                  <div>
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Mapa de Alocação Diária</h4>
-                                    <p className="text-[9px] font-bold text-[var(--muted)] opacity-50 uppercase mt-0.5">Visão granular do fluxo de trabalho</p>
+                                    <p className="text-[9px] font-bold text-[var(--muted)] opacity-50 uppercase mt-0.5">Frequência e Ocupação Mensal</p>
                                  </div>
                                  <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-1.5" title="Horas dedicadas a projetos com prazos definidos">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]"></div>
-                                        <span className="text-[9px] font-black uppercase text-[var(--muted)]">Ocupado</span>
-                                     </div>
-                                    <div className="flex items-center gap-1.5" title="Horas de suporte ou atividades contínuas">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.3)]"></div>
-                                        <span className="text-[9px] font-black uppercase text-[var(--muted)]">Reserva</span>
-                                     </div>
+                                       <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: 'var(--status-occupied)' }}></div>
+                                       <span className="text-[9px] font-black uppercase text-[var(--muted)]">Ocupado</span>
+                                    </div>
+
                                     <div className="flex items-center gap-1.5" title="Horas disponíveis livre de alocações">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.3)]"></div>
-                                        <span className="text-[9px] font-black uppercase text-[var(--muted)]">Livre</span>
-                                     </div>
-                                     <div className="flex items-center gap-1.5" title="Dias de ausência">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.3)]"></div>
-                                        <span className="text-[9px] font-black uppercase text-[var(--muted)]">Ausência</span>
-                                     </div>
+                                       <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: 'var(--status-free)' }}></div>
+                                       <span className="text-[9px] font-black uppercase text-[var(--muted)]">Livre</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5" title="Dias de ausência">
+                                       <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: 'var(--status-absent)' }}></div>
+                                       <span className="text-[9px] font-black uppercase text-[var(--muted)]">Ausência</span>
+                                    </div>
                                  </div>
                               </div>
 
@@ -563,32 +570,32 @@ const TeamMemberDetail: React.FC = () => {
                                        return (
                                           <div key={day.date} className="group relative">
                                              <div
-                                                className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-default overflow-hidden ${isOverloaded ? 'ring-2 ring-red-500/20' : ''} ${day.isAbsent ? 'bg-orange-500/10 border-orange-200' : ''}`}
+                                                className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-default overflow-hidden ${isOverloaded ? 'ring-2 ring-red-500/20' : ''}`}
                                                 style={{
-                                                   backgroundColor: day.isAbsent ? undefined : 'var(--bg)',
-                                                   borderColor: isOverloaded ? '#ef4444' : (day.isAbsent ? undefined : 'var(--border)')
+                                                   backgroundColor: day.isAbsent ? 'var(--status-absent-bg)' : 'var(--bg)',
+                                                   borderColor: isOverloaded ? 'var(--danger)' : (day.isAbsent ? 'var(--status-absent)' : 'var(--border)')
                                                 }}
                                              >
                                                 {/* Heatmap Bars */}
                                                 {!day.isAbsent && (
                                                    <div className="w-full h-full flex flex-col">
-                                                      <div className="flex-1 bg-blue-500/80" style={{ height: `${(day.plannedHours / Math.max(1, day.capacity)) * 100}%`, flex: 'none' }} />
-                                                      
-                                                      <div className="flex-1 bg-emerald-400/20" style={{ height: `${(day.bufferHours / Math.max(1, day.capacity)) * 100}%`, flex: 'none' }} />
+                                                      <div style={{ height: `${(day.plannedHours / Math.max(1, day.capacity)) * 100}%`, flex: 'none', backgroundColor: 'var(--status-occupied)' }} />
+
+                                                      <div style={{ height: `${(day.bufferHours / Math.max(1, day.capacity)) * 100}%`, flex: 'none', backgroundColor: 'var(--status-free-bg)' }} />
                                                    </div>
                                                 )}
-                                                
+
                                                 {day.isAbsent && (
-                                                   <div className="w-full h-full bg-orange-500/20 flex items-center justify-center">
-                                                      <AlertCircle size={14} className="text-orange-500 opacity-40" />
+                                                   <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--status-absent-bg)' }}>
+                                                      <AlertCircle size={14} style={{ color: 'var(--status-absent)', opacity: 0.4 }} />
                                                    </div>
                                                 )}
 
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                   <span className="text-[10px] font-black tabular-nums group-hover:hidden" style={{ color: isOverloaded ? '#ef4444' : (day.isAbsent ? '#f97316' : 'var(--text)') }}>
+                                                   <span className="text-[10px] font-black tabular-nums group-hover:hidden" style={{ color: isOverloaded ? 'var(--danger)' : (day.isAbsent ? 'var(--status-absent)' : 'var(--text)') }}>
                                                       {day.date.split('-')[2]}
                                                    </span>
-                                                   <span className="text-[7px] font-black hidden group-hover:block uppercase" style={{ color: isOverloaded ? '#ef4444' : (day.isAbsent ? '#f97316' : 'var(--text)') }}>
+                                                   <span className="text-[7px] font-black hidden group-hover:block uppercase" style={{ color: isOverloaded ? 'var(--danger)' : (day.isAbsent ? 'var(--status-absent)' : 'var(--text)') }}>
                                                       {day.isAbsent ? day.absenceType || 'AUS' : `${total}h`}
                                                    </span>
                                                 </div>
@@ -607,15 +614,15 @@ const TeamMemberDetail: React.FC = () => {
                                                    ) : (
                                                       <>
                                                          <div className="flex justify-between items-center text-[8px] font-bold">
-                                                            <span className="text-blue-400">OCUPADO:</span>
+                                                            <span style={{ color: 'var(--status-occupied)' }}>OCUPADO:</span>
                                                             <span>{day.plannedHours}h</span>
                                                          </div>
-                                                         
+
                                                          <div className="flex justify-between items-center text-[8px] font-bold border-t border-white/5 pt-1.5 mt-1.5">
-                                                            <span className="text-emerald-400">LIVRE:</span>
+                                                            <span style={{ color: 'var(--status-free)' }}>LIVRE:</span>
                                                             <span>{day.bufferHours}h</span>
                                                          </div>
-                                                         <div className={`flex justify-between items-center text-[9px] font-black pt-1 ${isOverloaded ? 'text-red-500' : 'text-white'}`}>
+                                                         <div className={`flex justify-between items-center text-[9px] font-black pt-1 ${isOverloaded ? 'text-[var(--danger)]' : 'text-white'}`}>
                                                             <span>CARGA TOTAL:</span>
                                                             <span>{total}h</span>
                                                          </div>
@@ -979,12 +986,6 @@ const TeamMemberDetail: React.FC = () => {
                            const intStart = effectiveStart > startDate ? effectiveStart : startDate;
                            const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
 
-                           let monthlyAllocatedHours = 0;
-                           if (intStart <= intEnd && intStart <= endDate && intEnd >= startDate) {
-                              const bizDaysInMonth = CapacityUtils.getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
-                              monthlyAllocatedHours = bizDaysInMonth * hoursPerDay;
-                           }
-
                            const monthlyReportedHours = timesheetEntries.reduce((sum, entry) => {
                               if (String(entry.taskId) === String(t.id) && String(entry.userId) === String(user.id)) {
                                  if (entry.date.startsWith(capacityMonth)) {
@@ -1001,23 +1002,38 @@ const TeamMemberDetail: React.FC = () => {
                               return sum;
                            }, 0);
 
+                           let monthlyAllocatedHours = 0;
+                           if (t.status === 'Done') {
+                              if (reportedHours > 0) {
+                                 monthlyAllocatedHours = monthlyReportedHours;
+                              } else {
+                                 const deliveryDate = t.actualDelivery || t.estimatedDelivery || p?.estimatedDelivery || endDate;
+                                 if (deliveryDate >= startDate && deliveryDate <= endDate) {
+                                    monthlyAllocatedHours = totalEffort;
+                                 }
+                              }
+                           } else if (intStart <= intEnd && intStart <= endDate && intEnd >= startDate) {
+                              const bizDaysInMonth = CapacityUtils.getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
+                              monthlyAllocatedHours = bizDaysInMonth * hoursPerDay;
+                           }
+
                            const now = new Date();
                            now.setHours(12, 0, 0, 0);
                            const delivery = t.estimatedDelivery ? new Date(t.estimatedDelivery + 'T12:00:00') : null;
                            const isOverdue = delivery ? now > delivery : false;
 
-                            return (
-                               <motion.div
-                                  variants={{
-                                     hidden: { opacity: 0, y: 10 },
-                                     visible: { opacity: 1, y: 0 }
-                                  }}
-                                  whileHover={{ scale: 1.005 }}
-                                  onClick={() => navigate(`/tasks/${t.id}`)}
-                                  key={t.id}
-                                  className="relative cursor-pointer border p-4 rounded-[16px] mb-3 flex gap-5 items-center group transition-all"
-                                  style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                               >
+                           return (
+                              <motion.div
+                                 variants={{
+                                    hidden: { opacity: 0, y: 10 },
+                                    visible: { opacity: 1, y: 0 }
+                                 }}
+                                 whileHover={{ scale: 1.005 }}
+                                 onClick={() => navigate(`/tasks/${t.id}`)}
+                                 key={t.id}
+                                 className="relative cursor-pointer border p-4 rounded-[16px] mb-3 flex gap-5 items-center group transition-all"
+                                 style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                              >
                                  {/* LOGO EMPRESA */}
                                  <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center p-2.5 shrink-0 shadow-lg">
                                     {client?.logoUrl ? (
@@ -1031,25 +1047,25 @@ const TeamMemberDetail: React.FC = () => {
                                  <div className="flex-1 min-w-0">
                                     {/* HEADER: TITULO + HORAS + PROGRESSO (TEXTO) */}
                                     <div className="flex items-center justify-between mb-1.5">
-                                        <div className="flex items-center gap-3">
-                                           <h4 className="font-black text-[15px] tracking-tight truncate max-w-lg" style={{ color: 'var(--text)' }}>
-                                              {t.title}
-                                           </h4>
-                                           <div className="flex items-center gap-2">
-                                              <div className="px-4 py-1.5 rounded-xl flex gap-4 items-center border shadow-inner" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }} title="Horas e Apontamentos do Mês Selecionado">
-                                                 <div className="flex flex-col items-start leading-tight">
-                                                    <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Alocado (Mês)</span>
-                                                    <span className="text-[12px] font-black text-purple-500 font-mono">{formatDecimalToTime(monthlyAllocatedHours)}h</span>
-                                                 </div>
-                                                 <div className="w-[1px] h-6" style={{ backgroundColor: 'var(--border)' }} />
-                                                 <div className="flex flex-col items-start leading-tight">
-                                                    <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Apontado</span>
-                                                    <span className="text-[12px] font-black text-blue-400 font-mono">{formatDecimalToTime(monthlyReportedHours)}h</span>
-                                                 </div>
+                                       <div className="flex items-center gap-3">
+                                          <h4 className="font-black text-[15px] tracking-tight truncate max-w-lg" style={{ color: 'var(--text)' }}>
+                                             {t.title}
+                                          </h4>
+                                          <div className="flex items-center gap-2">
+                                             <div className="px-4 py-1.5 rounded-xl flex gap-4 items-center border shadow-inner" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }} title="Horas e Apontamentos do Mês Selecionado">
+                                                <div className="flex flex-col items-start leading-tight">
+                                                   <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Alocado (Mês)</span>
+                                                   <span className="text-[12px] font-black text-purple-500 font-mono">{formatDecimalToTime(monthlyAllocatedHours)}h</span>
+                                                </div>
+                                                <div className="w-[1px] h-6" style={{ backgroundColor: 'var(--border)' }} />
+                                                <div className="flex flex-col items-start leading-tight">
+                                                   <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Apontado</span>
+                                                   <span className="text-[12px] font-black text-blue-400 font-mono">{formatDecimalToTime(monthlyReportedHours)}h</span>
+                                                </div>
                                              </div>
                                           </div>
                                        </div>
-                                        <span className="font-black text-[13px] font-mono text-purple-500" style={{ color: 'var(--primary)' }}>{t.progress}%</span>
+                                       <span className="font-black text-[13px] font-mono text-purple-500" style={{ color: 'var(--primary)' }}>{t.progress}%</span>
                                     </div>
 
                                     {/* STATUS BADGE */}
@@ -1059,49 +1075,49 @@ const TeamMemberDetail: React.FC = () => {
                                        </span>
                                     </div>
 
-                                     {/* INFO ROW: PERIODO | RESPONSÁVEL | EQUIPE */}
-                                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-bold uppercase tracking-tighter mb-4" style={{ color: 'var(--text-muted)' }}>
-                                        <div className="flex items-center gap-2">
-                                           <Calendar className="w-3.5 h-3.5 opacity-30" />
-                                           <span>PERÍODO: <span style={{ color: 'var(--text)' }}>{formatDateBR(t.scheduledStart || t.actualStart)} - {formatDateBR(t.estimatedDelivery)}</span></span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                           <UserIcon className="w-3.5 h-3.5 opacity-30" />
-                                           <span>RESPONSÁVEL: <span style={{ color: 'var(--text)' }}>{responsible?.name?.toUpperCase()}</span></span>
-                                        </div>
-                                        <div className="h-3 w-[1px] hidden xl:block" style={{ backgroundColor: 'var(--border)' }} />
-                                        <div className="flex items-center gap-1 min-w-0">
-                                           <span>EQUIPE: <span style={{ color: 'var(--text)', truncate: true }}>{teamNames}</span></span>
-                                        </div>
-                                     </div>
+                                    {/* INFO ROW: PERIODO | RESPONSÁVEL | EQUIPE */}
+                                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-bold uppercase tracking-tighter mb-4" style={{ color: 'var(--text-muted)' }}>
+                                       <div className="flex items-center gap-2">
+                                          <Calendar className="w-3.5 h-3.5 opacity-30" />
+                                          <span>PERÍODO: <span style={{ color: 'var(--text)' }}>{formatDateBR(t.scheduledStart || t.actualStart)} - {formatDateBR(t.estimatedDelivery)}</span></span>
+                                       </div>
+                                       <div className="flex items-center gap-2">
+                                          <UserIcon className="w-3.5 h-3.5 opacity-30" />
+                                          <span>RESPONSÁVEL: <span style={{ color: 'var(--text)' }}>{responsible?.name?.toUpperCase()}</span></span>
+                                       </div>
+                                       <div className="h-3 w-[1px] hidden xl:block" style={{ backgroundColor: 'var(--border)' }} />
+                                       <div className="flex items-center gap-1 min-w-0">
+                                          <span>EQUIPE: <span className="truncate" style={{ color: 'var(--text)' }}>{teamNames}</span></span>
+                                       </div>
+                                    </div>
 
-                                     {/* FOOTER: AVATARES + ALERTA + PROGRESS BAR */}
-                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                           <div className="flex -space-x-2.5">
-                                              {teamIds.slice(0, 8).map(id => {
-                                                 const collabo = users.find(u => String(u.id) === String(id));
-                                                 return (
-                                                    <div key={id} className="w-7 h-7 rounded-full border-2 overflow-hidden shadow-xl" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-2)' }}>
-                                                       {collabo?.avatarUrl ? <img src={collabo.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[7px] font-black uppercase" style={{ color: 'var(--text-muted)' }}>{collabo?.name?.substring(0, 1)}</div>}
-                                                    </div>
-                                                 );
-                                              })}
-                                           </div>
+                                    {/* FOOTER: AVATARES + ALERTA + PROGRESS BAR */}
+                                    <div className="flex items-center justify-between">
+                                       <div className="flex items-center gap-4">
+                                          <div className="flex -space-x-2.5">
+                                             {teamIds.slice(0, 8).map(id => {
+                                                const collabo = users.find(u => String(u.id) === String(id));
+                                                return (
+                                                   <div key={id} className="w-7 h-7 rounded-full border-2 overflow-hidden shadow-xl" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-2)' }}>
+                                                      {collabo?.avatarUrl ? <img src={collabo.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[7px] font-black uppercase" style={{ color: 'var(--text-muted)' }}>{collabo?.name?.substring(0, 1)}</div>}
+                                                   </div>
+                                                );
+                                             })}
+                                          </div>
 
-                                           {isOverdue && (
-                                              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-500/5 border border-red-500/20 text-red-500 shadow-2xl">
+                                          {isOverdue && (
+                                             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-500/5 border border-red-500/20 text-red-500 shadow-2xl">
                                                 <AlertCircle className="w-3.5 h-3.5" />
                                                 <span className="text-[10px] font-black uppercase tracking-[0.15em]">Tarefa Atrasada</span>
                                              </div>
                                           )}
                                        </div>
 
-                                        <div className="w-64 h-1.5 rounded-full overflow-hidden border transition-all" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-                                           <div
-                                              className="h-full bg-purple-600/10"
-                                              style={{ width: '100%' }}
-                                           >
+                                       <div className="w-64 h-1.5 rounded-full overflow-hidden border transition-all" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                          <div
+                                             className="h-full bg-purple-600/10"
+                                             style={{ width: '100%' }}
+                                          >
                                              <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${t.progress}%` }}
@@ -1215,31 +1231,31 @@ const TeamMemberDetail: React.FC = () => {
                                        </span>
                                     </div>
 
-                                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-bold uppercase tracking-tighter mb-4" style={{ color: 'var(--text-muted)' }}>
-                                        <div className="flex items-center gap-2">
-                                           <Calendar className="w-3.5 h-3.5 opacity-30" />
-                                           <span>PRAZO VENCIDO: <span className="text-red-400">{formatDateBR(t.estimatedDelivery)}</span></span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                           <UserIcon className="w-3.5 h-3.5 opacity-30" />
-                                           <span>RESPONSÁVEL: <span style={{ color: 'var(--text)' }}>{responsible?.name?.toUpperCase()}</span></span>
-                                        </div>
-                                     </div>
+                                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-bold uppercase tracking-tighter mb-4" style={{ color: 'var(--text-muted)' }}>
+                                       <div className="flex items-center gap-2">
+                                          <Calendar className="w-3.5 h-3.5 opacity-30" />
+                                          <span>PRAZO VENCIDO: <span className="text-red-400">{formatDateBR(t.estimatedDelivery)}</span></span>
+                                       </div>
+                                       <div className="flex items-center gap-2">
+                                          <UserIcon className="w-3.5 h-3.5 opacity-30" />
+                                          <span>RESPONSÁVEL: <span style={{ color: 'var(--text)' }}>{responsible?.name?.toUpperCase()}</span></span>
+                                       </div>
+                                    </div>
 
-                                     <div className="flex items-center justify-between">
-                                        <div className="flex -space-x-2.5">
-                                           {teamIds.slice(0, 8).map(id => {
-                                              const collabo = users.find(u => String(u.id) === String(id));
-                                              return (
-                                                 <div key={id} className="w-7 h-7 rounded-full border-2 overflow-hidden shadow-xl" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-2)' }}>
-                                                    {collabo?.avatarUrl ? <img src={collabo.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[7px] font-black uppercase" style={{ color: 'var(--text-muted)' }}>{collabo?.name?.substring(0, 1)}</div>}
-                                                 </div>
+                                    <div className="flex items-center justify-between">
+                                       <div className="flex -space-x-2.5">
+                                          {teamIds.slice(0, 8).map(id => {
+                                             const collabo = users.find(u => String(u.id) === String(id));
+                                             return (
+                                                <div key={id} className="w-7 h-7 rounded-full border-2 overflow-hidden shadow-xl" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-2)' }}>
+                                                   {collabo?.avatarUrl ? <img src={collabo.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[7px] font-black uppercase" style={{ color: 'var(--text-muted)' }}>{collabo?.name?.substring(0, 1)}</div>}
+                                                </div>
                                              );
                                           })}
                                        </div>
 
-                                        <div className="w-64 h-1.5 rounded-full overflow-hidden border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-                                           <div className="h-full bg-red-600/10" style={{ width: '100%' }}>
+                                       <div className="w-64 h-1.5 rounded-full overflow-hidden border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                          <div className="h-full bg-red-600/10" style={{ width: '100%' }}>
                                              <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${t.progress}%` }}
@@ -1320,12 +1336,6 @@ const TeamMemberDetail: React.FC = () => {
                         const intStart = effectiveStart > startDateBoundary ? effectiveStart : startDateBoundary;
                         const intEnd = effectiveEnd < endDateBoundary ? effectiveEnd : endDateBoundary;
 
-                        let monthlyAllocatedHours = 0;
-                        if (intStart <= intEnd && intStart <= endDateBoundary && intEnd >= startDateBoundary) {
-                           const bizDaysInMonth = CapacityUtils.getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
-                           monthlyAllocatedHours = bizDaysInMonth * hoursPerDay;
-                        }
-
                         const monthlyReportedHours = timesheetEntries.reduce((sum, entry) => {
                            if (String(entry.taskId) === String(t.id) && String(entry.userId) === String(user.id)) {
                               if (entry.date.startsWith(capacityMonth)) {
@@ -1334,6 +1344,28 @@ const TeamMemberDetail: React.FC = () => {
                            }
                            return sum;
                         }, 0);
+
+                        const reportedTaskTotal = timesheetEntries.reduce((sum, entry) => {
+                           if (String(entry.taskId) === String(t.id) && String(entry.userId) === String(user.id)) {
+                              return sum + (Number(entry.totalHours) || 0);
+                           }
+                           return sum;
+                        }, 0);
+
+                        let monthlyAllocatedHours = 0;
+                        if (t.status === 'Done') {
+                           if (reportedTaskTotal > 0) {
+                              monthlyAllocatedHours = monthlyReportedHours;
+                           } else {
+                              const deliveryDate = t.actualDelivery || t.estimatedDelivery || p?.estimatedDelivery || endDateBoundary;
+                              if (deliveryDate >= startDateBoundary && deliveryDate <= endDateBoundary) {
+                                 monthlyAllocatedHours = totalEffort;
+                              }
+                           }
+                        } else if (intStart <= intEnd && intStart <= endDateBoundary && intEnd >= startDateBoundary) {
+                           const bizDaysInMonth = CapacityUtils.getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
+                           monthlyAllocatedHours = bizDaysInMonth * hoursPerDay;
+                        }
                         return (
                            <motion.div
                               variants={{
@@ -1421,84 +1453,86 @@ const TeamMemberDetail: React.FC = () => {
             onConfirm={handleDeleteUser}
             onCancel={() => setDeleteModalOpen(false)}
          />
-          {showBreakdown && capData && (
-             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'var(--overlay)' }}>
-                <motion.div
-                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                   className="rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border"
-                   style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border)' }}
-                >
-                  <div className={`p-8 ${showBreakdown === 'planned' ? 'bg-blue-600' : 'bg-amber-500'} text-white`}>
-                     <div className="flex items-center justify-between">
-                        <div>
-                           <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Distribuição de Carga</p>
-                           <h3 className="text-2xl font-black">{showBreakdown === 'planned' ? 'Projetos Planejados' : 'Atividades de Reserva'}</h3>
+         {
+            showBreakdown && capData && (
+               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'var(--overlay)' }}>
+                  <motion.div
+                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                     animate={{ opacity: 1, scale: 1, y: 0 }}
+                     className="rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border"
+                     style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border)' }}
+                  >
+                     <div className={`p-8 ${showBreakdown === 'planned' ? 'bg-blue-600' : 'bg-amber-500'} text-white`}>
+                        <div className="flex items-center justify-between">
+                           <div>
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Distribuição de Carga</p>
+                              <h3 className="text-2xl font-black">{showBreakdown === 'planned' ? 'Projetos Planejados' : 'Atividades de Reserva'}</h3>
+                           </div>
+                           <button onClick={() => setShowBreakdown(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                              <LayoutGrid className="w-5 h-5 rotate-45" />
+                           </button>
                         </div>
-                        <button onClick={() => setShowBreakdown(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                           <LayoutGrid className="w-5 h-5 rotate-45" />
+
+                        <div className="mt-6 p-4 bg-white/10 rounded-2xl backdrop-blur-md">
+                           <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Total no Mês</p>
+                           <p className="text-3xl font-black font-mono">
+                              {formatDecimalToTime(showBreakdown === 'planned' ? capData.plannedHours : capData.continuousHours)}h
+                           </p>
+                        </div>
+                     </div>
+
+                     <div className="p-8 max-h-[60vh] overflow-y-auto" style={{ backgroundColor: 'var(--surface)' }}>
+                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 opacity-40">Origem das Horas</p>
+
+                        <div className="space-y-4">
+                           {(showBreakdown === 'planned' ? capData.breakdown.planned : capData.breakdown.continuous).map((item, idx) => (
+                              <div key={item.id} className="flex items-center justify-between p-4 rounded-3xl bg-[var(--surface)] border border-[var(--border)] group hover:border-[var(--primary)] transition-all">
+                                 <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${showBreakdown === 'planned' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                                       {idx + 1}
+                                    </div>
+                                    <div>
+                                       <p className="font-black text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{item.name}</p>
+                                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase">ID: {item.id}</p>
+                                    </div>
+                                 </div>
+                                 <div className="text-right">
+                                    <p className="font-black text-[var(--text)] font-mono">{formatDecimalToTime(item.hours)}h</p>
+                                    <p className="text-[9px] font-bold text-[var(--muted)]">Calculado</p>
+                                 </div>
+                              </div>
+                           ))}
+
+                           {(showBreakdown === 'planned' ? capData.breakdown.planned : capData.breakdown.continuous).length === 0 && (
+                              <div className="text-center py-12 opacity-30">
+                                 <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+                                 <p className="font-black uppercase text-xs">Nenhum projeto identificado</p>
+                              </div>
+                           )}
+                        </div>
+                     </div>
+
+                     <div className="p-8 border-t border-[var(--border)] flex justify-end" style={{ backgroundColor: 'var(--surface-2)' }}>
+                        <button
+                           onClick={() => setShowBreakdown(null)}
+                           className="px-8 py-3 border border-[var(--border)] text-[var(--text)] rounded-2xl font-black text-xs uppercase transition-all active:scale-95 shadow-sm"
+                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                           onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                           }}
+                           onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--surface)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                           }}
+                        >
+                           Fechar
                         </button>
                      </div>
-
-                     <div className="mt-6 p-4 bg-white/10 rounded-2xl backdrop-blur-md">
-                        <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Total no Mês</p>
-                        <p className="text-3xl font-black font-mono">
-                           {formatDecimalToTime(showBreakdown === 'planned' ? capData.plannedHours : capData.continuousHours)}h
-                        </p>
-                     </div>
-                  </div>
-
-                   <div className="p-8 max-h-[60vh] overflow-y-auto" style={{ backgroundColor: 'var(--surface)' }}>
-                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 opacity-40">Origem das Horas</p>
-
-                     <div className="space-y-4">
-                        {(showBreakdown === 'planned' ? capData.breakdown.planned : capData.breakdown.continuous).map((item, idx) => (
-                           <div key={item.id} className="flex items-center justify-between p-4 rounded-3xl bg-[var(--surface)] border border-[var(--border)] group hover:border-[var(--primary)] transition-all">
-                              <div className="flex items-center gap-4">
-                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${showBreakdown === 'planned' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
-                                    {idx + 1}
-                                 </div>
-                                 <div>
-                                    <p className="font-black text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{item.name}</p>
-                                    <p className="text-[10px] font-bold text-[var(--muted)] uppercase">ID: {item.id}</p>
-                                 </div>
-                              </div>
-                              <div className="text-right">
-                                 <p className="font-black text-[var(--text)] font-mono">{formatDecimalToTime(item.hours)}h</p>
-                                 <p className="text-[9px] font-bold text-[var(--muted)]">Calculado</p>
-                              </div>
-                           </div>
-                        ))}
-
-                        {(showBreakdown === 'planned' ? capData.breakdown.planned : capData.breakdown.continuous).length === 0 && (
-                           <div className="text-center py-12 opacity-30">
-                              <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-                              <p className="font-black uppercase text-xs">Nenhum projeto identificado</p>
-                           </div>
-                        )}
-                     </div>
-                  </div>
-
-                   <div className="p-8 border-t border-[var(--border)] flex justify-end" style={{ backgroundColor: 'var(--surface-2)' }}>
-                      <button
-                         onClick={() => setShowBreakdown(null)}
-                         className="px-8 py-3 border border-[var(--border)] text-[var(--text)] rounded-2xl font-black text-xs uppercase transition-all active:scale-95 shadow-sm"
-                         style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
-                            e.currentTarget.style.borderColor = 'var(--primary)';
-                         }}
-                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--surface)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                         }}
-                      >
-                        Fechar
-                     </button>
-                  </div>
-               </motion.div>
-            </div>
-         )}
+                  </motion.div>
+               </div>
+            )
+         }
       </div >
    );
 };

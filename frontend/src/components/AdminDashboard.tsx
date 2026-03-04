@@ -1392,7 +1392,7 @@ const AdminDashboard: React.FC = () => {
 
                           {partnerSubTab === 'info' && (
                             <div className="max-w-4xl animate-in fade-in duration-300">
-                               <div className="p-10 rounded-[2.5rem] border shadow-sm space-y-10" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                              <div className="p-10 rounded-[2.5rem] border shadow-sm space-y-10" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                                 <div className="flex justify-between items-start">
                                   <div className="space-y-1">
                                     <h4 className="text-xl font-black text-[var(--textTitle)]">Detalhes do Registro</h4>
@@ -1400,7 +1400,8 @@ const AdminDashboard: React.FC = () => {
                                   </div>
                                   <button
                                     onClick={() => navigate(`/admin/clients/${partner.id}`)}
-                                    className="px-6 py-2.5 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-700 transition-all flex items-center gap-2 shadow-lg shadow-purple-500/20"
+                                    className="px-6 py-2.5 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg"
+                                    style={{ backgroundColor: 'var(--primary)' }}
                                   >
                                     <Edit2 size={12} /> Editar
                                   </button>
@@ -1409,27 +1410,27 @@ const AdminDashboard: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                                   <div className="space-y-1.5">
                                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome do Parceiro</p>
-                                   <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.name}</p>
+                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.name}</p>
                                   </div>
-                                   <div className="space-y-1.5">
-                                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">CNPJ</p>
-                                     <p className="text-sm font-mono font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.cnpj || '---'}</p>
+                                  <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">CNPJ</p>
+                                    <p className="text-sm font-mono font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.cnpj || '---'}</p>
                                   </div>
-                                   <div className="space-y-1.5">
-                                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Email Principal</p>
-                                     <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.email_contato || '---'}</p>
+                                  <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Email Principal</p>
+                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.email_contato || '---'}</p>
                                   </div>
-                                   <div className="space-y-1.5">
-                                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Telefone</p>
-                                     <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.telefone || '---'}</p>
+                                  <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Telefone</p>
+                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.telefone || '---'}</p>
                                   </div>
-                                   <div className="space-y-1.5">
-                                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Responsável Externo</p>
-                                     <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.responsavel_externo || '---'}</p>
+                                  <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Responsável Externo</p>
+                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.responsavel_externo || '---'}</p>
                                   </div>
-                                   <div className="space-y-1.5">
-                                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Gestor da Conta (Interno)</p>
-                                     <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{internalResp?.name || '---'}</p>
+                                  <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Gestor da Conta (Interno)</p>
+                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{internalResp?.name || '---'}</p>
                                   </div>
                                 </div>
 
@@ -1485,7 +1486,7 @@ const AdminDashboard: React.FC = () => {
                               <h3 className="text-sm font-black text-[var(--textTitle)] uppercase tracking-[0.05em]">{partner.name}</h3>
                               <div className="flex items-center gap-3 mt-1 underline-offset-4">
                                 <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.projectCount} Contas Ativas</span>
-                                <span className="text-[10px] font-black text-purple-600 uppercase tracking-widest bg-purple-50 px-2 py-0.5 rounded-full">{partner.tenure}</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>{partner.tenure}</span>
                               </div>
                             </div>
                           </div>
@@ -2281,36 +2282,36 @@ const AdminDashboard: React.FC = () => {
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-5 rounded-2xl border surface-tinted-emerald">
-                             <div className="flex items-center gap-2 mb-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                               <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Faturamento</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Faturamento</p>
                             </div>
                             <p className="text-lg font-black text-[var(--textTitle)] font-mono">
                               {partner.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
                             </p>
                           </div>
                           <div className="p-5 rounded-2xl border surface-tinted-blue">
-                             <div className="flex items-center gap-2 mb-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                               <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase">Esforço (Horas)</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                              <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase">Esforço (Horas)</p>
                             </div>
                             <p className="text-lg font-black text-[var(--textTitle)] font-mono">
                               {Math.round(partner.totalHours)}<span className="text-xs ml-0.5 opacity-50 uppercase">h</span>
                             </p>
                           </div>
                           <div className="p-5 rounded-2xl border surface-tinted-purple">
-                             <div className="flex items-center gap-2 mb-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                               <p className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase">Contas Ativas</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                              <p className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase">Contas Ativas</p>
                             </div>
                             <p className="text-lg font-black text-[var(--textTitle)] font-mono">
                               {partner.projectCount}
                             </p>
                           </div>
                           <div className="p-5 rounded-2xl border surface-tinted-amber">
-                             <div className="flex items-center gap-2 mb-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                               <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase">Progresso Médio</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase">Progresso Médio</p>
                             </div>
                             <p className="text-lg font-black text-[var(--textTitle)] font-mono">
                               {Math.round(partner.averageProgress)}%
@@ -2385,7 +2386,7 @@ const AdminDashboard: React.FC = () => {
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg icon-box">
-                             <Building2 size={16} style={{ color: 'var(--text-muted)' }} />
+                            <Building2 size={16} style={{ color: 'var(--text-muted)' }} />
                           </div>
                           <div>
                             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Documentação</p>
@@ -2405,7 +2406,7 @@ const AdminDashboard: React.FC = () => {
                         )}
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg icon-box">
-                             <Briefcase size={16} style={{ color: 'var(--text-muted)' }} />
+                            <Briefcase size={16} style={{ color: 'var(--text-muted)' }} />
                           </div>
                           <div>
                             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Projetos Ativos</p>
@@ -2420,7 +2421,7 @@ const AdminDashboard: React.FC = () => {
                           <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2 border-b border-[var(--border)] pb-2">
                             <UserIcon size={12} className="text-blue-500" /> Contatos
                           </h3>
-                           <div className="p-5 rounded-2xl border shadow-sm" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                          <div className="p-5 rounded-2xl border shadow-sm" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
                             <div className="space-y-3">
                               {client.contato_principal && (
                                 <div className="flex items-center gap-2">

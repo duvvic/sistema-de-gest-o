@@ -114,7 +114,7 @@ export const addBusinessDays = (startDate: string, daysToAdd: number, holidays: 
 export interface DayAllocation {
     date: string;
     plannedHours: number;
-    
+
     bufferHours: number;
     totalOccupancy: number;
     isWorkingDay: boolean;
@@ -178,48 +178,52 @@ export const simulateUserDailyAllocation = (
         const isAbsent = !!activeAbsence;
         const isWorkingDay = !isWeekend && !isHoliday && !isAbsent;
 
-                let plannedHours = 0;
+        let plannedHours = 0;
         let bufferHours = 0;
         let currentCapacity = isAbsent ? 0 : capacityDia;
 
         if (isWorkingDay) {
-            // BUSCA DE TAREFAS ATIVAS NO DIA
-            const userTasks = allTasks.filter(t =>
-                (String(t.developerId) === String(userId) || t.collaboratorIds?.some(id => String(id) === String(userId))) &&
-                t.status !== 'Done' &&
-                (t.status as string) !== 'Cancelled' &&
-                (t.status as string) !== 'Cancelada' &&
-                !t.deleted_at
-            );
+            // 1. CAPTURAR HORAS REAIS (APONTAMENTOS)
+            // Se o usuário trabalhou no dia, isso deve refletir no mapa, independente do status da tarefa.
+            const reportedOnDay = timesheetEntries
+                .filter(e => String(e.userId) === String(userId) && e.date === dateStr)
+                .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
 
-            // Filtra tarefas que o dia atual (dateStr) está dentro do período (Início até Fim Estimado)
-            const activeTasks = userTasks.filter(t => {
-                const project = allProjects.find(p => String(p.id) === String(t.projectId));
-                if (!project) return false;
+            plannedHours = reportedOnDay;
 
-                // Se não tem data de início na tarefa, usa a do projeto. Se não tem fim, assume infinito (ocupado).
-                const tStart = t.scheduledStart || t.actualStart || project.startDate || '';
-                const tEnd = t.estimatedDelivery || '';
+            // 2. ADICIONAR PREVISÃO PLANEJADA (HOJE E FUTURO)
+            // Se o dia é hoje ou futuro, verificamos se há tarefas ATIVAS (não concluídas) para reservar o slot.
+            if (dateStr >= todayStr) {
+                const hasActiveTask = allTasks.some(t => {
+                    const isAssigned = String(t.developerId) === String(userId) || t.collaboratorIds?.some(id => String(id) === String(userId));
+                    if (!isAssigned || !!t.deleted_at) return false;
 
-                // Se o dia está depois do início E (não tem fim OU está antes do fim)
-                return dateStr >= tStart && (tEnd === '' || dateStr <= tEnd);
-            });
+                    const isClosed = t.status === 'Done' || (t.status as string) === 'Concluído' || (t.status as string) === 'Cancelled' || (t.status as string) === 'Cancelada';
+                    if (isClosed) return false;
 
-            if (activeTasks.length > 0) {
-                // Se houver qualquer tarefa ativa, o dia é considerado 100% OCUPADO
-                plannedHours = currentCapacity;
-                bufferHours = 0;
-            } else {
-                // Sem tarefas: 100% LIVRE
-                plannedHours = 0;
-                bufferHours = currentCapacity;
+                    const project = allProjects.find(p => String(p.id) === String(t.projectId));
+                    if (!project) return false;
+
+                    const tStart = t.scheduledStart || t.actualStart || project.startDate || '';
+                    const tEnd = t.estimatedDelivery || ''; // Se não tem fim, assume que continua ocupando
+
+                    return dateStr >= tStart && (tEnd === '' || dateStr <= tEnd);
+                });
+
+                if (hasActiveTask && plannedHours < currentCapacity) {
+                    // Reservar pelo menos a capacidade do dia se houver tarefa ativa e for hoje/futuro
+                    plannedHours = currentCapacity;
+                }
             }
+
+            // O buffer é o que sobra da capacidade diária
+            bufferHours = Math.max(0, currentCapacity - plannedHours);
         }
 
-allocations.push({
+        allocations.push({
             date: dateStr,
             plannedHours: Number(plannedHours.toFixed(2)),
-            
+
             bufferHours: Number(bufferHours.toFixed(2)),
             totalOccupancy: Number(plannedHours.toFixed(2)),
             isWorkingDay,
@@ -322,7 +326,7 @@ export const getUserAvailabilityInRange = (
 ): {
     capacity: number;
     plannedHours: number;
-    
+
     totalOccupancy: number;
     occupancyRate: number;
     balance: number;
@@ -377,36 +381,53 @@ export const getUserAvailabilityInRange = (
             .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id))
             .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
 
+        let effortInPeriod = 0;
+
         if (t.status === 'Done') {
-            totalEffort = reportedOnTask;
-        } else if (reportedOnTask > totalEffort) {
-            // Se ainda não está pronta mas já gastou mais que o previsto, a ocupação é pelo menos o apontado
-            totalEffort = reportedOnTask;
+            // Regra para concluídas:
+            if (reportedOnTask > 0) {
+                // Se teve apontamento, a alocação no período é EXATAMENTE o que foi apontado nele.
+                effortInPeriod = timesheetEntries
+                    .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id) && e.date >= startDate && e.date <= endDate)
+                    .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+            } else {
+                // Se NÃO teve apontamento, consideramos o esforço planejado na data de entrega
+                const deliveryDate = t.actualDelivery || t.estimatedDelivery || p.estimatedDelivery || endDate;
+                if (deliveryDate >= startDate && deliveryDate <= endDate) {
+                    effortInPeriod = totalEffort;
+                }
+            }
+        } else {
+            if (reportedOnTask > totalEffort) {
+                totalEffort = reportedOnTask;
+            }
+            if (totalEffort <= 0) return;
+
+            const tStart = t.scheduledStart || t.actualStart || p.startDate || startDate;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nominalEnd = t.actualDelivery || t.estimatedDelivery || p.estimatedDelivery || endDate;
+
+            // Só estende para hoje se a tarefa estava ORIGINALMENTE programada para terminar dentro do período atual.
+            // Isso evita que tarefas atrasadas de meses anteriores (ex: venceu em Jan) poluam o mês de Março.
+            const effectiveEnd = (nominalEnd < todayStr && nominalEnd >= startDate)
+                ? todayStr
+                : nominalEnd;
+            const effectiveStart = tStart;
+
+            // Distribuição teórica linear do Esforço por todos os dias da tarefa
+            const totalTaskDays = getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays, userAbsences) || 1;
+            const hoursPerDay = totalEffort / totalTaskDays;
+
+            const intStart = effectiveStart > startDate ? effectiveStart : startDate;
+            const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
+
+            if (intStart <= intEnd && intStart <= endDate && intEnd >= startDate) {
+                const bizDaysInPeriod = getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
+                effortInPeriod = bizDaysInPeriod * hoursPerDay;
+            }
         }
 
-        if (totalEffort <= 0 && t.status !== 'Done') return;
-
-        const tStart = t.scheduledStart || t.actualStart || p.startDate || startDate;
-        const todayStr = new Date().toISOString().split('T')[0];
-        const nominalEnd = t.actualDelivery || t.estimatedDelivery || p.estimatedDelivery || endDate;
-        // Só estende para hoje se a tarefa estava ORIGINALMENTE programada para terminar dentro do período atual.
-        // Isso evita que tarefas atrasadas de meses anteriores (ex: venceu em Jan) poluam o mês de Março.
-        const effectiveEnd = (t.status !== 'Done' && nominalEnd < todayStr && nominalEnd >= startDate)
-            ? todayStr
-            : nominalEnd;
-        const effectiveStart = tStart;
-
-        // Distribuição teórica linear do Esforço por todos os dias da tarefa
-        const totalTaskDays = getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays, userAbsences) || 1;
-        const hoursPerDay = totalEffort / totalTaskDays;
-
-        const intStart = effectiveStart > startDate ? effectiveStart : startDate;
-        const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
-
-        if (intStart <= intEnd && intStart <= endDate && intEnd >= startDate) {
-            const bizDaysInPeriod = getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
-            const effortInPeriod = bizDaysInPeriod * hoursPerDay;
-
+        if (effortInPeriod > 0) {
             if (p.project_type === 'continuous') {
                 continuousHoursTotal += effortInPeriod;
                 const existing = continuousProjectsBreakdown.find(pb => pb.id === p.id);
