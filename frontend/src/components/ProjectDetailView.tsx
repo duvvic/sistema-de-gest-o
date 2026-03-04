@@ -1944,9 +1944,8 @@ const ProjectTaskCard: React.FC<{
       onClick={onClick}
       className="cursor-pointer p-8 rounded-[40px] border transition-all relative overflow-hidden group shadow-xl hover:shadow-2xl flex flex-col gap-6"
       style={{
-        backgroundColor: 'rgba(30, 27, 75, 0.4)',
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(12px)'
+        backgroundColor: 'var(--surface)',
+        borderColor: 'var(--border)'
       }}
     >
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-all" />
@@ -1977,26 +1976,26 @@ const ProjectTaskCard: React.FC<{
       </div>
 
       {/* TITLE */}
-      <h3 className="font-black text-2xl leading-tight text-white tracking-tight group-hover:text-purple-300 transition-colors line-clamp-2">
+      <h3 className="font-black text-2xl leading-tight tracking-tight group-hover:text-purple-500 transition-colors line-clamp-2" style={{ color: 'var(--text)' }}>
         {task.title}
       </h3>
 
       {/* INFO ROW GRID */}
-      <div className="grid grid-cols-2 gap-4 p-5 rounded-3xl bg-white/5 border border-white/5">
+      <div className="grid grid-cols-2 gap-4 p-5 rounded-3xl border bg-[var(--surface-hover)] border-[var(--border)]">
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 opacity-50" style={{ color: 'var(--text)' }}>
             <Calendar size={12} /> Prazo Final
           </p>
-          <p className={`text-sm font-black ${isLate ? 'text-rose-400' : 'text-white'}`}>
+          <p className={`text-sm font-black ${isLate ? 'text-rose-500' : ''}`} style={{ color: isLate ? undefined : 'var(--text)' }}>
             {deliveryDateFormatted}
           </p>
         </div>
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2">
+          <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 opacity-50" style={{ color: 'var(--text)' }}>
             <Clock size={12} /> Alocado vs Real
           </p>
-          <p className="text-sm font-black text-white">
-            {formatDecimalToTime(totalAllocatedHours)} <span className="text-white/20 mx-1">/</span> {formatDecimalToTime(totalActualHours)}
+          <p className="text-sm font-black" style={{ color: 'var(--text)' }}>
+            {formatDecimalToTime(totalAllocatedHours)} <span className="opacity-20 mx-1">/</span> {formatDecimalToTime(totalActualHours)}
           </p>
         </div>
       </div>
@@ -2004,10 +2003,10 @@ const ProjectTaskCard: React.FC<{
       {/* EVOLUÇÃO (Progress) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase text-white/40 tracking-widest">Evolução</span>
-          <span className="text-xs font-black text-purple-400">{task.progress}%</span>
+          <span className="text-[10px] font-black uppercase tracking-widest opacity-50" style={{ color: 'var(--text)' }}>Evolução</span>
+          <span className="text-xs font-black text-purple-500">{task.progress}%</span>
         </div>
-        <div className="h-2 rounded-full bg-white/5 border border-white/5 overflow-hidden">
+        <div className="h-2 rounded-full border overflow-hidden bg-[var(--surface-hover)] border-[var(--border)]">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${task.progress}%` }}
@@ -2017,47 +2016,47 @@ const ProjectTaskCard: React.FC<{
       </div>
 
       {/* MAIN RESPONSIBLE */}
-      <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+      <div className="pt-4 border-t flex items-center justify-between border-[var(--border)]">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/10 p-0.5 bg-white/5 shadow-inner">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 p-0.5 shadow-inner bg-[var(--surface-hover)] border-[var(--border)]">
             {dev?.avatarUrl ? (
               <img src={dev.avatarUrl} className="w-full h-full object-cover rounded-[10px]" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-sm font-black text-white/40">
+              <div className="w-full h-full flex items-center justify-center text-sm font-black opacity-40" style={{ color: 'var(--text)' }}>
                 {task.developer?.substring(0, 2).toUpperCase() || '??'}
               </div>
             )}
           </div>
           <div className="flex flex-col gap-0.5">
-            <p className="font-black text-white text-base tracking-tight">{task.developer || 'Sem responsável'}</p>
-            <p className="text-[10px] font-black uppercase text-white/30 tracking-widest">Responsável</p>
+            <p className="font-black text-base tracking-tight" style={{ color: 'var(--text)' }}>{task.developer || 'Sem responsável'}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text)' }}>Responsável</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-sm font-black text-white">
-            {formatDecimalToTime(totalAllocatedHours)} <span className="text-white/20">/</span> {formatDecimalToTime(devActualHours)}
+          <p className="text-sm font-black" style={{ color: 'var(--text)' }}>
+            {formatDecimalToTime(totalAllocatedHours)} <span className="opacity-20">/</span> {formatDecimalToTime(devActualHours)}
           </p>
         </div>
       </div>
 
       {/* TEAM FOOTER SUMMARY */}
-      <div className="mt-auto p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
+      <div className="mt-auto p-4 rounded-2xl border flex items-center justify-between bg-[var(--surface-hover)] border-[var(--border)]">
         <div className="flex items-center gap-2">
           <div className="flex -space-x-3">
             {teamMembers.slice(0, 3).map((m, idx) => (
-              <div key={m.id} className="w-7 h-7 rounded-lg border-2 border-[#1e1b4b] bg-slate-800 overflow-hidden ring-1 ring-white/10" title={m.name}>
-                {m.avatarUrl ? <img src={m.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-white/50">{m.name.charAt(0)}</div>}
+              <div key={m.id} className="w-7 h-7 rounded-lg border-2 overflow-hidden ring-1 shadow-sm bg-[var(--surface)] border-[var(--border)] ring-[#0000000a]" title={m.name}>
+                {m.avatarUrl ? <img src={m.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-bold opacity-50" style={{ color: 'var(--text)' }}>{m.name.charAt(0)}</div>}
               </div>
             ))}
             {teamMembers.length > 3 && (
-              <div className="w-7 h-7 rounded-lg border-2 border-[#1e1b4b] bg-[#4c1d95] flex items-center justify-center text-[8px] font-black text-white ring-1 ring-white/10">
+              <div className="w-7 h-7 rounded-lg border-2 border-[#1e1b4b] bg-[#4c1d95] flex items-center justify-center text-[8px] font-black text-white ring-1 ring-[#0000000a]">
                 +{teamMembers.length - 3}
               </div>
             )}
           </div>
-          <span className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-1">Equipe</span>
+          <span className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-40" style={{ color: 'var(--text)' }}>Equipe</span>
         </div>
-        <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+        <span className="text-[10px] font-black uppercase tracking-widest opacity-50" style={{ color: 'var(--text)' }}>
           {teamMembers.length} {teamMembers.length === 1 ? 'membro' : 'membros'}
         </span>
       </div>
