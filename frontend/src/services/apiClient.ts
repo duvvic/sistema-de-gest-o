@@ -357,9 +357,12 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 
     const responseData = await response.json();
 
-    // Se for PostgREST e retornar um array (comum em mutações com return=representation),
-    // desempacotamos o primeiro item para manter compatibilidade com o resto do sistema
-    if (isPostgrest && Array.isArray(responseData)) {
+    const method = (fetchOptions.method || options.method || 'GET').toUpperCase();
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
+    // Para mutações PostgREST com 'return=representation', o retorno é um array com 1 item.
+    // Desempacotamos somente nesse caso para não quebrar GETs que legitimamente retornam listas.
+    if (isPostgrest && isMutation && Array.isArray(responseData)) {
         return responseData[0] as T;
     }
 
