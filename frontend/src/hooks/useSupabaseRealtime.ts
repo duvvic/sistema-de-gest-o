@@ -1,20 +1,13 @@
 import { useEffect } from 'react';
-import { supabase } from '@/services/supabaseClient';
 
 /**
- * Hook para escutar mudanças em tempo real em uma tabela do Supabase.
- * @param {string} table Nome da tabela
- * @param {(payload: any) => void} onChange Callback para tratar o evento
+ * Hook para escutar mudanças em tempo real (DESATIVADO).
+ * A comunicação agora é 100% via API backend.
  */
-export function useSupabaseRealtime(table, onChange) {
+export function useSupabaseRealtime(_table: string, _onChange: (payload: any) => void) {
   useEffect(() => {
-    if (!table || typeof onChange !== 'function') return;
-    const channel = supabase
-      .channel(`public:${table}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table }, onChange)
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [table, onChange]);
+    // Realtime desativado para garantir segurança e performance.
+    // O sistema utiliza poll/revalidate via backend.
+    console.warn('[Realtime] Supabase Realtime está desativado no frontend.');
+  }, []);
 }

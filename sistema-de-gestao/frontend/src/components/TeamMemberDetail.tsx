@@ -285,17 +285,20 @@ const TeamMemberDetail: React.FC = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                        <label className="block text-[10px] font-black text-[var(--muted)] uppercase">Hrs Meta Mês</label>
-                                       {(() => {
-                                          const currentMonth = new Date().toISOString().slice(0, 7);
-                                          const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonth);
-                                          const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
-                                          return (
-                                             <div className="w-full px-4 py-3 bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-black">
-                                                {calculatedMonthly}
-                                             </div>
-                                          );
-                                       })()}
-                                       <p className="text-[8px] font-bold uppercase opacity-40 mt-1">Base: {CapacityUtils.getWorkingDaysInMonth(new Date().toISOString().slice(0, 7))} dias úteis</p>
+                                       {!isEditing ? (
+                                          <div className="w-full px-4 py-3 bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-black">
+                                             {formData.monthlyAvailableHours}
+                                          </div>
+                                       ) : (
+                                          <input
+                                             type="text"
+                                             value={formData.monthlyAvailableHours || ''}
+                                             onChange={(e) => handleNumberChange('monthlyAvailableHours', e.target.value)}
+                                             placeholder="0"
+                                             className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold focus:ring-2 focus:ring-[var(--primary)]/20 outline-none"
+                                          />
+                                       )}
+                                       <p className="text-[8px] font-bold uppercase opacity-40 mt-1">Sugerido: {(formData.dailyAvailableHours || 0) * CapacityUtils.getWorkingDaysInMonth(new Date().toISOString().slice(0, 7))}h</p>
                                     </div>
                                  </div>
                               </div>

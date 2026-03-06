@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { Client, Project, Task } from '@/types';
 import { ArrowLeft, FolderKanban, CheckSquare, Info, Save, Edit, Briefcase, Globe, Phone, FileText, User } from 'lucide-react';
-import { supabase } from '@/services/supabaseClient';
+import { useDataController } from '@/controllers/useDataController';
 
 interface ClientDetailViewProps {
   client: Client;
@@ -16,19 +15,18 @@ interface ClientDetailViewProps {
 
 const ClientDetailView: React.FC<ClientDetailViewProps> = ({
   client,
-  projects: initialProjects,
-  tasks: initialTasks,
+  projects,
+  tasks,
   onBack,
   onTaskClick,
   onProjectClick,
   onOpenClientDetails,
 }) => {
-  const [projects, setProjects] = useState(initialProjects);
-  const [tasks, setTasks] = useState(initialTasks);
   const [activeTab, setActiveTab] = useState<'details' | 'projects' | 'tasks'>('details'); // Default to details as requested
   const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'inprogress' | 'review' | 'done'>('all');
 
   // Form State
+  const { updateClient } = useDataController();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -57,17 +55,6 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
     }
   }, [client]);
 
-  // Realtime subscriptions
-  useSupabaseRealtime('dim_projetos', (payload) => {
-    if (payload.eventType === 'INSERT') setProjects(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setProjects(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
-    else if (payload.eventType === 'DELETE') setProjects(prev => prev.filter(p => p.id !== payload.old.id));
-  });
-  useSupabaseRealtime('fato_tarefas', (payload) => {
-    if (payload.eventType === 'INSERT') setTasks(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
-    else if (payload.eventType === 'DELETE') setTasks(prev => prev.filter(t => t.id !== payload.old.id));
-  });
 
   // Filtra projetos do cliente
   const clientProjects = useMemo(
@@ -127,21 +114,16 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('dim_clientes')
-        .update({
-          NomeCliente: formData.name,
-          logo_url: formData.logoUrl,
-          contato_principal: formData.contato_principal,
-          cnpj: formData.cnpj,
-          telefone: formData.telefone,
-          pais: formData.pais,
-          tipo_cliente: formData.tipo_cliente,
-          ativo: formData.active
-        })
-        .eq('ID_Cliente', client.id);
-
-      if (error) throw error;
+      await updateClient(client.id, {
+        name: formData.name,
+        logoUrl: formData.logoUrl,
+        contato_principal: formData.contato_principal,
+        cnpj: formData.cnpj,
+        telefone: formData.telefone,
+        pais: formData.pais,
+        tipo_cliente: formData.tipo_cliente as any,
+        active: formData.active
+      });
       alert('Cliente atualizado com sucesso!');
       setIsEditing(false);
     } catch (error: any) {

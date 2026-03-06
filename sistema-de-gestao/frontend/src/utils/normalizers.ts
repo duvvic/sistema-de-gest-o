@@ -199,18 +199,18 @@ export function mapDbUserToUser(row: any): User {
     };
 
     return {
-        id: String(row.ID_Colaborador),
-        name: row.NomeColaborador || "Sem nome",
+        id: String(row.ID_Colaborador || row.id_colaborador),
+        name: row.NomeColaborador || row.nome_colaborador || "Sem nome",
         email: String(row.email || "").trim().toLowerCase(),
         avatarUrl: row.avatar_url || undefined,
-        cargo: row.Cargo || undefined,
+        cargo: row.Cargo || row.cargo || undefined,
         role: normalizeUserRole(row.role),
         active: row.ativo !== false,
         torre: row.torre || row.tower || undefined,
         nivel: row.nivel || undefined,
-        hourlyCost: row.custo_hora ? Number(row.custo_hora) : undefined,
-        dailyAvailableHours: row.horas_disponiveis_dia ? Number(row.horas_disponiveis_dia) : undefined,
-        monthlyAvailableHours: row.horas_disponiveis_mes ? Number(row.horas_disponiveis_mes) : undefined,
+        hourlyCost: row.custo_hora != null ? Number(row.custo_hora) : undefined,
+        dailyAvailableHours: row.horas_disponiveis_dia != null ? Number(row.horas_disponiveis_dia) : undefined,
+        monthlyAvailableHours: row.horas_disponiveis_mes != null ? Number(row.horas_disponiveis_mes) : undefined,
     };
 }
 

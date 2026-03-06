@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
 import { Save, User as UserIcon, Mail, Briefcase, Trash2, Camera, ArrowLeft, Zap, Calendar } from 'lucide-react';
-import { supabase } from '@/services/supabaseClient';
 import { getRoleDisplayName } from '@/utils/normalizers';
 import AbsenceManager from './AbsenceManager';
 

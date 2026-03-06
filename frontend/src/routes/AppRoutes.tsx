@@ -18,6 +18,8 @@ import KanbanBoard from '@/components/KanbanBoard';
 import TaskDetail from '@/components/TaskDetail';
 import MainLayout from '@/components/MainLayout';
 import Unauthorized from '@/pages/Unauthorized';
+import { AuditLogsPage } from '@/pages/AuditLogsPage';
+import { SystemTimelinePage } from '@/pages/SystemTimelinePage';
 
 // Componentes de Equipe
 import TeamList from '@/components/TeamList';
@@ -141,6 +143,24 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
                             <AdminMonitoringView />
+                        </ProtectedWrapper>
+                    }
+                />
+
+                <Route
+                    path="admin/audit-logs"
+                    element={
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
+                            <AuditLogsPage />
+                        </ProtectedWrapper>
+                    }
+                />
+
+                <Route
+                    path="admin/timeline"
+                    element={
+                        <ProtectedWrapper allowedRoles={ADMIN_ROLES}>
+                            <SystemTimelinePage />
                         </ProtectedWrapper>
                     }
                 />

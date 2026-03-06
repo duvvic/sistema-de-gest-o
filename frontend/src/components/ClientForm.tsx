@@ -5,7 +5,6 @@ import { useDataController } from '@/controllers/useDataController';
 import { Save, Upload, Trash2, Handshake, Building2, User, Mail, Phone, Calendar, DollarSign, FileText } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import BackButton from './shared/BackButton';
-import { supabase } from '@/services/supabaseClient';
 
 const ClientForm: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -141,7 +140,7 @@ const ClientForm: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-[var(--text-title)] flex items-center gap-2">
               {tipo_cliente === 'parceiro' ? <Handshake className="text-purple-500" /> : <Building2 className="text-blue-500" />}
-              {isEdit ? `Editar ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'}` : `Novo ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'}`}
+              {isEdit ? `Editar ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'} ` : `Novo ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'} `}
             </h2>
             <p className="text-[var(--text-muted)] text-sm">
               {tipo_cliente === 'parceiro'
@@ -153,7 +152,7 @@ const ClientForm: React.FC = () => {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className={`px-6 py-2.5 text-white rounded-lg font-bold shadow hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 ${tipo_cliente === 'parceiro' ? 'bg-purple-600' : 'bg-blue-600'}`}
+          className={`px - 6 py - 2.5 text - white rounded - lg font - bold shadow hover: opacity - 90 transition - all flex items - center gap - 2 disabled: opacity - 50 ${tipo_cliente === 'parceiro' ? 'bg-purple-600' : 'bg-blue-600'} `}
         >
           <Save className="w-4 h-4" />
           {loading ? 'Salvando...' : 'Salvar Cadastro'}
@@ -355,7 +354,7 @@ const ClientForm: React.FC = () => {
       <ConfirmationModal
         isOpen={showDeleteModal}
         title="Excluir Cadastro"
-        message={`Tem certeza que deseja excluir "${name}"?`}
+        message={`Tem certeza que deseja excluir "${name}" ? `}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteModal(false)}
         confirmText={loading ? 'Excluindo...' : 'Excluir'}

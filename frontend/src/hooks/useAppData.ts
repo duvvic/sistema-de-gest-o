@@ -1,6 +1,5 @@
 // hooks/useAppData.ts
-// Hook principal para carregar dados do Supabase
-
+// Hook principal para carregar dados do Backend
 import { useEffect, useState } from "react";
 import {
   Client,
@@ -8,12 +7,10 @@ import {
   Task,
   TimesheetEntry,
   User,
-  Status,
-  Priority,
-  Impact,
   Absence,
   ProjectMember,
   TaskMemberAllocation,
+  Holiday
 } from "@/types";
 
 import {
@@ -23,13 +20,18 @@ import {
   fetchUsers,
   fetchTimesheets,
   fetchTaskCollaborators,
+  fetchProjectMembers,
+  fetchAbsences,
+  fetchHolidays,
+  fetchAllocations,
   DbTaskRow,
 } from "@/services/api";
 import { useAuth } from '@/contexts/AuthContext';
-
-// =====================================================
-// INTERFACE DO HOOK
-// =====================================================
+import {
+  formatDate,
+  mapDbTaskToTask,
+  mapDbAbsenceToAbsence
+} from "@/utils/normalizers";
 
 interface AppData {
   users: User[];
@@ -45,27 +47,7 @@ interface AppData {
   error: string | null;
 }
 
-// Mock vazio para timesheets (implementar depois se necessário)
 const MOCK_TIMESHEETS: TimesheetEntry[] = [];
-
-// =====================================================
-// FUNÇÕES DE NORMALIZAÇÃO
-// =====================================================
-
-import {
-  normalizeStatus,
-  normalizePriority,
-  normalizeImpact,
-  formatDate,
-  mapDbTaskToTask,
-  mapDbTimesheetToEntry,
-  mapDbAbsenceToAbsence
-} from "@/utils/normalizers";
-import { Holiday } from "@/types";
-
-// =====================================================
-// HOOK PRINCIPAL
-// =====================================================
 
 export function useAppData(): AppData {
   const [users, setUsers] = useState<User[]>([]);
@@ -82,11 +64,9 @@ export function useAppData(): AppData {
   const [error, setError] = useState<string | null>(null);
   const { currentUser, isLoading: authLoading } = useAuth();
 
-  // Helper de Cache
   const CACHE_KEY = 'nic_labs_app_data';
-  const CACHE_VERSION = '1.5'; // Incrementado para incluir taskMemberAllocations
+  const CACHE_VERSION = '1.5';
 
-  // Carregamento inicial do cache
   useEffect(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -102,7 +82,6 @@ export function useAppData(): AppData {
           setTaskMemberAllocations(parsed.taskMemberAllocations || []);
           setAbsences(parsed.absences || []);
           setHolidays(parsed.holidays || []);
-          // Se temos cache, já podemos sinalizar que não estamos mais "travados"
           setLoading(false);
         }
       }
@@ -119,38 +98,41 @@ export function useAppData(): AppData {
         setLoading(true);
         setError(null);
 
-        // Verificar se está autenticado no Supabase ou se tem um token válido
-        const { supabase } = await import('@/services/supabaseClient');
-        const { data: { session } } = await supabase.auth.getSession();
-
-        // Check for monitoring token
         const urlParams = new URLSearchParams(window.location.search);
         const hasValidToken = urlParams.get('token') === 'xyz123';
+        const localToken = localStorage.getItem('nic_labs_auth_token');
 
-        if (!session && !currentUser && !hasValidToken) {
-
+        if (!localToken && !currentUser && !hasValidToken) {
           setLoading(false);
           return;
         }
 
-
-
-        const [usersData, clientsData, projectsData, tasksData, tasksCollaboratorsData, membersRes, rawTimesheets, absencesRes, holidaysRes, allocationsRes] = await Promise.all([
+        const [
+          usersData,
+          clientsData,
+          projectsData,
+          tasksData,
+          tasksCollaboratorsData,
+          membersData,
+          rawTimesheets,
+          absencesData,
+          holidaysData,
+          allocationsData
+        ] = await Promise.all([
           fetchUsers(),
           fetchClients(),
           fetchProjects(),
           fetchTasks(),
           fetchTaskCollaborators(),
-          supabase.from('project_members').select('*'),
+          fetchProjectMembers(),
           fetchTimesheets(),
-          supabase.from('colaborador_ausencias').select('*'),
-          supabase.from('feriados').select('*'),
-          supabase.from('task_member_allocations').select('*')
+          fetchAbsences(),
+          fetchHolidays(),
+          fetchAllocations()
         ]);
 
         if (!isMounted) return;
 
-        // Otimização: Criar Map de Usuários para Lookup O(1)
         const userMap = new Map(usersData.map((u) => [u.id, u]));
 
         const tasksMapped: Task[] = tasksData.map((row: DbTaskRow) => {
@@ -159,42 +141,33 @@ export function useAppData(): AppData {
           return mapDbTaskToTask(row, userMap, projectName, clientName);
         });
 
-        // Map collaborators lookup is still O(N*M) above? 
-        // tasksCollaboratorsData is array. filter inside map is nested loop.
-        // Optimization: Pre-group collaborators by task.
         const collaboratorsMap = new Map<string, string[]>();
         (tasksCollaboratorsData || []).forEach(tc => {
           if (!collaboratorsMap.has(tc.taskId)) collaboratorsMap.set(tc.taskId, []);
           collaboratorsMap.get(tc.taskId)?.push(tc.userId);
         });
 
-        // Re-map tasks with optimized collaborators lookup
         tasksMapped.forEach(t => {
           t.collaboratorIds = collaboratorsMap.get(t.id) || [];
         });
 
-        // Remover fetch sequencial de timesheets pois já está no Promise.all
-
-        // Otimização: Criar Map de Tarefas para Lookup reverso de ID de Texto -> ID Numérico
         const taskExternalMap = new Map(tasksData.filter(t => t.ID_Tarefa).map(t => [String(t.ID_Tarefa).toLowerCase(), String(t.id_tarefa_novo)]));
 
-        // Faz um mapeamento dos campos da tabela horas_trabalhadas para o formato do front
         const timesheetMapped: TimesheetEntry[] = (rawTimesheets || []).map((r: any) => {
-          // Se não tiver o ID Numérico, tenta encontrar via ID de Texto da planilha
           let taskId = String(r.id_tarefa_novo || '');
           if (!taskId || taskId === 'null' || taskId === '0') {
             const extId = String(r.ID_Tarefa || '').toLowerCase();
             if (extId && taskExternalMap.has(extId)) {
               taskId = taskExternalMap.get(extId)!;
             } else {
-              taskId = String(r.ID_Tarefa || ''); // Fallback para o ID original se não achar vínculo
+              taskId = String(r.ID_Tarefa || '');
             }
           }
 
           return {
             id: String(r.ID_Horas_Trabalhadas || crypto.randomUUID()),
             userId: String(r.ID_Colaborador || ''),
-            userName: r.dim_colaboradores?.NomeColaborador || r.userName || '',
+            userName: r.dim_colaboradores?.nome_colaborador || r.userName || '',
             clientId: String(r.ID_Cliente || ''),
             projectId: String(r.ID_Projeto || ''),
             taskId: taskId,
@@ -207,8 +180,8 @@ export function useAppData(): AppData {
           };
         });
 
-        const absencesMapped = (absencesRes.data || []).map(mapDbAbsenceToAbsence);
-        const holidaysMapped: Holiday[] = (holidaysRes.data || []).map((r: any) => ({
+        const absencesMapped = (absencesData || []).map(mapDbAbsenceToAbsence);
+        const holidaysMapped: Holiday[] = (holidaysData || []).map((r: any) => ({
           id: String(r.id),
           name: r.nome,
           date: r.data,
@@ -223,7 +196,6 @@ export function useAppData(): AppData {
           return Array.from(new Map(items.map(i => [i.id, i])).values());
         };
 
-        // Atualiza os states (retorna todos, filtragem no componente)
         setUsers(deduplicateById(usersData));
         setClients(deduplicateById(clientsData));
         setProjects(deduplicateById(projectsData));
@@ -231,16 +203,15 @@ export function useAppData(): AppData {
         setTimesheetEntries(deduplicateById(timesheetMapped));
         setAbsences(deduplicateById(absencesMapped));
         setHolidays(deduplicateById(holidaysMapped));
-        setTaskMemberAllocations((allocationsRes.data || []).map((row: any) => ({
+        setTaskMemberAllocations((allocationsData || []).map((row: any) => ({
           id: String(row.id),
           taskId: String(row.task_id),
           userId: String(row.user_id),
           reservedHours: Number(row.reserved_hours),
         })));
 
-        if (membersRes.data) {
-
-          const membersMapped: ProjectMember[] = membersRes.data.map((row: any) => ({
+        if (membersData) {
+          const membersMapped: ProjectMember[] = membersData.map((row: any) => ({
             id_pc: row.id_pc,
             id_projeto: row.id_projeto,
             id_colaborador: row.id_colaborador,
@@ -250,12 +221,9 @@ export function useAppData(): AppData {
             role_in_project: row.role_in_project
           }));
 
-          // Deduplicate members
           const uniqueMembers = Array.from(new Map(membersMapped.map((m) => [`${m.id_projeto}-${m.id_colaborador}`, m])).values());
-
           setProjectMembers(uniqueMembers);
 
-          // SALVAR NO CACHE
           const cacheData = {
             version: CACHE_VERSION,
             timestamp: Date.now(),
@@ -264,14 +232,12 @@ export function useAppData(): AppData {
             projects: projectsData,
             tasks: tasksMapped,
             timesheetEntries: timesheetMapped,
-            projectMembers: membersMapped,
-            taskMemberAllocations: allocationsRes.data || [],
+            projectMembers: uniqueMembers,
+            taskMemberAllocations: allocationsData,
             absences: absencesMapped,
             holidays: holidaysMapped
           };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-        } else {
-          console.warn('🔍 Project Members Error:', membersRes.error);
         }
 
       } catch (err) {
@@ -290,7 +256,6 @@ export function useAppData(): AppData {
       loadData();
     }
 
-    // Cleanup
     return () => {
       isMounted = false;
     };

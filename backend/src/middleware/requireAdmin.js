@@ -31,16 +31,16 @@ export async function requireAdmin(req, res, next) {
 
         // 1) tenta pelo auth_user_id
         let { data: colab, error: colabErr } = await supabaseAdmin
-            .from('dim_colaboradores')
-            .select('ID_Colaborador, NomeColaborador, role, ativo, auth_user_id, email, "E-mail"')
+            .from('v_colaboradores')
+            .select('id, nome, role, ativo, email')
             .eq('auth_user_id', authUserId)
             .maybeSingle();
 
         if ((colabErr || !colab) && email) {
             // 2) fallback por email padronizado
             const { data: rColab } = await supabaseAdmin
-                .from('dim_colaboradores')
-                .select('ID_Colaborador, NomeColaborador, role, ativo, auth_user_id, email, "E-mail"')
+                .from('v_colaboradores')
+                .select('id, nome, role, ativo, email')
                 .eq('email', email)
                 .maybeSingle();
             colab = rColab;
@@ -57,7 +57,7 @@ export async function requireAdmin(req, res, next) {
         }
 
         const role = String(colab.role || '').toLowerCase();
-        console.log(`[requireAdmin] User: ${colab.NomeColaborador}, Email: ${email}, Role: "${role}"`);
+        console.log(`[requireAdmin] User: ${colab.nome}, Email: ${email}, Role: "${role}"`);
 
         // Comentado a pedido do usuário: "permitir todos a todos"
         // Aceita qualquer valor que contenha 'admin' ou 'administrador' ou 'system_admin'
@@ -71,8 +71,8 @@ export async function requireAdmin(req, res, next) {
         req.user = {
             authUserId,
             email,
-            colaboradorId: colab.ID_Colaborador,
-            nome: colab.NomeColaborador,
+            colaboradorId: colab.id,
+            nome: colab.nome,
             role: role
         };
 

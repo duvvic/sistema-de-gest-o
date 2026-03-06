@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { TimesheetEntry, Client, Project, User, Task } from '@/types';
 import { ArrowLeft, Edit2, Calendar, Clock, Users, Briefcase, ChevronDown, ChevronUp, CheckSquare } from 'lucide-react';
 import { formatDecimalToTime } from '@/utils/normalizers';
@@ -16,42 +15,18 @@ interface TimesheetAdminDetailProps {
 
 const TimesheetAdminDetail: React.FC<TimesheetAdminDetailProps> = ({
   client,
-  projects: initialProjects,
+  projects,
   entries: initialEntries,
-  tasks: initialTasks,
-  users: initialUsers,
+  tasks,
+  users,
   onBack,
   onEditEntry
 }) => {
-  const [projects, setProjects] = useState(initialProjects);
-  const [entries, setEntries] = useState(initialEntries);
-  const [tasks, setTasks] = useState(initialTasks);
-  const [users, setUsers] = useState(initialUsers);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
-  // Realtime subscriptions
-  useSupabaseRealtime('dim_projetos', (payload) => {
-    if (payload.eventType === 'INSERT') setProjects(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setProjects(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
-    else if (payload.eventType === 'DELETE') setProjects(prev => prev.filter(p => p.id !== payload.old.id));
-  });
-  useSupabaseRealtime('fato_tarefas', (payload) => {
-    if (payload.eventType === 'INSERT') setTasks(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setTasks(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
-    else if (payload.eventType === 'DELETE') setTasks(prev => prev.filter(t => t.id !== payload.old.id));
-  });
-  useSupabaseRealtime('fato_apontamentos', (payload) => {
-    if (payload.eventType === 'INSERT') setEntries(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setEntries(prev => prev.map(e => e.id === payload.new.id ? payload.new : e));
-    else if (payload.eventType === 'DELETE') setEntries(prev => prev.filter(e => e.id !== payload.old.id));
-  });
-  useSupabaseRealtime('dim_colaboradores', (payload) => {
-    if (payload.eventType === 'INSERT') setUsers(prev => [...prev, payload.new]);
-    else if (payload.eventType === 'UPDATE') setUsers(prev => prev.map(u => u.id === payload.new.id ? payload.new : u));
-    else if (payload.eventType === 'DELETE') setUsers(prev => prev.filter(u => u.id !== payload.old.id));
-  });
+  const entries = initialEntries;
 
   const clientProjects = projects.filter(p => p.clientId === client.id);
   const clientEntries = entries.filter(e => e.clientId === client.id);

@@ -48,12 +48,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // Priorizar campo 'role' do banco de dados se existir
         if (userData.role) {
             return {
-                id: String(userData.ID_Colaborador),
-                name: userData.NomeColaborador,
+                id: String(userData.id_colaborador || userData.ID_Colaborador),
+                name: userData.nome_colaborador || userData.NomeColaborador,
                 email: userData.email || userData['E-mail'],
                 role: userData.role as Role,
                 avatarUrl: userData.avatar_url,
-                cargo: userData.Cargo || userData.cargo,
+                cargo: userData.cargo || userData.Cargo,
                 active: userData.ativo ?? true,
                 torre: userData.torre || userData.tower // Capture torre field
             } as User;
@@ -82,12 +82,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         return {
-            id: String(userData.ID_Colaborador),
-            name: userData.NomeColaborador,
+            id: String(userData.id_colaborador || userData.ID_Colaborador),
+            name: userData.nome_colaborador || userData.NomeColaborador,
             email: userData.email || userData['E-mail'],
             role: role,
             avatarUrl: userData.avatar_url,
-            cargo: userData.Cargo || userData.cargo,
+            cargo: userData.cargo || userData.Cargo,
             active: userData.ativo ?? true,
         } as User;
     }, []);
@@ -129,8 +129,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
             const response = await Promise.race([
                 supabase
                     .from('dim_colaboradores')
-                    .select('ID_Colaborador, NomeColaborador, email, "E-mail", role, avatar_url, Cargo, ativo, torre')
-                    .or(`email.eq.${emailToFind},"E-mail".eq.${emailToFind}`)
+                    .select('id_colaborador, nome_colaborador, email, role, avatar_url, cargo, ativo, torre')
+                    .eq('email', emailToFind)
                     .maybeSingle(),
                 timeoutPromise as any
             ]);

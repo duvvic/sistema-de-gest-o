@@ -13,12 +13,12 @@ export interface NotesResponse {
     tabs: NoteTab[];
 }
 
-export const getNotesLinks = async (_token?: string): Promise<NotesResponse> => {
-    // Agora o apiRequest obtém o token automaticamente do Supabase
+export const getNotesLinks = async (): Promise<NotesResponse> => {
+    // Agora o apiRequest obtém o token automaticamente
     return apiRequest('/notes/links');
 };
 
-export const syncNotes = async (_token: string, tabs: Omit<NoteTab, 'url'>[]): Promise<{ ok: boolean, tabs: NoteTab[] }> => {
+export const syncNotes = async (tabs: Omit<NoteTab, 'url'>[]): Promise<{ ok: boolean, tabs: NoteTab[] }> => {
     return apiRequest('/notes/sync', {
         method: 'POST',
         body: JSON.stringify({ tabs })

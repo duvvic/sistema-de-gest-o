@@ -8,7 +8,6 @@ import { User as UserIcon, Mail, Briefcase, Shield, Edit, Save, Trash2, ArrowLef
 import OrganizationalStructureSelector from './OrganizationalStructureSelector';
 import ConfirmationModal from './ConfirmationModal';
 import { getRoleDisplayName, formatDecimalToTime, getStatusDisplayName, formatDateBR, parseTimeToDecimal } from '@/utils/normalizers';
-import { supabase } from '@/services/supabaseClient';
 
 import TimesheetCalendar from './TimesheetCalendar';
 import AbsenceManager from './AbsenceManager';
@@ -31,7 +30,7 @@ const TeamMemberDetail: React.FC = () => {
    const { userId } = useParams<{ userId: string }>();
    const navigate = useNavigate();
    const [searchParams] = useSearchParams();
-   const { users, tasks, projects, projectMembers, timesheetEntries, deleteUser, absences, holidays, clients, taskMemberAllocations } = useDataController();
+   const { users, tasks, projects, projectMembers, timesheetEntries, deleteUser, updateUser, absences, holidays, clients, taskMemberAllocations } = useDataController();
 
    // --- CAPACITY MONTH CONTROL ---
    const [capacityMonth, setCapacityMonth] = useState(() => {
@@ -138,26 +137,20 @@ const TeamMemberDetail: React.FC = () => {
       }
       setLoading(true);
       try {
-         const payload = {
-            NomeColaborador: formData.name,
+         await updateUser(userId!, {
+            name: formData.name,
             email: formData.email,
-            Cargo: formData.cargo,
+            cargo: formData.cargo,
             nivel: formData.nivel,
             role: formData.role,
-            ativo: formData.active,
-            avatar_url: formData.avatarUrl,
+            active: formData.active,
+            avatarUrl: formData.avatarUrl,
             torre: formData.torre,
-            custo_hora: Number(String(formData.hourlyCost).replace(',', '.')),
-            horas_disponiveis_dia: Number(String(formData.dailyAvailableHours).replace(',', '.')),
-            horas_disponiveis_mes: Number(String(formData.monthlyAvailableHours).replace(',', '.'))
-         };
+            hourlyCost: Number(String(formData.hourlyCost).replace(',', '.')),
+            dailyAvailableHours: Number(String(formData.dailyAvailableHours).replace(',', '.')),
+            monthlyAvailableHours: Number(String(formData.monthlyAvailableHours).replace(',', '.'))
+         });
 
-         const { error } = await supabase
-            .from('dim_colaboradores')
-            .update(payload)
-            .eq('ID_Colaborador', Number(userId));
-
-         if (error) throw error;
          alert('Dados atualizados com sucesso!');
          setIsEditing(false);
       } catch (error: any) {
@@ -170,7 +163,6 @@ const TeamMemberDetail: React.FC = () => {
 
    // --- HELPERS ---
    const getDelayDays = (task: Task) => (task.daysOverdue ?? 0);
-
 
    const handleNumberChange = (field: keyof typeof formData, value: string) => {
       const cleanValue = value.replace(/[^0-9.,]/g, '');
@@ -767,8 +759,14 @@ const TeamMemberDetail: React.FC = () => {
 
                                           return (
                                              <div className="space-y-1">
-                                                <div className="w-full px-4 py-3 bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-black flex justify-between items-center">
-                                                   <span>{formatDecimalToTime(calculatedTotal)}</span>
+                                                <div className={`w-full px-4 py-3 border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-black flex justify-between items-center transition-all ${isEditing ? 'bg-[var(--surface-2)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20' : 'bg-transparent border-transparent px-0'}`}>
+                                                   <input
+                                                      type="text"
+                                                      value={formData.monthlyAvailableHours ?? ''}
+                                                      onChange={(e) => handleNumberChange('monthlyAvailableHours', e.target.value)}
+                                                      placeholder={formatDecimalToTime(calculatedTotal).replace(':', '.')}
+                                                      className="w-24 bg-transparent border-none outline-none font-black p-0 focus:ring-0 disabled:text-[var(--text)]"
+                                                   />
                                                    {isCurrentMonth && (
                                                       <span className="text-[10px] bg-purple-500/10 text-purple-600 px-2 py-1 rounded-lg font-black uppercase tracking-tight">
                                                          RESTAM: {formatDecimalToTime(calculatedResidual)}

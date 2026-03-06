@@ -92,42 +92,36 @@ export function formatDateBR(dateStr: string | null | undefined): string {
 export function mapDbTaskToTask(row: any, userMap?: Map<string, any>, projectName?: string, clientName?: string): Task {
     const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
     let developerName = undefined;
-    if (row.ID_Colaborador && userMap) {
-        const dev = userMap.get(String(row.ID_Colaborador));
+    if (row.colaborador_id && userMap) {
+        const dev = userMap.get(String(row.colaborador_id));
         developerName = dev?.name;
     }
 
-    const status = normalizeStatus(row.StatusTarefa);
+    const status = normalizeStatus(row.status);
 
     return {
-        id: safeString(row.id_tarefa_novo),
-        externalId: row.ID_Tarefa || undefined,
-        title: (row.Afazer && row.Afazer !== 'null') ? row.Afazer : "(Sem título)",
-        projectId: safeString(row.ID_Projeto),
+        id: safeString(row.id),
+        title: (row.tarefa && row.tarefa !== 'null') ? row.tarefa : "(Sem título)",
+        projectId: safeString(row.projeto_id),
         projectName: projectName,
-        clientId: safeString(row.ID_Cliente),
+        clientId: safeString(row.cliente_id),
         clientName: clientName,
         developer: developerName,
-        developerId: row.ID_Colaborador ? safeString(row.ID_Colaborador) : undefined,
+        developerId: row.colaborador_id ? safeString(row.colaborador_id) : undefined,
         collaboratorIds: [],
         status: status,
         estimatedDelivery: formatDate(row.entrega_estimada),
         actualDelivery: row.entrega_real || undefined,
         scheduledStart: row.inicio_previsto || undefined,
         actualStart: row.inicio_real || undefined,
-        progress: Math.min(100, Math.max(0, Number(row.Porcentagem) || 0)),
-        priority: normalizePriority(row.Prioridade),
-        impact: normalizeImpact(row.Impacto),
-        risks: row.Riscos || undefined,
-        notes: row["Observações"] || row.notes || undefined,
+        progress: Math.min(100, Math.max(0, Number(row.progress) || 0)),
+        priority: normalizePriority(row.prioridade),
+        impact: normalizeImpact(row.impacto),
         description: row.description || undefined,
-        em_testes: !!row.em_testes,
-        link_ef: row.link_ef || undefined,
-        id_tarefa_novo: row.id_tarefa_novo,
         estimatedHours: row.estimated_hours ? Number(row.estimated_hours) : undefined,
+        allocatedHours: row.allocated_hours ? Number(row.allocated_hours) : undefined,
         is_impediment: !!row.is_impediment,
-        task_weight: row.task_weight ? Number(row.task_weight) : undefined,
-        daysOverdue: calculateDaysOverdue(row.entrega_estimada, row.entrega_real, status),
+        daysOverdue: row.dias_atraso || calculateDaysOverdue(row.entrega_estimada, row.entrega_real, status),
         deleted_at: row.deleted_at || undefined
     };
 }
@@ -164,7 +158,7 @@ export function mapDbTimesheetToEntry(r: any, taskExternalMap?: Map<string, stri
     return {
         id: safeString(r.ID_Horas_Trabalhadas || r.id || ''),
         userId: safeString(r.ID_Colaborador || ''),
-        userName: r.dim_colaboradores?.NomeColaborador || r.userName || '',
+        userName: r.dim_colaboradores?.nome_colaborador || r.userName || '',
         clientId: safeString(r.ID_Cliente || ''),
         projectId: safeString(r.ID_Projeto || ''),
         taskId: taskId,
@@ -181,32 +175,19 @@ export function mapDbTimesheetToEntry(r: any, taskExternalMap?: Map<string, stri
 export function mapDbProjectToProject(row: any): Project {
     const safeString = (val: any) => (val === null || val === undefined || val === 'null' || val === 'undefined') ? '' : String(val);
     return {
-        id: String(row.ID_Projeto),
-        name: row.NomeProjeto || "Sem nome",
-        clientId: safeString(row.ID_Cliente),
+        id: String(row.id),
+        name: row.nome || "Sem nome",
+        clientId: safeString(row.cliente_id),
         partnerId: row.partner_id ? safeString(row.partner_id) : undefined,
-        status: row.StatusProjeto || undefined,
+        status: row.status || undefined,
         active: row.ativo ?? true,
-        budget: row.budget ? Number(row.budget) : undefined,
-        description: row.description || undefined,
-        estimatedDelivery: row.estimatedDelivery || undefined,
-        startDate: row.startDate || undefined,
-        valor_total_rs: row.valor_total_rs ? Number(row.valor_total_rs) : undefined,
-        managerClient: row.manager_client || undefined,
-        responsibleNicLabsId: row.responsible_nic_labs_id ? safeString(row.responsible_nic_labs_id) : undefined,
-        startDateReal: row.start_date_real || undefined,
-        endDateReal: row.end_date_real || undefined,
-        risks: row.risks || undefined,
-        successFactor: row.success_factor || undefined,
-        criticalDate: row.critical_date || undefined,
-        docLink: row.doc_link || undefined,
-        gapsIssues: row.gaps_issues || undefined,
-        importantConsiderations: row.important_considerations || undefined,
-        weeklyStatusReport: row.weekly_status_report || undefined,
         complexidade: row.complexidade || undefined,
-        horas_vendidas: row.horas_vendidas ? Number(row.horas_vendidas) : undefined,
-        project_type: row.project_type || 'planned',
-        valor_diario: row.valor_diario ? Number(row.valor_diario) : undefined,
+        manager: row.manager || undefined,
+        startDate: row.startDate || undefined,
+        estimatedDelivery: row.estimatedDelivery || undefined,
+        valor_total_rs: row.valor_total_rs ? Number(row.valor_total_rs) : undefined,
+        torre: row.torre || undefined,
+        project_type: row.project_type || 'planned'
     };
 }
 
@@ -228,18 +209,15 @@ export function mapDbUserToUser(row: any): User {
     };
 
     return {
-        id: safeString(row.ID_Colaborador),
-        name: row.NomeColaborador || "Sem nome",
+        id: safeString(row.id),
+        name: row.nome || "Sem nome",
         email: String(row.email || "").trim().toLowerCase(),
-        avatarUrl: row.avatar_url || undefined,
-        cargo: row.Cargo || undefined,
+        avatarUrl: row.avatarUrl || undefined,
+        cargo: row.cargo || undefined,
         role: normalizeUserRole(row.role),
         active: row.ativo !== false,
-        torre: row.torre || row.tower || undefined,
-        nivel: row.nivel || undefined,
-        hourlyCost: row.custo_hora ? Number(row.custo_hora) : undefined,
-        dailyAvailableHours: row.horas_disponiveis_dia ? Number(row.horas_disponiveis_dia) : undefined,
-        monthlyAvailableHours: row.horas_disponiveis_mes ? Number(row.horas_disponiveis_mes) : undefined,
+        torre: row.torre || undefined,
+        nivel: row.nivel || undefined
     };
 }
 

@@ -57,6 +57,7 @@ export interface Project {
   budget?: number;
   status?: string;
   active?: boolean;
+  manager?: string;
   valor_total_rs?: number;
   risks?: string;
   successFactor?: string; // Fator de sucesso

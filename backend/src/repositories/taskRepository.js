@@ -1,0 +1,79 @@
+import { dbFindAll, dbFindById, dbInsert, dbUpdate, dbDelete } from '../database/index.js';
+
+// Colunas existentes na view v_tarefas:
+// id, projeto_id, cliente_id, colaborador_id, status, prioridade, impacto, description,
+// tarefa, inicio_previsto, inicio_real, entrega_estimada, entrega_real,
+// estimated_hours, allocated_hours, dias_atraso
+const TASK_SELECT = [
+    'id',
+    'projeto_id',
+    'cliente_id',
+    'colaborador_id',
+    'status',
+    'prioridade',
+    'impacto',
+    'description',
+    'tarefa',
+    'inicio_previsto',
+    'inicio_real',
+    'entrega_estimada',
+    'entrega_real',
+    'estimated_hours',
+    'allocated_hours',
+    'dias_atraso',
+].join(', ');
+
+export const taskRepository = {
+    async findAll({ projectId, clientId, status } = {}) {
+        const query = {
+            select: TASK_SELECT,
+            order: { column: 'inicio_previsto', ascending: false },
+            filters: {}
+        };
+
+        if (projectId) query.filters.projeto_id = projectId;
+        if (clientId) query.filters.cliente_id = clientId;
+        if (status) query.filters.status = status;
+
+        return await dbFindAll('v_tarefas', query);
+    },
+
+    async findById(id) {
+        return await dbFindById('v_tarefas', { id }, { select: TASK_SELECT });
+    },
+
+    async create(data) {
+        return await dbInsert('fato_tarefas', data, { select: 'id_tarefa_novo, *' });
+    },
+
+    async update(id, data) {
+        return await dbUpdate('fato_tarefas', { id_tarefa_novo: id }, data, { select: 'id_tarefa_novo, *' });
+    },
+
+    async delete(id) {
+        await dbDelete('fato_tarefas', { id_tarefa_novo: id });
+        return true;
+    },
+
+    async getCollaboratorIdByName(name) {
+        const data = await dbFindAll('v_colaboradores', {
+            select: 'id',
+            filters: { nome: name },
+            maybeSingle: true
+        });
+        return data?.id || null;
+    },
+
+    async updateCollaborators(taskId, collaboratorIds) {
+        // Hard delete — tarefa_colaboradores não tem deleted_at
+        await dbDelete('tarefa_colaboradores', { id_tarefa: taskId });
+
+        if (collaboratorIds && collaboratorIds.length > 0) {
+            const inserts = collaboratorIds.map(id => ({
+                id_tarefa: taskId,
+                id_colaborador: Number(id)
+            }));
+            await dbInsert('tarefa_colaboradores', inserts, { select: false });
+        }
+    }
+};

@@ -1,0 +1,44 @@
+import { dbFindAll, dbFindById, dbInsert, dbUpdate, dbDelete } from '../database/index.js';
+
+// Colunas existentes na view v_clientes:
+// id, nome, pais, cnpj, telefone, email_contato, ativo
+const CLIENT_SELECT = [
+    'id',
+    'nome',
+    'ativo',
+    'pais',
+    'logoUrl'
+].join(', ');
+
+export const clientRepository = {
+    async findAll(query = {}) {
+        const dbQuery = {
+            select: CLIENT_SELECT,
+            order: { column: 'nome' },
+            filters: {}
+        };
+
+        if (query.filters?.ativo !== undefined) {
+            dbQuery.filters.ativo = query.filters.ativo;
+        }
+
+        return await dbFindAll('v_clientes', dbQuery);
+    },
+
+    async findById(id) {
+        return await dbFindById('v_clientes', { id }, { select: CLIENT_SELECT });
+    },
+
+    async create(data) {
+        return await dbInsert('dim_clientes', data);
+    },
+
+    async update(id, data) {
+        return await dbUpdate('dim_clientes', { ID_Cliente: id }, data);
+    },
+
+    async delete(id) {
+        await dbDelete('dim_clientes', { ID_Cliente: id });
+        return true;
+    }
+};

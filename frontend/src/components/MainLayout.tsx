@@ -47,6 +47,7 @@ const MainLayout: React.FC = () => {
         { path: '/admin/sync', icon: RefreshCw, label: 'Sincronização' },
 
         { path: '/timesheet', icon: Clock, label: 'Timesheet' },
+        { path: '/admin/timeline', icon: Activity, label: 'Timeline' },
     ];
 
     const developerMenuItems = [

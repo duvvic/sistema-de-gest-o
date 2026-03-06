@@ -129,8 +129,7 @@ export async function syncExcel(file: File): Promise<{ message: string; details:
     formData.append('file', file);
 
     const baseUrl = await (await import('./apiClient')).getApiBaseUrl();
-    const { data } = await (await import('./supabaseClient')).supabase.auth.getSession();
-    const token = data.session?.access_token;
+    const token = localStorage.getItem('nic_labs_auth_token');
 
     const res = await fetch(`${baseUrl}/admin/sync/excel`, {
         method: 'POST',
@@ -146,7 +145,8 @@ export async function syncExcel(file: File): Promise<{ message: string; details:
         throw new Error(`Sync ${res.status}: ${text || res.statusText}`);
     }
 
-    return res.json();
+    const result = await res.json();
+    return result.success ? result.data : result;
 }
 
 export async function exportDatabaseExcel(): Promise<Blob> {

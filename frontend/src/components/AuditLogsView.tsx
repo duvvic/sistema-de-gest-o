@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/services/supabaseClient';
+import { apiRequest } from '@/services/apiClient';
 import { AuditLogEntry, User } from '@/types';
 import { Search, Filter, Calendar as CalendarIcon, Eye, ShieldAlert, ArrowLeft, Download, RefreshCw } from 'lucide-react';
 import { useDataController } from '@/controllers/useDataController';
@@ -29,13 +29,7 @@ const AuditLogsView: React.FC = () => {
     const fetchLogs = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('audit_log')
-                .select('*')
-                .order('timestamp', { ascending: false })
-                .limit(200); // Limite inicial de segurança
-
-            if (error) throw error;
+            const data = await apiRequest<any[]>('/admin/audit-logs?limit=200');
 
             // Mapear user_id para user_name se possível
             const mappedLogs = (data || []).map((log: any) => {
@@ -59,31 +53,7 @@ const AuditLogsView: React.FC = () => {
 
     useEffect(() => {
         fetchLogs();
-
-        // Configuração de Tempo Real (Realtime)
-        const channel = supabase
-            .channel('audit_log_changes')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'audit_log' },
-                (payload) => {
-                    const newLog = payload.new as any;
-                    // Mapear nome do usuário para o novo log
-                    const user = users.find(u => u.id === newLog.user_id) || users.find(u => u.email === newLog.user_email);
-                    const mappedNewLog = {
-                        ...newLog,
-                        user_name: user ? user.name : (newLog.user_email || newLog.user_id || 'Sistema/Desconhecido')
-                    };
-
-                    setLogs(currentLogs => [mappedNewLog, ...currentLogs].slice(0, 500)); // Mantém o topo e limita tamanho
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [users]); // Re-executa se usuarios carregarem
+    }, [users]);
 
     const uniqueActions = useMemo(() => Array.from(new Set(logs.map(l => l.action))), [logs]);
     const uniqueResources = useMemo(() => Array.from(new Set(logs.map(l => l.resource))), [logs]);
@@ -139,8 +109,8 @@ const AuditLogsView: React.FC = () => {
                     <button
                         onClick={() => setDateFilter('')}
                         className={`flex-shrink-0 px-6 py-3 rounded-2xl font-bold transition-all border ${dateFilter === ''
-                                ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200 scale-105'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-purple-200 hover:bg-slate-50'
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200 scale-105'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-purple-200 hover:bg-slate-50'
                             }`}
                     >
                         Tudo
@@ -157,8 +127,8 @@ const AuditLogsView: React.FC = () => {
                                 key={dateStr}
                                 onClick={() => setDateFilter(dateStr)}
                                 className={`flex-shrink-0 flex flex-col items-center min-w-[70px] py-3 rounded-2xl font-bold transition-all border ${isActive
-                                        ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200 scale-105'
-                                        : 'bg-white text-slate-500 border-slate-200 hover:border-purple-200 hover:bg-slate-50'
+                                    ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200 scale-105'
+                                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-200 hover:bg-slate-50'
                                     }`}
                             >
                                 <span className={`text-[10px] uppercase tracking-wider mb-1 ${isActive ? 'text-purple-100' : 'text-slate-400'}`}>

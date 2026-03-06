@@ -1,35 +1,126 @@
 import { supabaseAdmin } from '../config/supabaseAdmin.js';
+import { projectRepository } from '../repositories/projectRepository.js';
+import { auditService } from '../audit/auditService.js';
+import { auditContext } from '../audit/auditMiddleware.js';
+
+export const projectService = {
+    async getAllProjects(filters) {
+        return await projectRepository.findAll(filters);
+    },
+
+    async getProjectById(id) {
+        const project = await projectRepository.findById(id);
+        if (!project) {
+            const error = new Error('Projeto não encontrado');
+            error.status = 404;
+            throw error;
+        }
+        return project;
+    },
+
+    async createProject(data) {
+        if (!data.NomeProjeto) {
+            const error = new Error('Nome do projeto é obrigatório');
+            error.status = 400;
+            throw error;
+        }
+
+        const payload = {
+            ...data,
+            ativo: data.ativo ?? true,
+            StatusProjeto: data.StatusProjeto || 'Em andamento'
+        };
+
+        const created = await projectRepository.create(payload);
+
+        const context = auditContext.getStore() || {};
+        await auditService.logAction({
+            userId: context.userId,
+            action: 'CREATE',
+            entity: 'dim_projetos',
+            entityId: created.ID_Projeto,
+            newData: created,
+            ip: context.ip
+        });
+
+        return created;
+    },
+
+    async updateProject(id, data) {
+        const project = await projectRepository.findById(id);
+        if (!project) {
+            const error = new Error('Projeto não encontrado');
+            error.status = 404;
+            throw error;
+        }
+
+        const updated = await projectRepository.update(id, data);
+
+        const context = auditContext.getStore() || {};
+        await auditService.logAction({
+            userId: context.userId,
+            action: 'UPDATE',
+            entity: 'dim_projetos',
+            entityId: id,
+            oldData: project,
+            newData: updated,
+            ip: context.ip
+        });
+
+        return updated;
+    },
+
+    async deleteProject(id, force = false) {
+        const project = await projectRepository.findById(id);
+        if (!project) {
+            const error = new Error('Projeto não encontrado');
+            error.status = 404;
+            throw error;
+        }
+
+        // Se não for forçado, podemos fazer um soft delete (marcar como inativo)
+        const context = auditContext.getStore() || {};
+
+        if (!force) {
+            const updated = await projectRepository.update(id, { ativo: false });
+
+            await auditService.logAction({
+                userId: context.userId,
+                action: 'UPDATE', // É um Mute Logic / Soft delete na real
+                entity: 'dim_projetos',
+                entityId: id,
+                oldData: project,
+                newData: updated,
+                ip: context.ip
+            });
+            return updated;
+        }
+
+        await projectRepository.delete(id);
+
+        await auditService.logAction({
+            userId: context.userId,
+            action: 'DELETE',
+            entity: 'dim_projetos',
+            entityId: id,
+            oldData: project,
+            ip: context.ip
+        });
+
+        return true;
+    }
+};
 
 /**
- * Obtém um projeto pelo ID
+ * MANTIDO PARA COMPATIBILIDADE - Obtém um projeto pelo ID
  * @param {string|number} projectId 
  */
 export async function getProjectById(projectId) {
-    const { data, error } = await supabaseAdmin
-        .from('dim_projetos')
-        .select(`
-            ID_Projeto,
-            NomeProjeto,
-            ID_Cliente,
-            responsible_user_id,
-            project_manager_id,
-            manager,
-            StatusProjeto
-        `)
-        .eq('ID_Projeto', projectId)
-        .maybeSingle();
-
-    if (error) {
-        console.error('Erro getProjectById:', error);
-        throw error;
-    }
-    return data;
+    return await projectService.getProjectById(projectId);
 }
 
 /**
  * Verifica se um usuário é membro do projeto
- * @param {string|number} projectId 
- * @param {string|number} userId (ID_Colaborador)
  */
 export async function checkUserIsMember(projectId, userId) {
     const { data, error } = await supabaseAdmin
@@ -39,9 +130,8 @@ export async function checkUserIsMember(projectId, userId) {
         .eq('id_colaborador', userId)
         .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is 'not found' sometimes depending on method
+    if (error && error.code !== 'PGRST116') {
         console.error('Erro checkUserIsMember:', error);
-        // Não lança erro, retorna false para não quebrar fluxo, mas loga
         return false;
     }
     return !!data;
@@ -49,11 +139,8 @@ export async function checkUserIsMember(projectId, userId) {
 
 /**
  * Verifica se o usuário tem tarefas atribuídas no projeto
- * @param {string|number} projectId 
- * @param {string|number} userId 
  */
 export async function checkUserHasTasks(projectId, userId) {
-    // Verifica na tabela de tarefas se existe alguma tarefa para este usuário neste projeto
     const { data, error } = await supabaseAdmin
         .from('fato_tarefas')
         .select('id_tarefa_novo')
@@ -69,14 +156,11 @@ export async function checkUserHasTasks(projectId, userId) {
 }
 
 /**
- * Verifica se existe algum membro no projeto que pertença à torre do usuário (Tech Lead)
- * @param {string|number} projectId 
- * @param {string} towerName 
+ * Verifica se existe algum membro no projeto que pertença à torre do usuário
  */
 export async function checkTowerMembersInProject(projectId, towerName) {
     if (!towerName) return false;
 
-    // 1. Buscar membros do projeto
     const { data: members, error } = await supabaseAdmin
         .from('project_members')
         .select('id_colaborador')
@@ -86,7 +170,6 @@ export async function checkTowerMembersInProject(projectId, towerName) {
 
     const memberIds = members.map(m => m.id_colaborador);
 
-    // 2. Verificar se algum desses membros é da torre especificada
     const { data: towerMembers, error: towerError } = await supabaseAdmin
         .from('dim_colaboradores')
         .select('ID_Colaborador')
@@ -104,8 +187,6 @@ export async function checkTowerMembersInProject(projectId, towerName) {
 
 /**
  * Verifica se o projeto tem tarefas criadas
- * @param {string|number} projectId 
- * @returns {Promise<boolean>}
  */
 export async function checkProjectHasTasks(projectId) {
     const { data, error } = await supabaseAdmin
@@ -124,8 +205,6 @@ export async function checkProjectHasTasks(projectId) {
 
 /**
  * Verifica se a tarefa tem horas apontadas
- * @param {string} taskId 
- * @returns {Promise<boolean>}
  */
 export async function checkTaskHasHours(taskId) {
     const { data, error } = await supabaseAdmin

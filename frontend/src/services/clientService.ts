@@ -1,7 +1,7 @@
 // services/clientService.ts
-// CRUD de Clientes no Supabase
+// CRUD de Clientes via Backend Express
 
-import { supabase } from './supabaseClient';
+import { apiRequest } from './apiClient';
 import { Client } from '@/types';
 
 const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
@@ -45,17 +45,16 @@ export async function createClient(data: Partial<Client>): Promise<number> {
   if (data.responsavel_externo) payload.responsavel_externo = data.responsavel_externo;
   if (data.email_contato) payload.email_contato = data.email_contato;
 
-  const { data: inserted, error } = await supabase
-    .from("dim_clientes")
-    .insert(payload)
-    .select("ID_Cliente")
-    .single();
+  const result = await apiRequest<any>('/clients', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 
-  if (error) {
-    throw error;
+  if (!result || !result.ID_Cliente) {
+    throw new Error("Erro ao criar cliente: ID não retornado pelo servidor.");
   }
 
-  return inserted.ID_Cliente;
+  return result.ID_Cliente;
 }
 
 // ===========================
@@ -77,49 +76,29 @@ export async function updateClient(clientId: string, data: Partial<Client>): Pro
   if (data.responsavel_externo !== undefined) payload.responsavel_externo = data.responsavel_externo;
   if (data.email_contato !== undefined) payload.email_contato = data.email_contato;
 
-  const { error } = await supabase
-    .from("dim_clientes")
-    .update(payload)
-    .eq("ID_Cliente", safeNum(clientId)!);
-
-  if (error) {
-
-    throw error;
-  }
-
+  await apiRequest(`/clients/${clientId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
 }
 
 // ===========================
 // DELETE (Soft Delete - marca como inativo)
 // ===========================
 export async function deleteClient(clientId: string): Promise<void> {
-
-  // Soft delete: apenas marca como inativo
-  const { error } = await supabase
-    .from("dim_clientes")
-    .update({ ativo: false })
-    .eq("ID_Cliente", safeNum(clientId)!);
-
-  if (error) {
-
-    throw error;
-  }
-
+  // Soft delete: via API chamando o update
+  await apiRequest(`/clients/${clientId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ativo: false })
+  });
 }
 
 // ===========================
 // DELETE (Hard Delete - remove do banco)
 // ===========================
 export async function hardDeleteClient(clientId: string): Promise<void> {
-
-  const { error } = await supabase
-    .from("dim_clientes")
-    .delete()
-    .eq("ID_Cliente", safeNum(clientId)!);
-
-  if (error) {
-
-    throw error;
-  }
-
+  await apiRequest(`/clients/${clientId}`, {
+    method: 'DELETE'
+  });
 }
+

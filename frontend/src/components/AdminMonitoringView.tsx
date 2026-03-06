@@ -1,7 +1,6 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
-import { useDataController } from '@/controllers/useDataController';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/services/supabaseClient';
+import { useDataController } from "@/controllers/useDataController";
+import { useAuth } from "@/contexts/AuthContext";
 import { Task, Project, User, Client } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProjectStatusByTimeline, getProjectStatusColor } from '@/utils/projectStatus';
@@ -31,41 +30,41 @@ import ThemeToggle from './ThemeToggle';
 // --- Sub-componentes Estilizados ---
 
 const Badge = ({ children, status, className = "" }: { children: React.ReactNode, status: string, className?: string }) => {
-     const colors: any = {
-         'andamento': 'bg-blue-50 text-blue-600 border-blue-100',
-         'impedido': 'bg-amber-50 text-amber-600 border-amber-100',
-         'analise': 'bg-purple-50 text-purple-600 border-purple-100',
-         'nao-iniciado': 'text-slate-700 border-slate-200',
-                         'concluido': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                         'atrasada': 'bg-red-500 text-white border-red-600',
-                         'entrega-hoje': 'bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-500/20',
-                         'pre-projeto': 'text-slate-700 border-slate-200',
-         'saudavel': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-         'critico': 'bg-red-100 text-red-700 border-red-200',
-     };
-     const key = status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-     const colorClass = colors[key] || 'text-slate-600 border-slate-200';
-     const shouldUseThemeBackground = key === 'nao-iniciado' || key === 'pre-projeto';
+    const colors: any = {
+        'andamento': 'bg-blue-50 text-blue-600 border-blue-100',
+        'impedido': 'bg-amber-50 text-amber-600 border-amber-100',
+        'analise': 'bg-purple-50 text-purple-600 border-purple-100',
+        'nao-iniciado': 'text-slate-700 border-slate-200',
+        'concluido': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        'atrasada': 'bg-red-500 text-white border-red-600',
+        'entrega-hoje': 'bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-500/20',
+        'pre-projeto': 'text-slate-700 border-slate-200',
+        'saudavel': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        'critico': 'bg-red-100 text-red-700 border-red-200',
+    };
+    const key = status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+    const colorClass = colors[key] || 'text-slate-600 border-slate-200';
+    const shouldUseThemeBackground = key === 'nao-iniciado' || key === 'pre-projeto';
 
-     return (
-         <span className={`px-2 py-0.5 2xl:px-4 2xl:py-1.5 rounded-lg text-[9px] sm:text-[10px] 2xl:text-xs 3xl:text-sm font-black uppercase tracking-wide border-2 ${colorClass} ${className} whitespace-nowrap`} style={shouldUseThemeBackground ? { backgroundColor: 'var(--surface-3)', borderColor: 'var(--border)' } : {}}>
-             {children}
-         </span>
-     );
+    return (
+        <span className={`px-2 py-0.5 2xl:px-4 2xl:py-1.5 rounded-lg text-[9px] sm:text-[10px] 2xl:text-xs 3xl:text-sm font-black uppercase tracking-wide border-2 ${colorClass} ${className} whitespace-nowrap`} style={shouldUseThemeBackground ? { backgroundColor: 'var(--surface-3)', borderColor: 'var(--border)' } : {}}>
+            {children}
+        </span>
+    );
 };
 
 const SectionHeader = ({ label, icon: Icon, colorClass, children }: { label: string, icon: any, colorClass: string, children?: React.ReactNode }) => (
-     <div className="flex items-center gap-2 sm:gap-3 2xl:gap-6 mb-1.5 sm:mb-2 lg:mb-3 2xl:mb-4">
-         <div className={`w-1.5 h-3 sm:h-4 lg:h-5 2xl:h-7 rounded-full ${colorClass}`} />
-         <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 2xl:w-5 2xl:h-5 shrink-0" style={{ color: 'var(--text-muted)' }} />
-         <h2 className="text-[5px] sm:text-[6px] lg:text-[7px] 2xl:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] 2xl:tracking-[0.2em] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{label}</h2>
-         <div className="h-[1px] flex-1 ml-2 opacity-50" style={{ backgroundColor: 'var(--border)' }} />
-         {children && <div className="flex items-center gap-1 sm:gap-1.5 2xl:gap-3 ml-2">{children}</div>}
-     </div>
+    <div className="flex items-center gap-2 sm:gap-3 2xl:gap-6 mb-1.5 sm:mb-2 lg:mb-3 2xl:mb-4">
+        <div className={`w-1.5 h-3 sm:h-4 lg:h-5 2xl:h-7 rounded-full ${colorClass}`} />
+        <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 2xl:w-5 2xl:h-5 shrink-0" style={{ color: 'var(--text-muted)' }} />
+        <h2 className="text-[5px] sm:text-[6px] lg:text-[7px] 2xl:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.15em] 2xl:tracking-[0.2em] whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{label}</h2>
+        <div className="h-[1px] flex-1 ml-2 opacity-50" style={{ backgroundColor: 'var(--border)' }} />
+        {children && <div className="flex items-center gap-1 sm:gap-1.5 2xl:gap-3 ml-2">{children}</div>}
+    </div>
 );
 
 const CompactStat = ({ label, count, icon: Icon, colorClass }: { label: string, count: number, icon: any, colorClass: string }) => (
-     <div className="backdrop-blur-sm px-1.5 py-0.5 2xl:px-2.5 2xl:py-1 rounded-md border shadow-sm flex items-center gap-1.5 transition-all" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+    <div className="backdrop-blur-sm px-1.5 py-0.5 2xl:px-2.5 2xl:py-1 rounded-md border shadow-sm flex items-center gap-1.5 transition-all" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
         <Icon className={`${colorClass} w-2 h-2 2xl:w-3.5 2xl:h-3.5 opacity-80`} />
         <span className={`text-[5px] sm:text-[5.5px] 2xl:text-[9.5px] font-black uppercase tracking-tighter ${colorClass}`}>
             {label} <span className="opacity-60 ml-0.5">({count})</span>
@@ -271,98 +270,10 @@ const AdminMonitoringView: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Sistema de notificações em tempo real (HIGH Priority)
+    // Sistema de notificações em tempo real (DESATIVADO)
     useEffect(() => {
-        const channel = supabase
-            .channel('monitoring_notifications')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fato_tarefas', filter: 'StatusTarefa=eq.Done' }, (payload: any) => {
-                const user = usersRef.current.find(u => u.id === String(payload.new.ID_Colaborador));
-                const taskName = payload.new.Afazer || 'Tarefa';
-                addNotification(`✅ ${user?.name || 'Colaborador'} finalizou: ${taskName}`, 'HIGH');
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dim_projetos' }, async (payload: any) => {
-                // Lookup client
-                const client = clientsRef.current.find(c => c.id === String(payload.new.ID_Cliente));
-
-                // Fetch members with a small delay to allow for member insertion
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                let members: User[] = [];
-                try {
-                    const { data: memberData } = await supabase
-                        .from('project_members')
-                        .select('id_colaborador')
-                        .eq('id_projeto', payload.new.ID_Projeto);
-
-                    if (memberData) {
-                        members = memberData.map((m: any) => usersRef.current.find(u => u.id === m.id_colaborador)).filter(Boolean) as User[];
-                    }
-                } catch (e) {
-                    console.error('Error fetching new project members', e);
-                }
-
-                const msg = (
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col gap-1 flex-1">
-                            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                                <Zap size={14} /> Novo Projeto Criado
-                            </span>
-                            <span className="text-xl font-black text-white">{payload.new.NomeProjeto || 'Novo Projeto'}</span>
-                            <span className="text-sm font-bold text-slate-300">Cliente: {client?.name || 'Cliente'}</span>
-                        </div>
-
-                        {members.length > 0 && (
-                            <div className="flex -space-x-3">
-                                {members.slice(0, 4).map(m => (
-                                    <div key={m.id} className="w-10 h-10 rounded-full border-2 overflow-hidden shadow-lg" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-2)' }}>
-                                        <img
-                                            src={m.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}`}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.onerror = null;
-                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=f8fafc&color=475569`;
-                                            }}
-                                        />
-                                    </div>
-                                ))}
-                                {members.length > 4 && (
-                                    <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-bold text-white shadow-lg" style={{ borderColor: 'var(--surface)', backgroundColor: 'var(--surface-2)' }}>
-                                        +{members.length - 4}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                );
-
-                // Projeto novo: 10 segundos, mostrar uma vez (HIGH priority garante destaque)
-                addNotification(msg, 'HIGH', 10000);
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fato_tarefas' }, (payload: any) => {
-                const user = usersRef.current.find(u => u.id === String(payload.new.ID_Colaborador));
-                const taskName = payload.new.Afazer || 'Nova Tarefa';
-                const msg = (
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs border border-white/20">
-                            NEW
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-base font-bold text-white leading-tight">{taskName}</span>
-                            <span className="text-xs text-blue-300">Criada para {user?.name || 'Equipe'}</span>
-                        </div>
-                    </div>
-                );
-                addNotification(msg, 'HIGH', 5000);
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dim_clientes' }, (payload: any) => {
-                addNotification(`🏢 Cliente cadastrado: ${payload.new.NomeCliente || 'Novo Cliente'}`, 'HIGH');
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        // Realtime desabilitado no frontend para centralização no backend.
+        console.log('[AdminMonitoring] Realtime desativado.');
     }, []);
 
     // 1. Timer para limpar a notificação atual (Dinâmico base na duration)
@@ -812,7 +723,7 @@ const AdminMonitoringView: React.FC = () => {
                                                             )
                                                         ) : (
                                                             task.estimatedDelivery && (
-                                                        <span className={`text-[8px] sm:text-[10px] 2xl:text-xs font-black uppercase flex items-center gap-1 mt-0.5 ${isDueToday ? 'text-sky-600' : ''}`} style={!isDueToday ? { color: 'var(--text-muted)' } : {}}>
+                                                                <span className={`text-[8px] sm:text-[10px] 2xl:text-xs font-black uppercase flex items-center gap-1 mt-0.5 ${isDueToday ? 'text-sky-600' : ''}`} style={!isDueToday ? { color: 'var(--text-muted)' } : {}}>
                                                                     📅 {formattedDate}{countdownText ? ` • ${countdownText}` : ''}
                                                                 </span>
                                                             )

@@ -1,35 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, ArrowRight, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/services/supabaseClient';
+import { apiRequest } from '@/services/apiClient';
 
 interface ResetPasswordProps {
   onComplete: () => void;
-}
-
-// Hash de senha com fallback para ambiente sem WebCrypto seguro
-async function hashPassword(password: string): Promise<string> {
-  const hasWebCrypto =
-    typeof window !== 'undefined' &&
-    !!window.crypto &&
-    !!window.crypto.subtle &&
-    (window.isSecureContext ?? window.location.hostname === 'localhost');
-
-  if (hasWebCrypto) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-  }
-
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const chr = password.charCodeAt(i);
-    hash = (hash << 5) - hash + chr;
-    hash |= 0;
-  }
-  return hash.toString(16);
 }
 
 const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
@@ -50,29 +24,39 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
   };
 
   useEffect(() => {
-    // Verifica se há uma sessão de recuperação de senha
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+    // Verifica se há tokens no fragmento da URL (hash)
+    const handleUrlHash = () => {
+      const hash = window.location.hash;
+      if (!hash) return;
 
-        if (error || !session) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const email = params.get('email'); // Alguns provedores podem passar o email
 
-          alert('Link de recuperação inválido ou expirado. Solicite um novo link.');
-          onComplete();
-          return;
-        }
-
-        // Session existe - usuário veio do link de email
-        setUserEmail(session.user.email || '');
+      if (accessToken) {
+        // Armazena temporariamente para o apiRequest usar no header
+        localStorage.setItem('nic_labs_auth_token', accessToken);
         setIsValidToken(true);
-      } catch (error) {
-
-        alert('Erro ao validar link de recuperação.');
-        onComplete();
+        if (email) setUserEmail(email);
       }
     };
 
-    checkSession();
+    handleUrlHash();
+
+    // Se não tiver token no hash, mas tiver no localStorage (ex: via OTP), consideramos válido para esta tela
+    const token = localStorage.getItem('nic_labs_auth_token');
+    if (token) {
+      setIsValidToken(true);
+    } else {
+      // Se após verificar tudo não temos token
+      setTimeout(() => {
+        if (!localStorage.getItem('nic_labs_auth_token')) {
+          alert('Sessão de recuperação expirada ou inválida. Solicite um novo link.');
+          onComplete();
+        }
+      }, 500);
+    }
   }, [onComplete]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,62 +83,26 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
     try {
       setLoading(true);
 
-      // 1. Atualiza a senha no Supabase Auth
-      const { error: authError } = await supabase.auth.updateUser({
-        password: newPassword,
+      // No backend novo, usamos o endpoint /auth/set-password
+      // O e-mail pode ser opcional se o token já identifica o usuário, 
+      // mas vamos passar se tivermos.
+      await apiRequest('/auth/set-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: userEmail, password: newPassword }),
       });
 
-      if (authError) {
-
-        alert('Erro ao atualizar senha. Tente novamente.');
-        return;
-      }
-
-      // 2. Busca o colaborador pelo email
-      const { data: colaboradores, error: dbError } = await supabase
-        .from('dim_colaboradores')
-        .select('ID_Colaborador')
-        .eq('email', userEmail)
-        .maybeSingle();
-
-      if (dbError || !colaboradores) {
-
-        // Senha foi alterada no Auth, mas não conseguimos atualizar credentials
-        alert('Senha alterada, mas houve um problema ao sincronizar. Contate o administrador.');
-        setSuccess(true);
-        return;
-      }
-
-      // 3. Atualiza o hash na tabela user_credentials
-      const passwordHash = await hashPassword(newPassword);
-
-      const { error: credError } = await supabase
-        .from('user_credentials')
-        .upsert({
-          colaborador_id: colaboradores.ID_Colaborador,
-          password_hash: passwordHash,
-        }, {
-          onConflict: 'colaborador_id',
-        });
-
-      if (credError) {
-
-        alert('Senha alterada parcialmente. Contate o administrador se tiver problemas ao entrar.');
-      }
-
-      // 4. Faz logout da sessão temporária
-      await supabase.auth.signOut();
-
       setSuccess(true);
+
+      // Remove o token temporário após o sucesso
+      localStorage.removeItem('nic_labs_auth_token');
 
       // Redireciona para login após 3 segundos
       setTimeout(() => {
         onComplete();
       }, 3000);
 
-    } catch (error) {
-
-      alert('Erro ao processar alteração de senha.');
+    } catch (error: any) {
+      alert('Erro ao processar alteração de senha: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -213,9 +161,11 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onComplete }) => {
             />
           </div>
           <h2 className="text-2xl font-bold" style={{ color: 'var(--textTitle)' }}>Redefinir Senha</h2>
-          <p className="text-sm" style={{ color: 'var(--textMuted)' }}>
-            Digite sua nova senha para a conta: <span className="font-semibold" style={{ color: 'var(--text)' }}>{userEmail}</span>
-          </p>
+          {userEmail && (
+            <p className="text-sm" style={{ color: 'var(--textMuted)' }}>
+              Digite sua nova senha para a conta: <span className="font-semibold" style={{ color: 'var(--text)' }}>{userEmail}</span>
+            </p>
+          )}
         </div>
 
         {/* Form */}

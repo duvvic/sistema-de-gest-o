@@ -1,10 +1,6 @@
-// contexts/DataContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { Task, Project, Client, User, TimesheetEntry, Absence, ProjectMember, Holiday, TaskMemberAllocation } from '@/types';
-import { supabase } from '@/services/supabaseClient';
-import { useAuth } from '@/contexts/AuthContext';
-import { mapDbTaskToTask, mapDbTimesheetToEntry, mapDbProjectToProject, mapDbUserToUser, mapDbAbsenceToAbsence } from '@/utils/normalizers';
 import { enrichProjectsWithTaskDates } from '@/utils/projectUtils';
 
 
@@ -37,8 +33,6 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
-    const { currentUser, isLoading: authLoading } = useAuth();
-
     // Hook que faz o fetch centralizado
     const {
         users: loadedUsers,
@@ -64,12 +58,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [absences, setAbsences] = useState<Absence[]>([]);
     const [holidays, setHolidays] = useState<Holiday[]>([]);
 
-    // Ref para evitar ciclos de re-subscrição e garantir acesso a dados frescos nos callbacks
-    const usersRef = React.useRef<User[]>([]);
-    const tasksRef = React.useRef<Task[]>([]);
-    useEffect(() => { usersRef.current = users; }, [users]);
-    useEffect(() => { tasksRef.current = tasks; }, [tasks]);
-
     // Sincronizar dados globais quando o carregamento termina
     useEffect(() => {
         if (dataLoading) return;
@@ -85,186 +73,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setHolidays(loadedHolidays || []);
     }, [dataLoading, loadedClients, loadedProjects, loadedTasks, loadedUsers, loadedTimesheets, loadedProjectMembers, loadedAbsences, loadedHolidays]);
-
-    // === REALTIME SUBSCRIPTIONS ===
-    useEffect(() => {
-        const channel = supabase
-            .channel('app_realtime_changes')
-            // 1. Clientes
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_clientes' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    const newItem: Client = { id: String(payload.new.ID_Cliente), name: payload.new.NomeCliente, logoUrl: payload.new.NewLogo, active: payload.new.ativo };
-                    setClients(prev => {
-                        if (prev.some(c => c.id === newItem.id)) return prev;
-                        return [...prev, newItem];
-                    });
-                } else if (payload.eventType === 'UPDATE') {
-                    setClients(prev => prev.map(c => c.id === String(payload.new.ID_Cliente)
-                        ? { ...c, name: payload.new.NomeCliente, logoUrl: payload.new.NewLogo, active: payload.new.ativo } : c));
-                } else if (payload.eventType === 'DELETE') {
-                    setClients(prev => prev.filter(c => c.id !== String(payload.old.ID_Cliente)));
-                }
-            })
-            // 2. Projetos
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_projetos' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const project = mapDbProjectToProject(payload.new);
-                    setProjects(prev => {
-                        const exists = prev.find(p => String(p.id) === String(project.id));
-                        const updatedProjects = exists
-                            ? prev.map(p => String(p.id) === String(project.id) ? project : p)
-                            : [...prev, project];
-                        return enrichProjectsWithTaskDates(updatedProjects, tasksRef.current);
-                    });
-
-                } else if (payload.eventType === 'DELETE') {
-                    setProjects(prev => prev.filter(p => p.id !== String(payload.old.ID_Projeto)));
-                }
-            })
-            // 3. Tarefas (Com Normalização)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'fato_tarefas' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const userMap = new Map((usersRef.current || []).map(u => [String(u.id), u]));
-                    const task = mapDbTaskToTask(payload.new, userMap);
-                    setTasks(prev => {
-                        const exists = prev.find(t => String(t.id) === String(task.id));
-                        const updatedTasks = exists
-                            ? prev.map(t => String(t.id) === String(task.id) ? { ...t, ...task, collaboratorIds: t.collaboratorIds || [] } : t)
-                            : [task, ...prev];
-
-                        // Re-process projects when tasks change to update start dates if needed (evitando loops desnecessários)
-                        // Note: setProjects inside setTasks is slightly risky but common here.
-                        return updatedTasks;
-                    });
-
-                    // Atualiza datas dos projetos de forma atomizada fora do setTasks anterior se possível, 
-                    // ou garante que o enrich use a lista mais nova.
-                    setProjects(currentProjects => enrichProjectsWithTaskDates(currentProjects, tasksRef.current));
-
-                } else if (payload.eventType === 'DELETE') {
-                    setTasks(prev => prev.filter(t => t.id !== String(payload.old.id_tarefa_novo)));
-                }
-            })
-            // 3.1 Vínculos de Colaboradores (tarefa_colaboradores)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefa_colaboradores' }, (payload) => {
-                const taskId = String((payload.new as any)?.id_tarefa || (payload.old as any)?.id_tarefa);
-                const userId = String((payload.new as any)?.id_colaborador || (payload.old as any)?.id_colaborador);
-
-                if (payload.eventType === 'INSERT') {
-                    setTasks(prev => prev.map(t => t.id === taskId
-                        ? { ...t, collaboratorIds: [...(t.collaboratorIds || []).filter(id => id !== userId), userId] }
-                        : t
-                    ));
-                } else if (payload.eventType === 'DELETE') {
-                    setTasks(prev => prev.map(t => t.id === taskId
-                        ? { ...t, collaboratorIds: (t.collaboratorIds || []).filter(id => id !== userId) }
-                        : t
-                    ));
-                }
-            })
-            // 4. Colaboradores
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'dim_colaboradores' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const user = mapDbUserToUser(payload.new);
-                    setUsers(prev => {
-                        const exists = prev.find(u => String(u.id) === String(user.id));
-                        if (exists) return prev.map(u => String(u.id) === String(user.id) ? user : u);
-                        return [...prev, user];
-                    });
-                }
-            })
-            // 5. Timesheet
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'horas_trabalhadas' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const entry = mapDbTimesheetToEntry(payload.new);
-                    setTimesheetEntries(prev => {
-                        const exists = prev.find(e => String(e.id) === String(entry.id));
-                        if (exists) return prev.map(e => String(e.id) === String(entry.id) ? entry : e);
-                        return [entry, ...prev];
-                    });
-                } else if (payload.eventType === 'DELETE') {
-                    setTimesheetEntries(prev => prev.filter(e => e.id !== String(payload.old.ID_Horas_Trabalhadas)));
-                }
-            })
-            // 6. Membros
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const newMember: ProjectMember = {
-                        id_pc: payload.new.id_pc,
-                        id_projeto: payload.new.id_projeto,
-                        id_colaborador: payload.new.id_colaborador,
-                        allocation_percentage: payload.new.allocation_percentage,
-                        start_date: payload.new.start_date,
-                        end_date: payload.new.end_date,
-                    };
-                    setProjectMembers(prev => {
-                        const exists = prev.find(pm => String(pm.id_projeto) === String(newMember.id_projeto) && String(pm.id_colaborador) === String(newMember.id_colaborador));
-                        if (exists) {
-                            return prev.map(pm => (String(pm.id_projeto) === String(newMember.id_projeto) && String(pm.id_colaborador) === String(newMember.id_colaborador)) ? newMember : pm);
-                        }
-                        return [...prev, newMember];
-                    });
-                } else if (payload.eventType === 'DELETE') {
-                    setProjectMembers(prev => prev.filter(pm => !(String(pm.id_projeto) === String(payload.old.id_projeto) && String(pm.id_colaborador) === String(payload.old.id_colaborador))));
-                }
-            })
-            // 7. Ausências
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'colaborador_ausencias' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const absence = mapDbAbsenceToAbsence(payload.new);
-                    setAbsences(prev => {
-                        const exists = prev.find(a => String(a.id) === String(absence.id));
-                        if (exists) return prev.map(a => String(a.id) === String(absence.id) ? absence : a);
-                        return [...prev, absence];
-                    });
-                } else if (payload.eventType === 'DELETE') {
-                    setAbsences(prev => prev.filter(a => a.id !== String(payload.old.id)));
-                }
-            })
-            // 8. Feriados
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'feriados' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const h = payload.new;
-                    const holiday: Holiday = {
-                        id: String(h.id),
-                        name: h.nome,
-                        date: h.data,
-                        type: h.tipo,
-                        observations: h.observacoes
-                    };
-                    setHolidays(prev => {
-                        const exists = prev.find(item => String(item.id) === String(holiday.id));
-                        if (exists) return prev.map(item => String(item.id) === String(holiday.id) ? holiday : item);
-                        return [...prev, holiday];
-                    });
-                } else if (payload.eventType === 'DELETE') {
-                    setHolidays(prev => prev.filter(h => h.id !== String(payload.old.id)));
-                }
-            })
-            // 9. Alocações de Tarefas
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'task_member_allocations' }, (payload) => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    const allocation: TaskMemberAllocation = {
-                        id: String(payload.new.id),
-                        taskId: String(payload.new.task_id),
-                        userId: String(payload.new.user_id),
-                        reservedHours: Number(payload.new.reserved_hours)
-                    };
-                    setTaskMemberAllocations(prev => {
-                        const exists = prev.find(a => String(a.id) === String(allocation.id));
-                        if (exists) return prev.map(a => String(a.id) === String(allocation.id) ? allocation : a);
-                        return [...prev, allocation];
-                    });
-                } else if (payload.eventType === 'DELETE') {
-                    setTaskMemberAllocations(prev => prev.filter(a => a.id !== String(payload.old.id)));
-                }
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, []);
 
     const value = React.useMemo(() => ({
         clients,

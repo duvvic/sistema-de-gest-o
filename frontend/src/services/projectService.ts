@@ -1,13 +1,9 @@
 // services/projectService.ts
-// CRUD de Projetos no Supabase
+// CRUD de Projetos via Backend Express
 
-import { supabase } from './supabaseClient';
 import { Project } from '@/types';
 import { apiRequest } from './apiClient';
 
-// ===========================
-// CREATE
-// ===========================
 const clean = (val: any) => (typeof val === 'string' && val.trim() === '') ? null : val;
 const safeNum = (val: any) => {
   if (val === null || val === undefined || val === '' || val === 'null' || val === 'undefined') return null;
@@ -19,7 +15,6 @@ const safeNum = (val: any) => {
 // CREATE
 // ===========================
 export async function createProject(data: Partial<Project>): Promise<number> {
-
   const payload = {
     NomeProjeto: data.name || "(Sem nome)",
     ID_Cliente: safeNum(data.clientId),
@@ -47,20 +42,18 @@ export async function createProject(data: Partial<Project>): Promise<number> {
     torre: clean(data.torre),
     project_type: data.project_type || 'continuous',
     valor_diario: clean(data.valor_diario),
-    // fora_do_fluxo: !!(data as any).fora_do_fluxo // Coluna ainda não existe no banco
   };
 
-  const { data: inserted, error } = await supabase
-    .from("dim_projetos")
-    .insert(payload)
-    .select("ID_Projeto")
-    .single();
+  const result = await apiRequest<any>('/projects', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 
-  if (error) {
-    throw error;
+  if (!result || !result.ID_Projeto) {
+    throw new Error("Erro ao criar projeto: ID não retornado pelo servidor.");
   }
 
-  return inserted.ID_Projeto;
+  return result.ID_Projeto;
 }
 
 // ===========================
@@ -87,7 +80,6 @@ export async function updateProject(projectId: string, data: Partial<Project>): 
   if (data.criticalDate !== undefined) payload.critical_date = clean(data.criticalDate);
   if (data.docLink !== undefined) payload.doc_link = clean(data.docLink);
 
-  // Status report mapping
   const gaps = (data as any).gaps_issues !== undefined ? (data as any).gaps_issues : (data as any).gapsIssues;
   if (gaps !== undefined) payload.gaps_issues = clean(gaps);
 
@@ -102,47 +94,28 @@ export async function updateProject(projectId: string, data: Partial<Project>): 
   if (data.torre !== undefined) payload.torre = clean(data.torre);
   if (data.project_type !== undefined) payload.project_type = data.project_type;
   if ((data as any).valor_diario !== undefined) payload.valor_diario = clean((data as any).valor_diario);
-  // if ((data as any).fora_do_fluxo !== undefined) payload.fora_do_fluxo = !!(data as any).fora_do_fluxo; // Coluna ainda não existe no banco
 
-  const { error } = await supabase
-    .from("dim_projetos")
-    .update(payload)
-    .eq("ID_Projeto", safeNum(projectId)!);
-
-  if (error) {
-    console.error("Supabase updateProject error:", error);
-    console.log("Payload was:", payload);
-
-    throw error;
-  }
-
-}
-
-// ===========================
-// DELETE (Soft Delete - marca como inativo)
-// ===========================
-
-export async function deleteProject(projectId: string, force: boolean = false): Promise<void> {
-  const query = force ? '?force=true' : '';
-  await apiRequest(`/admin/projects/${projectId}${query}`, {
-    method: 'DELETE'
+  await apiRequest(`/projects/${projectId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
   });
 }
 
+// ===========================
+// DELETE (Soft Delete ou Hard Delete baseado no parâmetro force)
+// ===========================
+export async function deleteProject(projectId: string, force: boolean = false): Promise<void> {
+  const query = force ? '?force=true' : '';
+  await apiRequest(`/projects/${projectId}${query}`, {
+    method: 'DELETE'
+  });
+}
 
 // ===========================
 // DELETE (Hard Delete - remove do banco)
 // ===========================
 export async function hardDeleteProject(projectId: string): Promise<void> {
-
-  const { error } = await supabase
-    .from("dim_projetos")
-    .delete()
-    .eq("ID_Projeto", safeNum(projectId)!);
-
-  if (error) {
-
-    throw error;
-  }
-
+  await apiRequest(`/projects/${projectId}?force=true`, {
+    method: 'DELETE'
+  });
 }

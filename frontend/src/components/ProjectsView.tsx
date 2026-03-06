@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Project, Client, Task } from '@/types';
 import { Plus, Trash2, FileText } from 'lucide-react';
-import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import BackButton from './BackButton';
 
 interface ProjectsViewProps {
@@ -36,24 +35,6 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({
     estimatedDelivery: '',
   });
 
-  // Realtime updates for projects and tasks
-  const handleProjectRealtime = useCallback((payload) => {
-    // Atualize a lista de projetos conforme necessário
-    // Exemplo: refetchProjects();
-    // Ou chame onNewProject/onDeleteProject se apropriado
-    // Aqui apenas um console.log para debug
-
-  }, []);
-
-  const handleTaskRealtime = useCallback((payload) => {
-    // Atualize a lista de tarefas conforme necessário
-    // Exemplo: refetchTasks();
-    // Ou chame onTaskClick se apropriado
-
-  }, []);
-
-  useSupabaseRealtime('projects', handleProjectRealtime);
-  useSupabaseRealtime('tasks', handleTaskRealtime);
 
   const clientProjects = projects.filter(p => p.clientId === client.id);
   const tasksByProject = (projectId: string) => tasks.filter(t => t.projectId === projectId);

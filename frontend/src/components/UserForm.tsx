@@ -1,18 +1,17 @@
 // components/UserForm.tsx - Adaptado para Router
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { formatDecimalToTime } from '@/utils/normalizers';
 import { User, Role } from '@/types';
-import { ArrowLeft, Save, User as UserIcon, Mail, Briefcase, Shield, Zap, Info, LayoutGrid, AlertTriangle } from 'lucide-react';
-import { supabase } from '@/services/supabaseClient';
+import { ArrowLeft, Save, User as UserIcon, Shield, Zap, Info, LayoutGrid, AlertTriangle } from 'lucide-react';
 import OrganizationalStructureSelector from './OrganizationalStructureSelector';
 import * as CapacityUtils from '@/utils/capacity';
 
 const UserForm: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, holidays } = useDataController();
+  const { users, holidays, createUser, updateUser } = useDataController();
 
   const isNew = !userId || userId === 'new';
   const initialUser = !isNew ? users.find(u => u.id === userId) : undefined;
@@ -73,30 +72,10 @@ const UserForm: React.FC = () => {
 
     setLoading(true);
     try {
-      const payload = {
-        NomeColaborador: formData.name,
-        email: formData.email,
-        Cargo: formData.cargo,
-        nivel: formData.nivel,
-        role: formData.role,
-        ativo: formData.active,
-        avatar_url: formData.avatarUrl,
-        torre: formData.torre,
-        custo_hora: formData.hourlyCost,
-        horas_disponiveis_dia: formData.dailyAvailableHours,
-        horas_disponiveis_mes: formData.monthlyAvailableHours,
-        atrasado: formData.atrasado
-      };
-
       if (isNew) {
-        const { error } = await supabase.from('dim_colaboradores').insert(payload);
-        if (error) throw error;
+        await createUser(formData as any);
       } else {
-        const { error } = await supabase
-          .from('dim_colaboradores')
-          .update(payload)
-          .eq('ID_Colaborador', userId);
-        if (error) throw error;
+        await updateUser(userId!, formData as any);
       }
       navigate(-1);
     } catch (error: any) {
@@ -150,7 +129,7 @@ const UserForm: React.FC = () => {
       {/* Form Area */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div className="max-w-3xl mx-auto">
-          <form onSubmit={handleSave} className="ui-card p-10 space-y-10">
+          <div className="ui-card p-10 space-y-10">
 
             {/* Avatar e Nome Principal */}
             <div className="flex items-center gap-8">
@@ -325,7 +304,7 @@ const UserForm: React.FC = () => {
                 <p className="text-[10px] text-amber-700 font-medium leading-relaxed italic">Estes dados são utilizados para o cálculo de IDL (Índice de Lucratividade) e monitoramento de capacidade. Somente administradores do sistema têm visibilidade total destes campos.</p>
               </div>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>

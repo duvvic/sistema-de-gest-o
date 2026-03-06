@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getNotesLinks, syncNotes, NoteTab } from '@/services/notesApi';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/services/supabaseClient';
 import { ExternalLink, StickyNote, CheckSquare, BookOpen, Clipboard, Lightbulb, ArrowRight, Copy, Check, Plus, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,10 +33,8 @@ const Notes: React.FC = () => {
     const CACHE_KEY = `notes_cache_${currentUser?.id}`;
 
     const fetchLinks = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
         try {
-            const data = await getNotesLinks(session.access_token);
+            const data = await getNotesLinks();
             setTabs(data.tabs);
             // Save to cache
             localStorage.setItem(CACHE_KEY, JSON.stringify(data.tabs));
@@ -79,9 +76,6 @@ const Notes: React.FC = () => {
         if (!confirm('Tem certeza que deseja excluir esta nota?')) return;
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) return;
-
             const updatedTabs = tabs.filter(t => t.key !== keyToDelete);
             const tabsToSend = updatedTabs.map(t => ({
                 key: t.key,
@@ -90,7 +84,7 @@ const Notes: React.FC = () => {
                 type: t.type
             }));
 
-            await syncNotes(session.access_token, tabsToSend);
+            await syncNotes(tabsToSend);
             await fetchLinks();
         } catch (err) {
             console.error(err);
@@ -102,9 +96,6 @@ const Notes: React.FC = () => {
         if (!newNoteLabel.trim()) return;
         setCreating(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) return;
-
             const newItem = {
                 key: Date.now().toString(),
                 label: newNoteLabel,
@@ -113,7 +104,7 @@ const Notes: React.FC = () => {
             };
 
             const updatedTabs = [...tabs.map(t => ({ key: t.key, label: t.label, slug: t.slug, type: t.type })), newItem];
-            await syncNotes(session.access_token, updatedTabs);
+            await syncNotes(updatedTabs);
 
             await fetchLinks(); // Recarrega para pegar URLs completas
             setIsModalOpen(false);

@@ -49,16 +49,15 @@ const UserForm: React.FC = () => {
     }
   }, [initialUser]);
 
-  // Sincronizar Horas Mês automaticamente
+  // Inicializar Horas Mês automaticamente Apenas se for novo
   useEffect(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonth);
-    const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
-
-    if (formData.monthlyAvailableHours !== calculatedMonthly) {
+    if (isNew && formData.monthlyAvailableHours === 160) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonth);
+      const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
       setFormData(prev => ({ ...prev, monthlyAvailableHours: calculatedMonthly }));
     }
-  }, [formData.dailyAvailableHours]);
+  }, [isNew, formData.dailyAvailableHours]);
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -295,10 +294,13 @@ const UserForm: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Carga Máxima (Mês)</label>
-                  <div className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] opacity-80 cursor-not-allowed">
-                    {formData.monthlyAvailableHours} <span className="text-[10px] opacity-40 ml-2">PROJETADO</span>
-                  </div>
-                  <p className="text-[7px] font-bold opacity-40 mt-1 uppercase">Automático: {CapacityUtils.getWorkingDaysInMonth(new Date().toISOString().slice(0, 7))} dias úteis</p>
+                  <input
+                    type="number"
+                    value={formData.monthlyAvailableHours || ''}
+                    onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)]"
+                  />
+                  <p className="text-[7px] font-bold opacity-40 mt-1 uppercase">Sugerido: {(formData.dailyAvailableHours || 0) * CapacityUtils.getWorkingDaysInMonth(new Date().toISOString().slice(0, 7))}h</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start p-4 bg-amber-500/5 rounded-xl border border-amber-500/10">

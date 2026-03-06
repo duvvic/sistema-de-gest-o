@@ -1,4 +1,4 @@
-import { User, Task, Project } from '@/types';
+import { User, Task, Project, ProjectMember } from '@/types';
 
 /**
  * Retorna o número de dias úteis (Segunda a Sexta) em um determinado mês.
@@ -115,7 +115,6 @@ const isIntersectingMonth = (start: Date, end: Date | null, monthStart: Date, mo
  * Regra 2: Alocação Válida (Data Inicio <= Ultimo Dia Mês AND Data Fim >= Primeiro Dia Mês)
  * Regra 3: Horas Alocadas = Soma das horas mensais dos projetos (Horas Vendidas / Duração * % Alocação)
  */
-import { ProjectMember } from '@/types';
 
 export const getUserMonthlyAvailability = (
     user: User,
@@ -132,7 +131,7 @@ export const getUserMonthlyAvailability = (
 
     // 1. Capacidade Mensal (Horas Meta do Mês)
     const dailyGoal = user.dailyAvailableHours || 8;
-    const capacity = dailyGoal * workingDays;
+    const capacity = user.monthlyAvailableHours ?? (dailyGoal * workingDays);
 
     // 2. Horas Alocadas (Combinando Tarefas e Projetos Contínuos)
     let allocated = getMonthlyAllocatedHours(user.id, monthStr, tasks);
@@ -173,14 +172,6 @@ export const getUserMonthlyAvailability = (
     const today = new Date(todayStr + 'T12:00:00');
 
     if (monthEnd >= today) {
-        let remainingWorkingDays = 0;
-        if (today < monthStart) {
-            remainingWorkingDays = workingDays;
-        } else if (today >= monthStart && today <= monthEnd) {
-            remainingWorkingDays = getWorkingDaysInRange(todayStr, monthStr + '-' + new Date(year, month, 0).getDate());
-        }
-
-        const totalRemainingCapacity = remainingWorkingDays * dailyGoal;
         // A disponibilidade é o saldo absoluto entre capacidade total e alocação total do mês
         currentAvailability = capacity - allocated;
     }

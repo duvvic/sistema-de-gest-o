@@ -101,7 +101,7 @@ export async function fetchUsers(): Promise<User[]> {
 
     const { data, error } = await supabase
       .from("dim_colaboradores")
-      .select("ID_Colaborador, NomeColaborador, Cargo, email, avatar_url, role, ativo, torre, nivel, custo_hora, horas_disponiveis_dia, horas_disponiveis_mes");
+      .select("id_colaborador, nome_colaborador, cargo, email, avatar_url, role, ativo, torre, nivel, custo_hora, horas_disponiveis_dia, horas_disponiveis_mes");
 
     if (error) {
       console.error("[API] Erro Supabase:", error);
@@ -133,8 +133,8 @@ export async function deactivateUser(userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("dim_colaboradores")
     .update({ ativo: false })
-    .eq("ID_Colaborador", numericId)
-    .select("ID_Colaborador, NomeColaborador, ativo");
+    .eq("id_colaborador", numericId)
+    .select("id_colaborador, nome_colaborador, ativo");
 
   if (error) {
     throw error;
@@ -280,7 +280,7 @@ export async function fetchTimesheets(): Promise<any[]> {
         Almoco_Deduzido,
         Descricao,
         deleted_at,
-        dim_colaboradores!inner(NomeColaborador)
+        dim_colaboradores!inner(nome_colaborador)
       `)
       .is('deleted_at', null)
       .order('Data', { ascending: false })

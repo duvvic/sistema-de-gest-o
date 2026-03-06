@@ -1,40 +1,146 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+import helmet from "helmet";
+import xss from "xss-clean";
+import mongoSanitize from "express-mongo-sanitize";
+import hpp from "hpp";
+import ExpressBrute from "express-brute";
+import { apiLimiter } from "./middleware/rateLimit.js";
+import { auditMiddleware } from "./audit/auditMiddleware.js";
+import { logger } from "./utils/logger.js";
+import { sendError, sendSuccess } from "./utils/responseHelper.js";
+import { supabaseAdmin } from "./config/supabaseAdmin.js";
+import { setupSwagger } from "./config/swagger.js";
+import { authMiddleware } from "./middleware/authMiddleware.js";
+import { allocationController } from "./controllers/allocationController.js";
 
+// Rotas
 import adminUsersRouter from "./routes/adminUsers.js";
 import adminBaseRouter from "./routes/adminBase.js";
 import reportRoutes from "./routes/report.js";
 import authRoutes from "./routes/auth.js";
 import notesRoutes from "./routes/notes.js";
 import syncRoutes from "./routes/sync.js";
-
-
-
-// dotenv.config() called at top via import "dotenv/config";
+import clientsRoutes from "./routes/clients.js";
+import projectRoutes from "./routes/projects.js";
+import tasksRoutes from "./routes/tasks.js";
+import timesheetsRoutes from "./routes/timesheets.js";
+import auditLogsRoutes from "./routes/auditLogs.js";
+import collaboratorRoutes from "./routes/collaborators.js";
+import supportRoutes from "./routes/support.js";
 
 const app = express();
+const store = new ExpressBrute.MemoryStore();
+const bruteForce = new ExpressBrute(store);
+const startTime = Date.now();
 
+// 1. Segurança de Cabeçalhos
+app.use(helmet());
+
+// 2. CORS Seguro
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:3000"];
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("CORS não permitido"));
+        }
+    },
+    credentials: true
+}));
+
+// 3. Proteção contra Poluição de Parâmetros
+app.use(hpp());
+
+// 4. Parser e Sanitização
 app.use(express.json({ limit: "1mb" }));
-// Logger simples para diagnosticar se as requisições estão chegando
+app.use(xss());
+app.use(mongoSanitize());
+
+// 5. Logs de Requisição
 app.use((req, res, next) => {
-    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+    logger.info(`${req.method} ${req.url}`, "HTTP");
     next();
 });
 
-app.use(cors()); // Aceita tudo por padrão para testes de produção
+// 6. Auditoria Contextual
+app.use(auditMiddleware);
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+// 7. Limite de Requisições
+app.use("/api", apiLimiter);
 
+// 8. Documentação
+setupSwagger(app);
+
+// 9. Healthcheck
+app.get("/health", async (req, res) => {
+    try {
+        const { error } = await supabaseAdmin.from('system_settings').select('key').limit(1);
+        const dbStatus = error ? 'error' : 'connected';
+
+        return sendSuccess(res, {
+            status: "ok",
+            database: dbStatus,
+            uptime: `${Math.floor((Date.now() - startTime) / 1000)}s`,
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        return sendError(res, "Healthcheck failed", 500);
+    }
+});
+
+/**
+ * 9. Rotas Versionadas (v1)
+ * Normalizadas para português conforme frontend solicita
+ */
+const apiV1 = express.Router();
+
+apiV1.use("/auth", bruteForce.prevent, authRoutes);
+apiV1.use("/clientes", clientsRoutes);
+apiV1.use("/projetos", projectRoutes);
+apiV1.use("/tarefas", tasksRoutes);
+apiV1.use("/colaboradores", collaboratorRoutes);
+apiV1.use("/timesheets", timesheetsRoutes);
+apiV1.use("/support", supportRoutes);
+apiV1.use("/sync", syncRoutes);
+apiV1.use("/audit-logs", auditLogsRoutes);
+
+// Allocations
+apiV1.get("/allocations", authMiddleware, allocationController.list);
+apiV1.post("/allocations", authMiddleware, allocationController.upsert);
+apiV1.delete("/allocations/task/:taskId", authMiddleware, allocationController.deleteByTask);
+
+// Alias em inglês para v1 (Opcional, mas bom p/ padrão rest)
+apiV1.use("/clients", clientsRoutes);
+apiV1.use("/projects", projectRoutes);
+apiV1.use("/tasks", tasksRoutes);
+
+app.use("/api/v1", apiV1);
+
+/**
+ * 10. Fallbacks de Compatibilidade
+ */
 app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminBaseRouter);
-app.use("/api/admin/report", reportRoutes);
-app.use("/api/admin/users", adminUsersRouter);
-app.use("/api/notes", notesRoutes);
-app.use("/api/admin/sync", syncRoutes);
+app.use("/api/clientes", clientsRoutes);
+app.use("/api/projetos", projectRoutes);
+app.use("/api/tarefas", tasksRoutes);
+app.use("/api/tasks", tasksRoutes);
+app.use("/api/colaboradores", collaboratorRoutes);
+app.use("/api/timesheets", timesheetsRoutes);
+app.use("/api/support", supportRoutes);
+app.use("/api/sync", syncRoutes);
+app.use("/api/audit-logs", authMiddleware, auditLogsRoutes);
+app.get("/api/allocations", authMiddleware, allocationController.list);
 
-
+// 11. Tratamento de Erro Global
+app.use((err, req, res, next) => {
+    logger.error(`Erro não tratado: ${err.message}`, "GlobalErrorHandler", err);
+    return sendError(res, "Ocorreu um erro interno no servidor.", 500);
+});
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`✅ Backend rodando na porta ${port}`));
+app.listen(port, () => logger.info(`✅ Backend rodando na porta ${port}`, "ServerInit"));
+
+export default app;

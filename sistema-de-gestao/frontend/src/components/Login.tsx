@@ -175,7 +175,7 @@ export default function Login() {
         try {
             const { data: colab } = await supabase
                 .from('dim_colaboradores')
-                .select('ID_Colaborador, email, NomeColaborador, role')
+                .select('id_colaborador, email, nome_colaborador, role')
                 .eq('email', val)
                 .maybeSingle();
 
@@ -196,7 +196,7 @@ export default function Login() {
             const { data: cred } = await supabase
                 .from('user_credentials')
                 .select('colaborador_id')
-                .eq('colaborador_id', colab.ID_Colaborador)
+                .eq('colaborador_id', colab.id_colaborador)
                 .maybeSingle();
 
             if (!cred) {
@@ -353,7 +353,7 @@ export default function Login() {
             // 1. Validar se o usuário existe na base dim_colaboradores
             const { data: dbUser, error: dbError } = await supabase
                 .from('dim_colaboradores')
-                .select('ID_Colaborador, NomeColaborador, email, role')
+                .select('id_colaborador, nome_colaborador, email, role')
                 .eq('email', emailToUse)
                 .maybeSingle();
 
@@ -387,8 +387,8 @@ export default function Login() {
                 papelStr.includes('executive');
 
             setSelectedUser({
-                id: String(dbUser.ID_Colaborador),
-                name: dbUser.NomeColaborador,
+                id: String(dbUser.id_colaborador),
+                name: dbUser.nome_colaborador,
                 email: dbUser.email,
                 role: isAdminRole ? 'admin' : 'developer'
             } as User);
@@ -422,7 +422,7 @@ export default function Login() {
             // 1. Validar se o usuário existe na base dim_colaboradores
             const { data: dbUser, error: dbError } = await supabase
                 .from('dim_colaboradores')
-                .select('ID_Colaborador, NomeColaborador, email, role')
+                .select('id_colaborador, nome_colaborador, email, role')
                 .eq('email', normalizedEmail)
                 .maybeSingle();
 
@@ -455,8 +455,8 @@ export default function Login() {
                 papelStr.includes('executive');
 
             setSelectedUser({
-                id: String(dbUser.ID_Colaborador),
-                name: dbUser.NomeColaborador,
+                id: String(dbUser.id_colaborador),
+                name: dbUser.nome_colaborador,
                 email: dbUser.email,
                 role: isAdminRole ? 'admin' : 'developer'
             } as User);
