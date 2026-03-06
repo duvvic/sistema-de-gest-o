@@ -228,9 +228,20 @@ function applyPostgrestTransformations(path: string, options: RequestInit): { fi
                         // Skip mapping if value is null or undefined to avoid PostgREST errors
                         if (val === null || val === undefined) continue;
 
-                        // Treat empty strings as null for IDs/Numeric fields to avoid 400
-                        if (typeof val === 'string' && val.trim() === '' && (mappedKey.startsWith('ID_') || mappedKey.includes('_id') || mappedKey === 'id_tarefa_novo')) {
-                            continue;
+                        // Treat empty strings as null for IDs/Numeric/Date fields to avoid 400 (especially 22007 invalid datetime)
+                        if (typeof val === 'string' && val.trim() === '') {
+                            const isNonText =
+                                mappedKey.startsWith('ID_') ||
+                                mappedKey.includes('_id') ||
+                                mappedKey === 'id_tarefa_novo' ||
+                                mappedKey.includes('entrega') ||
+                                mappedKey.includes('inicio') ||
+                                mappedKey.includes('Data') ||
+                                mappedKey === 'Porcentagem' ||
+                                mappedKey.includes('hours') ||
+                                mappedKey.includes('weight');
+
+                            if (isNonText) continue;
                         }
 
                         if (targetTable === '/fato_tarefas') {
