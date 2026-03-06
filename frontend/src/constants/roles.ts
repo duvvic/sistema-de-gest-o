@@ -57,3 +57,14 @@ export const USER_MANAGEMENT_ROLES: UserRole[] = [
     USER_ROLES.CEO,
     USER_ROLES.RH
 ];
+
+// Roles que podem ver os lançamentos (Timesheet) de todos os colaboradores
+export const TIMESHEET_VIEW_ALL_ROLES: string[] = [
+    'system_admin',
+    'admin',
+    'ceo',
+    'executive',
+    'diretoria',
+    'pmo',
+    'gestor'
+];

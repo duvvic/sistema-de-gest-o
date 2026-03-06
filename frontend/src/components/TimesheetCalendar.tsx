@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Task, Project, Client, Absence, Holiday, TimesheetEntry } from '@/types';
+import { TIMESHEET_VIEW_ALL_ROLES } from '@/constants/roles';
 import {
   ChevronLeft, ChevronRight, Plus, Clock, TrendingUp, Trash2,
   Users, AlertTriangle, CheckCircle, Calendar,
@@ -22,6 +23,11 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, isAdmin } = useAuth();
   const { timesheetEntries, deleteTimesheet, tasks, users, loading, clients, projects, absences, holidays, createAbsence, createTimesheet } = useDataController();
+
+  const canViewOthers = useMemo(() =>
+    !!currentUser && TIMESHEET_VIEW_ALL_ROLES.includes(currentUser.role),
+    [currentUser]
+  );
 
   const [isCloning, setIsCloning] = useState(false);
 
@@ -77,9 +83,9 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       setSelectedUserId(userId);
     } else if (queryUserId) {
       setSelectedUserId(queryUserId);
-    } else if (!selectedUserId || (currentUser && selectedUserId !== currentUser.id && !isAdmin)) {
-      // Prioritize current user if not admin and no specific user in URL
-      const idToSet = (isAdmin ? (localStorage.getItem('timesheet_last_selected_user_id') || currentUser?.id) : currentUser?.id) || '';
+    } else if (!selectedUserId || (currentUser && selectedUserId !== currentUser.id && !canViewOthers)) {
+      // Prioritize current user if not authorized to view others and no specific user in URL
+      const idToSet = (canViewOthers ? (localStorage.getItem('timesheet_last_selected_user_id') || currentUser?.id) : currentUser?.id) || '';
       if (idToSet) {
         setSelectedUserId(idToSet);
       }
@@ -203,11 +209,10 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     return missing;
   };
 
-  // Processar usuários (apenas para Admin)
+  // Processar usuários (apenas para quem tem permissão de ver outros)
   const processedUsers = useMemo(() => {
-    if (!isAdmin) return [];
+    if (!canViewOthers) return [];
 
-    const activeRoles = ['admin', 'system_admin', 'gestor', 'diretoria', 'pmo', 'ceo', 'tech_lead'];
     return safeUsers
       .filter((u: User) => u.active !== false && u.torre !== 'N/A')
       .map((u: User) => {
@@ -226,7 +231,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
 
 
   /* --- DADOS DO CALENDÁRIO --- */
-  const targetUserId = isAdmin ? (selectedUserId || currentUser?.id) : currentUser?.id;
+  const targetUserId = canViewOthers ? (selectedUserId || currentUser?.id) : currentUser?.id;
   const targetUser = useMemo(() => safeUsers.find((u: User) => u.id === targetUserId), [safeUsers, targetUserId]);
 
   const currentEntries = useMemo(() => {
@@ -270,7 +275,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
 
     // 3. Pendências (Dias sem nenhum apontamento)
     let missing = 0;
-    if (isAdmin) {
+    if (canViewOthers) {
       const u = processedUsers.find((u: any) => u.id === targetUserId);
       missing = u ? (u as any).missing : 0;
     } else {
@@ -399,8 +404,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                 </div>
                 <div>
                   <h2 className="text-base font-black tracking-tight flex items-center gap-2">
-                    {isAdmin && <Users className="w-3.5 h-3.5 opacity-60" />}
-                    {isAdmin ? processedUsers.find((u: any) => u.id === targetUserId)?.name || 'Usuário' : 'Meus Lançamentos'}
+                    {canViewOthers && <Users className="w-3.5 h-3.5 opacity-60" />}
+                    {canViewOthers ? processedUsers.find((u: any) => u.id === targetUserId)?.name || 'Usuário' : 'Meus Lançamentos'}
                   </h2>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-black uppercase tracking-widest text-white/60">
                     <span className="flex items-center gap-1 text-white/90">
@@ -420,8 +425,8 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
               </div>
 
               <div className="flex items-center gap-3">
-                {/* Search integrated in header for Admins */}
-                {isAdmin && !embedded && (
+                {/* Search integrated in header for Authorized Users only */}
+                {canViewOthers && !embedded && (
                   <div className="relative" ref={dropdownRef}>
                     <div
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
