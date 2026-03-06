@@ -1408,7 +1408,7 @@ const ProjectDetailView: React.FC = () => {
                                   style={{ color: 'var(--text)' }}
                                 >
                                   <option value="">Selecione...</option>
-                                  {users.map((u: User) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                  {users.slice().sort((a: User, b: User) => a.name.localeCompare(b.name)).map((u: User) => <option key={u.id} value={u.id}>{u.name}</option>)}
                                 </select>
                               ) : <p className="text-xs font-black" style={{ color: 'var(--text)' }}>{users.find((u: User) => u.id === project?.responsibleNicLabsId)?.name || '--'}</p>}
                             </div>
@@ -1590,49 +1590,54 @@ const ProjectDetailView: React.FC = () => {
                           </div>
                         ) : (
                           <>
-                            {projectMembers.filter((pm: ProjectMember) => String(pm.id_projeto) === projectId).map((pm: ProjectMember) => {
-                              const u = users.find((user: User) => user.id === String(pm.id_colaborador));
-                              return u ? (
-                                <div key={u.id} className="px-3 py-2.5 rounded-xl border transition-all" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
-                                  {/* Header with User Info */}
-                                  <div className="flex items-center gap-2.5 mb-2.5">
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-[var(--border)]" style={{ backgroundColor: 'var(--surface)' }}>
-                                      {u.avatarUrl
-                                        ? <img src={u.avatarUrl} className="w-full h-full object-cover" />
-                                        : <div className="w-full h-full flex items-center justify-center text-[9px] font-black uppercase" style={{ color: 'var(--primary)' }}>{u.name.substring(0, 2).toUpperCase()}</div>
-                                      }
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-[11px] font-bold tracking-tight truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
-                                      <p className="text-[7px] font-black uppercase opacity-35 tracking-widest truncate mt-0.5" style={{ color: 'var(--text)' }}>{u.cargo || 'Consultor'}</p>
-                                    </div>
-                                  </div>
-
-                                  {/* Metrics: ALOCADO (TAREFAS) + APONTADO */}
-                                  {(() => {
-                                    const metrics = teamOperationalBalance?.memberMetrics[u.id];
-                                    const allocatedHours = metrics?.allocatedHours ?? 0;
-                                    const reported = timesheetEntries
-                                      .filter((e: TimesheetEntry) => e.projectId === projectId && e.userId === u.id)
-                                      .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
-                                    const actualHours = metrics?.actualHours ?? reported;
-
-                                    return (
-                                      <div className="grid grid-cols-2 gap-1.5">
-                                        <div className="flex flex-col items-center px-2 py-2 rounded-lg border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                          <p className="text-[6px] font-black uppercase opacity-40 tracking-wider mb-0.5">Alocado (Tarefas)</p>
-                                          <p className="text-[12px] font-black tabular-nums" style={{ color: 'var(--text)' }}>{formatDecimalToTime(allocatedHours)}</p>
-                                        </div>
-                                        <div className="flex flex-col items-center px-2 py-2 rounded-lg border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                          <p className="text-[6px] font-black uppercase opacity-40 tracking-wider mb-0.5">Apontado</p>
-                                          <p className="text-[12px] font-black tabular-nums" style={{ color: 'var(--text)' }}>{formatDecimalToTime(actualHours)}</p>
-                                        </div>
+                            {projectMembers
+                              .filter((pm: ProjectMember) => String(pm.id_projeto) === projectId)
+                              .map((pm: ProjectMember) => ({ pm, u: users.find((user: User) => user.id === String(pm.id_colaborador)) }))
+                              .filter(item => !!item.u)
+                              .sort((a, b) => (a.u?.name || "").localeCompare(b.u?.name || ""))
+                              .map(({ pm, u }) => {
+                                if (!u) return null;
+                                return (
+                                  <div key={u.id} className="px-3 py-2.5 rounded-xl border transition-all" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
+                                    {/* Header with User Info */}
+                                    <div className="flex items-center gap-2.5 mb-2.5">
+                                      <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-[var(--border)]" style={{ backgroundColor: 'var(--surface)' }}>
+                                        {u.avatarUrl
+                                          ? <img src={u.avatarUrl} className="w-full h-full object-cover" />
+                                          : <div className="w-full h-full flex items-center justify-center text-[9px] font-black uppercase" style={{ color: 'var(--primary)' }}>{u.name.substring(0, 2).toUpperCase()}</div>
+                                        }
                                       </div>
-                                    );
-                                  })()}
-                                </div>
-                              ) : null;
-                            })}
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] font-bold tracking-tight truncate" style={{ color: 'var(--text)' }}>{u.name}</p>
+                                        <p className="text-[7px] font-black uppercase opacity-35 tracking-widest truncate mt-0.5" style={{ color: 'var(--text)' }}>{u.cargo || 'Consultor'}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Metrics: ALOCADO (TAREFAS) + APONTADO */}
+                                    {(() => {
+                                      const metrics = teamOperationalBalance?.memberMetrics[u.id];
+                                      const allocatedHours = metrics?.allocatedHours ?? 0;
+                                      const reported = timesheetEntries
+                                        .filter((e: TimesheetEntry) => e.projectId === projectId && e.userId === u.id)
+                                        .reduce((sum: number, e: TimesheetEntry) => sum + (Number(e.totalHours) || 0), 0);
+                                      const actualHours = metrics?.actualHours ?? reported;
+
+                                      return (
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                          <div className="flex flex-col items-center px-2 py-2 rounded-lg border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                            <p className="text-[6px] font-black uppercase opacity-40 tracking-wider mb-0.5">Alocado (Tarefas)</p>
+                                            <p className="text-[12px] font-black tabular-nums" style={{ color: 'var(--text)' }}>{formatDecimalToTime(allocatedHours)}</p>
+                                          </div>
+                                          <div className="flex flex-col items-center px-2 py-2 rounded-lg border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                            <p className="text-[6px] font-black uppercase opacity-40 tracking-wider mb-0.5">Apontado</p>
+                                            <p className="text-[12px] font-black tabular-nums" style={{ color: 'var(--text)' }}>{formatDecimalToTime(actualHours)}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                );
+                              })}
 
 
                             {/* EX-COLABORADORES (Com horas mas sem vínculo atual) */}

@@ -5,16 +5,22 @@ let cachedApiUrl: string | null = null;
 
 export async function getApiBaseUrl(): Promise<string> {
     const envUrl = import.meta.env.VITE_API_URL?.toString()?.trim();
+    const isLocalHost = globalThis.location.hostname === 'localhost' || globalThis.location.hostname === '127.0.0.1';
 
-    // Se estiver no .env, usa ele
+    // Se estiver no .env, usa ele - exceto se for localhost rodando fora de localhost
     if (envUrl && envUrl !== 'undefined' && envUrl !== '') {
-        let url = envUrl.replace(/\/$/, '');
-        if (!url.endsWith('/api')) url += '/api';
-        return url;
+        const isEnvLocal = envUrl.includes('localhost') || envUrl.includes('127.0.0.1');
+
+        if (!isEnvLocal || isLocalHost) {
+            let url = envUrl.replace(/\/$/, '');
+            if (!url.endsWith('/api')) url += '/api';
+            return url;
+        }
+        console.warn('[API] VITE_API_URL ignora localhost pois estamos em produção:', globalThis.location.hostname);
     }
 
-    // Se estiver rodando localmente (Vite padrão é 5173/5174), tenta o local:3000
-    if (globalThis.location.hostname === 'localhost' || globalThis.location.hostname === '127.0.0.1') {
+    // Se estiver rodando localmente, tenta o local:3000
+    if (isLocalHost) {
         const url = 'http://localhost:3000/api';
         console.log('[API] Usando fallback para localhost:3000');
         return url;
@@ -23,10 +29,11 @@ export async function getApiBaseUrl(): Promise<string> {
     // Último recurso: Supabase REST (Caminho A)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (supabaseUrl) {
-        console.log('[API] Usando fallback para Supabase REST');
+        console.log('[API] Usando fallback para Supabase REST (Produção)');
         return `${supabaseUrl}/rest/v1`;
     }
 
+    console.error('[API] Nenhuma URL de API configurada!');
     return '';
 }
 

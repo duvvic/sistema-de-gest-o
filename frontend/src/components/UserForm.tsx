@@ -51,14 +51,17 @@ const UserForm: React.FC = () => {
     }
   }, [initialUser]);
 
-  // Sincronizar Horas Mês automaticamente
+  // Sincronizar Horas Mês automaticamente apenas se estiver zerado ou se a carga diária mudar
+  // Mas permite edição manual
   useEffect(() => {
-    const currentMonthStr = new Date().toISOString().slice(0, 7);
-    const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonthStr, holidays || []);
-    const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
+    if (formData.dailyAvailableHours > 0) {
+      const currentMonthStr = new Date().toISOString().slice(0, 7);
+      const workingDays = CapacityUtils.getWorkingDaysInMonth(currentMonthStr, holidays || []);
+      const calculatedMonthly = (formData.dailyAvailableHours || 0) * workingDays;
 
-    if (formData.monthlyAvailableHours !== calculatedMonthly) {
-      setFormData(prev => ({ ...prev, monthlyAvailableHours: calculatedMonthly }));
+      if (!formData.monthlyAvailableHours || formData.monthlyAvailableHours === 0) {
+        setFormData(prev => ({ ...prev, monthlyAvailableHours: calculatedMonthly }));
+      }
     }
   }, [formData.dailyAvailableHours, holidays]);
 
@@ -289,13 +292,15 @@ const UserForm: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Carga Máxima (Mês)</label>
-                  <div className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] opacity-80 cursor-not-allowed">
-                    {formatDecimalToTime(formData.monthlyAvailableHours)} <span className="text-[10px] opacity-40 ml-2">DINÂMICO</span>
-                  </div>
+                  <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Hrs Meta Mês</label>
+                  <input
+                    type="number"
+                    value={formData.monthlyAvailableHours || ''}
+                    onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                  />
                   <p className="text-[7px] font-bold opacity-40 mt-1 uppercase">
-                    Ref: {new Date().toLocaleString('pt-BR', { month: 'short' }).replace('.', '')} |
-                    Meta: {formatDecimalToTime(CapacityUtils.getWorkingDaysInMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`, holidays || []) * (formData.dailyAvailableHours || 8))} ({CapacityUtils.getWorkingDaysInMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`, holidays || [])} dias)
+                    Ref: {new Date().toLocaleString('pt-BR', { month: 'short' }).replace('.', '')} | Sugerido: {formatDecimalToTime(CapacityUtils.getWorkingDaysInMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`, holidays || []) * (formData.dailyAvailableHours || 8))}
                   </p>
                 </div>
               </div>

@@ -130,7 +130,7 @@ export const useDataController = () => {
 
     // Add Project Member via API
     const addProjectMember = async (projectId: string, userId: string, allocationPercentage: number = 100): Promise<void> => {
-        await apiRequest('/project-members', {
+        await apiRequest('/support/project-members', {
             method: 'POST',
             body: JSON.stringify({
                 id_projeto: safeNum(projectId),
@@ -149,7 +149,7 @@ export const useDataController = () => {
     };
 
     const removeProjectMember = async (projectId: string, userId: string): Promise<void> => {
-        await apiRequest(`/project-members/${projectId}/${userId}`, {
+        await apiRequest(`/support/project-members/${projectId}/${userId}`, {
             method: 'DELETE'
         });
         setProjectMembers(prev => prev.filter(pm => !(safeString(pm.id_projeto) === projectId && safeString(pm.id_colaborador) === userId)));

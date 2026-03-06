@@ -210,7 +210,7 @@ const MainLayout: React.FC = () => {
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <div
-                    className={`absolute left-0 top-0 h-full flex flex-col z-20 shadow-2xl border-r border-white/5 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExpanded ? 'w-64' : 'w-20'}`}
+                    className={`absolute left-0 top-0 h-full flex flex-col z-20 shadow-2xl border-r border-white/5 overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.19,1,0.22,1)] ${isExpanded ? 'w-64' : 'w-20'}`}
                     style={{ background: 'linear-gradient(180deg, var(--sidebar-bg), var(--sidebar-bg-2))' }}
                 >
                     <div className={`flex items-center justify-between border-b border-white/10 ${isExpanded ? 'p-6' : 'p-4 justify-center'}`}>
