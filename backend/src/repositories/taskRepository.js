@@ -7,9 +7,13 @@ import { dbFindAll, dbFindById, dbInsert, dbUpdate, dbDelete } from '../database
 const TASK_SELECT = [
     'id',
     'projeto_id',
+    '"ID_Projeto"',
     'cliente_id',
+    '"ID_Cliente"',
     'colaborador_id',
+    '"ID_Colaborador"',
     'status',
+    '"StatusTarefa"',
     'prioridade',
     'impacto',
     'description',

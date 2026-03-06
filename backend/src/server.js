@@ -39,16 +39,20 @@ const startTime = Date.now();
 app.use(helmet());
 
 // 2. CORS Seguro
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:3000"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Permite requisições sem origin (como mobile apps ou curl) ou se estiver na whitelist ou se CORS_ORIGIN for *
+        if (!origin || allowedOrigins.includes(origin) || process.env.CORS_ORIGIN === "*") {
             callback(null, true);
         } else {
+            logger.warn(`Origin negada pelo CORS: ${origin}`, "CORS");
             callback(new Error("CORS não permitido"));
         }
     },
-    credentials: true
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "apikey", "ngrok-skip-browser-warning", "Prefer"]
 }));
 
 // 3. Proteção contra Poluição de Parâmetros

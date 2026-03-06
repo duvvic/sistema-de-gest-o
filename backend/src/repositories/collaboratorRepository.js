@@ -4,13 +4,15 @@ import { dbFindAll } from '../database/index.js';
 // id, nome, cargo, nivel, torre, role, email, avatar_url, ativo
 const COLAB_SELECT = [
     'id',
+    '"ID_Colaborador"',
     'nome',
+    '"NomeColaborador"',
     'cargo',
     'nivel',
     'torre',
     'role',
     'email',
-    'avatarUrl',
+    '"avatarUrl"',
     'ativo',
 ].join(', ');
 

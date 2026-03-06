@@ -4,10 +4,15 @@ import { dbFindAll, dbFindById, dbInsert, dbUpdate, dbDelete } from '../database
 // id, nome, pais, cnpj, telefone, email_contato, ativo
 const CLIENT_SELECT = [
     'id',
+    '"ID_Cliente"',
     'nome',
+    '"NomeCliente"',
     'ativo',
     'pais',
-    'logoUrl'
+    '"logoUrl"',
+    'contato_principal',
+    'tipo_cliente',
+    'partner_id'
 ].join(', ');
 
 export const clientRepository = {

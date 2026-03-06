@@ -4,23 +4,30 @@ const AUTH_TOKEN_KEY = 'nic_labs_auth_token';
 let cachedApiUrl: string | null = null;
 
 export async function getApiBaseUrl(): Promise<string> {
-    // Tenta pegar do .env do Vite
     const envUrl = import.meta.env.VITE_API_URL?.toString()?.trim();
 
+    // Se estiver no .env, usa ele
     if (envUrl && envUrl !== 'undefined' && envUrl !== '') {
         let url = envUrl.replace(/\/$/, '');
         if (!url.endsWith('/api')) url += '/api';
-        cachedApiUrl = url;
         return url;
     }
 
-    if (cachedApiUrl) return cachedApiUrl;
+    // Se estiver rodando localmente (Vite padrão é 5173/5174), tenta o local:3000
+    if (globalThis.location.hostname === 'localhost' || globalThis.location.hostname === '127.0.0.1') {
+        const url = 'http://localhost:3000/api';
+        console.log('[API] Usando fallback para localhost:3000');
+        return url;
+    }
 
-    // EM PRODUÇÃO: Se não houver VITE_API_URL, o app falharia aqui.
-    // Para o Caminho A (Supabase), não queremos o localhost:3000 como padrão.
-    // Retornamos vazio ou a URL do Supabase como último recurso para evitar o erro de localhost
-    const supabaseFallback = import.meta.env.VITE_SUPABASE_URL;
-    return supabaseFallback ? `${supabaseFallback}/rest/v1` : '';
+    // Último recurso: Supabase REST (Caminho A)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (supabaseUrl) {
+        console.log('[API] Usando fallback para Supabase REST');
+        return `${supabaseUrl}/rest/v1`;
+    }
+
+    return '';
 }
 
 /**
@@ -30,12 +37,20 @@ function applyPostgrestTransformations(path: string, options: RequestInit): { fi
     let finalPath = path;
     const fetchOptions = { ...options };
 
-    if (finalPath.startsWith('/support/')) {
-        finalPath = finalPath.replace('/support/', '/support_');
-    }
-    if (finalPath.includes('/audit-logs')) {
-        finalPath = finalPath.replace('/audit-logs', '/audit_logs');
-    }
+    const mappings: Record<string, string> = {
+        '/support/': '/support_',
+        '/audit-logs': '/audit_logs',
+        '/colaboradores': '/v_colaboradores',
+        '/clientes': '/v_clientes',
+        '/projetos': '/v_projetos',
+        '/tarefas': '/v_tarefas',
+        '/timesheets': '/horas_trabalhadas',
+        '/allocations': '/task_allocations'
+    };
+
+    Object.entries(mappings).forEach(([key, val]) => {
+        if (finalPath.includes(key)) finalPath = finalPath.replace(key, val);
+    });
 
     const urlParts = finalPath.split('?')[0].split('/');
     const lastPart = urlParts.at(-1);
@@ -45,23 +60,18 @@ function applyPostgrestTransformations(path: string, options: RequestInit): { fi
         finalPath = `${resource}?id=eq.${lastPart}${finalPath.includes('?') ? '&' + finalPath.split('?')[1] : ''}`;
     }
 
-    if (fetchOptions.method === 'PUT') {
-        fetchOptions.method = 'PATCH';
-    }
+    if (fetchOptions.method === 'PUT') fetchOptions.method = 'PATCH';
 
     if (finalPath.includes('?')) {
         const [urlStr, paramsStr] = finalPath.split('?');
         const searchParams = new URLSearchParams(paramsStr);
-        const postgrestReserves = new Set(['select', 'limit', 'offset', 'order', 'columns', 'or', 'and']);
-        const suspiciousKeys: string[] = [];
+        const reserves = new Set(['select', 'limit', 'offset', 'order', 'columns', 'or', 'and']);
 
-        searchParams.forEach((val, key) => {
-            if (!postgrestReserves.has(key) && !val.includes('.')) {
-                suspiciousKeys.push(key);
-            }
+        [...searchParams.keys()].forEach(k => {
+            const val = searchParams.get(k);
+            if (!reserves.has(k) && !val?.includes('.')) searchParams.delete(k);
         });
 
-        suspiciousKeys.forEach(k => searchParams.delete(k));
         const newQuery = searchParams.toString();
         finalPath = newQuery ? `${urlStr}?${newQuery}` : urlStr;
     }
@@ -110,7 +120,9 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
             const text = await response.text();
             const errJson = JSON.parse(text);
             errorMsg = errJson.error || errorMsg;
-        } catch (e) { }
+        } catch {
+            // Se falhar o parse do JSON, mantemos o statusText original
+        }
         throw new Error(`Erro na API (${response.status}): ${errorMsg}`);
     }
 

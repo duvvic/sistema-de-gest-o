@@ -22,7 +22,8 @@ import {
     Activity,
     RefreshCw,
     Palmtree,
-    ShieldAlert
+    ShieldAlert,
+    History
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import logoImg from '@/assets/logo.png';
@@ -50,7 +51,7 @@ const MainLayout: React.FC = () => {
         { path: '/admin/sync', icon: RefreshCw, label: 'Sincronização' },
 
         { path: '/timesheet', icon: Clock, label: 'Timesheet' },
-        { path: '/admin/timeline', icon: Activity, label: 'Timeline' },
+        { path: '/admin/timeline', icon: History, label: 'Ações de Usuário' },
     ];
 
     const developerMenuItems = [
@@ -204,12 +205,12 @@ const MainLayout: React.FC = () => {
         <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
             {/* Sidebar Wrapper */}
             <div
-                className={`relative z-30 flex-shrink-0 transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] ${sidebarOpen ? 'w-64' : 'w-20'}`}
+                className={`relative z-30 flex-shrink-0 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${sidebarOpen ? 'w-64' : 'w-20'}`}
                 onMouseEnter={() => !sidebarOpen && setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <div
-                    className={`absolute left-0 top-0 h-full flex flex-col z-20 shadow-2xl border-r border-white/5 overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] ${isExpanded ? 'w-64' : 'w-20'}`}
+                    className={`absolute left-0 top-0 h-full flex flex-col z-20 shadow-2xl border-r border-white/5 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExpanded ? 'w-64' : 'w-20'}`}
                     style={{ background: 'linear-gradient(180deg, var(--sidebar-bg), var(--sidebar-bg-2))' }}
                 >
                     <div className={`flex items-center justify-between border-b border-white/10 ${isExpanded ? 'p-6' : 'p-4 justify-center'}`}>
@@ -299,7 +300,20 @@ const MainLayout: React.FC = () => {
                                     }}
                                 >
                                     <Icon className="w-5 h-5 flex-shrink-0" />
-                                    {isExpanded && <span className="font-medium" translate="no">{item.label}</span>}
+                                    <AnimatePresence>
+                                        {isExpanded && (
+                                            <motion.span
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -10 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="font-medium whitespace-nowrap"
+                                                translate="no"
+                                            >
+                                                {item.label}
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
                                     {active && (
                                         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
                                     )}
@@ -320,7 +334,19 @@ const MainLayout: React.FC = () => {
                             ) : (
                                 <Sun className="w-5 h-5 flex-shrink-0" />
                             )}
-                            {isExpanded && <span className="font-medium">{themeMode === 'light' ? 'Escuro' : 'Claro'}</span>}
+                            <AnimatePresence>
+                                {isExpanded && (
+                                    <motion.span
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="font-medium whitespace-nowrap"
+                                    >
+                                        {themeMode === 'light' ? 'Escuro' : 'Claro'}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
                         </button>
 
                         {/* Logout - Now Integrated */}
@@ -329,7 +355,19 @@ const MainLayout: React.FC = () => {
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-red-500/80 hover:text-white transition-colors ${!isExpanded && 'justify-center'}`}
                         >
                             <LogOut className="w-5 h-5 flex-shrink-0" />
-                            {isExpanded && <span className="font-medium">Sair</span>}
+                            <AnimatePresence>
+                                {isExpanded && (
+                                    <motion.span
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="font-medium whitespace-nowrap"
+                                    >
+                                        Sair
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
                         </button>
                     </nav>
 

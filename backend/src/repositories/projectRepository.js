@@ -4,14 +4,17 @@ import { dbFindAll, dbFindById, dbInsert, dbUpdate, dbDelete } from '../database
 // id, nome, cliente_id, status, torre, complexidade, manager, startDate, estimatedDelivery, valor_total_rs, ativo
 const PROJECT_SELECT = [
     'id',
+    '"ID_Projeto"',
     'nome',
+    '"NomeProjeto"',
     'cliente_id',
+    '"ID_Cliente"',
     'status',
     'ativo',
     'complexidade',
     'manager',
-    'startDate',
-    'estimatedDelivery',
+    '"startDate"',
+    '"estimatedDelivery"',
     'valor_total_rs',
     'torre',
     'partner_id'
