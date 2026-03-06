@@ -339,3 +339,47 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 
     return await response.json() as T;
 }
+
+/**
+ * Helper para download de arquivos/blobs
+ */
+export async function apiDownload(path: string, options: RequestInit = {}): Promise<Blob> {
+    const baseUrl = await getApiBaseUrl();
+    const supabaseKey = SUPABASE_KEY;
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    let finalPath = path;
+    let fetchOptions = { ...options };
+
+    if (baseUrl.includes('.supabase.co/rest/v1')) {
+        ({ finalPath, fetchOptions } = applyPostgrestTransformations(path, options));
+    }
+
+    if (finalPath.startsWith('/')) finalPath = finalPath.substring(1);
+
+    const headers: Record<string, string> = {
+        'apikey': supabaseKey,
+        'ngrok-skip-browser-warning': 'true',
+        ...(options.headers as any),
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    } else if (baseUrl.includes('.supabase.co/rest/v1')) {
+        headers['Authorization'] = `Bearer ${supabaseKey}`;
+    }
+
+    const sep = baseUrl.endsWith('/') ? '' : '/';
+    const response = await fetch(`${baseUrl}${sep}${finalPath}`, { ...fetchOptions, headers });
+
+    if (!response.ok) {
+        let errorMsg = response.statusText;
+        try {
+            const errData = await response.json();
+            errorMsg = errData.message || JSON.stringify(errData);
+        } catch (e) { /* ignore */ }
+        throw new Error(`Erro no download (${response.status}): ${errorMsg}`);
+    }
+
+    return await response.blob();
+}
