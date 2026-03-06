@@ -47,7 +47,7 @@ function applyPostgrestTransformations(path: string, options: RequestInit): { fi
     const method = fetchOptions.method || 'GET';
     const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
-    const baseMappings: Record<string, { view: string, table: string, pk: string }> = {
+    const baseMappings: Record<string, { view: string, table: string, pk: string, select?: string }> = {
         '/support/': { view: '/support_', table: '/support_', pk: 'id' },
         '/audit-logs': { view: '/audit_logs', table: '/audit_logs', pk: 'id' },
         '/colaboradores': { view: '/v_colaboradores', table: '/dim_colaboradores', pk: 'id_colaborador' },
@@ -55,15 +55,18 @@ function applyPostgrestTransformations(path: string, options: RequestInit): { fi
         '/projetos': { view: '/v_projetos', table: '/dim_projetos', pk: 'ID_Projeto' },
         '/tarefas': { view: '/v_tarefas', table: '/fato_tarefas', pk: 'id_tarefa_novo' },
         '/tasks': { view: '/v_tarefas', table: '/fato_tarefas', pk: 'id_tarefa_novo' },
-        '/timesheets': { view: '/horas_trabalhadas', table: '/horas_trabalhadas', pk: 'id' },
+        '/timesheets': { view: '/horas_trabalhadas', table: '/horas_trabalhadas', pk: 'id', select: '*,colaborador:dim_colaboradores(NomeColaborador:nome_colaborador)' },
         '/allocations': { view: '/task_member_allocations', table: '/task_member_allocations', pk: 'id' }
     };
 
     let matchedPk = 'id';
+    let matchedSelect: string | undefined = undefined;
+
     Object.entries(baseMappings).forEach(([key, config]) => {
         if (finalPath.includes(key)) {
             finalPath = finalPath.replace(key, isMutation ? config.table : config.view);
             matchedPk = config.pk;
+            matchedSelect = config.select;
         }
     });
 
@@ -87,8 +90,14 @@ function applyPostgrestTransformations(path: string, options: RequestInit): { fi
             if (!reserves.has(k) && !val?.includes('.')) searchParams.delete(k);
         });
 
+        if (matchedSelect && !isMutation && !searchParams.has('select')) {
+            searchParams.set('select', matchedSelect);
+        }
+
         const newQuery = searchParams.toString();
         finalPath = newQuery ? `${urlStr}?${newQuery}` : urlStr;
+    } else if (matchedSelect && !isMutation) {
+        finalPath = `${finalPath}?select=${matchedSelect}`;
     }
 
     if (isMutation && fetchOptions.body && typeof fetchOptions.body === 'string') {
