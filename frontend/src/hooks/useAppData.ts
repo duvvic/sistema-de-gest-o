@@ -65,7 +65,7 @@ export function useAppData(): AppData {
   const { currentUser, isLoading: authLoading } = useAuth();
 
   const CACHE_KEY = 'nic_labs_app_data';
-  const CACHE_VERSION = '1.5';
+  const CACHE_VERSION = '1.6';
 
   useEffect(() => {
     try {
@@ -107,18 +107,7 @@ export function useAppData(): AppData {
           return;
         }
 
-        const [
-          usersData,
-          clientsData,
-          projectsData,
-          tasksData,
-          tasksCollaboratorsData,
-          membersData,
-          rawTimesheets,
-          absencesData,
-          holidaysData,
-          allocationsData
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           fetchUsers(),
           fetchClients(),
           fetchProjects(),
@@ -131,13 +120,33 @@ export function useAppData(): AppData {
           fetchAllocations()
         ]);
 
+        const safeResult = <T>(result: PromiseSettledResult<T>, fallback: T, name: string): T => {
+          if (result.status === 'rejected') {
+            console.warn(`[useAppData] ${name} falhou:`, result.reason?.message || result.reason);
+            return fallback;
+          }
+          return result.value ?? fallback;
+        };
+
+        const usersData = safeResult(results[0], [] as any[], 'fetchUsers');
+        const clientsData = safeResult(results[1], [] as any[], 'fetchClients');
+        const projectsData = safeResult(results[2], [] as any[], 'fetchProjects');
+        const tasksData = safeResult(results[3], [] as any[], 'fetchTasks');
+        const tasksCollaboratorsData = safeResult(results[4], [] as any[], 'fetchTaskCollaborators');
+        const membersData = safeResult(results[5], null as any, 'fetchProjectMembers');
+        const rawTimesheets = safeResult(results[6], [] as any[], 'fetchTimesheets');
+        const absencesData = safeResult(results[7], [] as any[], 'fetchAbsences');
+        const holidaysData = safeResult(results[8], [] as any[], 'fetchHolidays');
+        const allocationsData = safeResult(results[9], [] as any[], 'fetchAllocations');
+
         if (!isMounted) return;
 
         const userMap = new Map(usersData.map((u) => [u.id, u]));
 
         const tasksMapped: Task[] = tasksData.map((row: DbTaskRow) => {
-          const projectName = row.ID_Projeto ? projectsData.find((p) => p.id === String(row.ID_Projeto))?.name : undefined;
-          const clientName = row.ID_Cliente ? clientsData.find((c) => c.id === String(row.ID_Cliente))?.name : undefined;
+          const r = row as any;
+          const projectName = r.ID_Projeto ? projectsData.find((p) => p.id === String(r.ID_Projeto))?.name : undefined;
+          const clientName = r.ID_Cliente ? clientsData.find((c) => c.id === String(r.ID_Cliente))?.name : undefined;
           return mapDbTaskToTask(row, userMap, projectName, clientName);
         });
 
