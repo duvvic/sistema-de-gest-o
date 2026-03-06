@@ -1,10 +1,10 @@
 import express from 'express';
-import { requireAuth } from '../middleware/requireAuth.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 import { timesheetController } from '../controllers/timesheetController.js';
 
 const router = express.Router();
 
-router.use(requireAuth);
+router.use(authMiddleware);
 
 router.get('/', timesheetController.getTimesheets);
 router.get('/:id', timesheetController.getTimesheetById);

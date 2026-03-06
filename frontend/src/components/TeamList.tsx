@@ -134,7 +134,7 @@ const TeamList: React.FC = () => {
       }
 
       return matchesSearch && matchesCargo && matchesStatus;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }, [visibleUsers, searchTerm, selectedCargo, statusFilter, tasks, projects, clients, absences]);
 
 

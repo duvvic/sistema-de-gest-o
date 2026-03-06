@@ -327,7 +327,7 @@ export const getUserAvailabilityInRange = (
 ): {
     capacity: number;
     plannedHours: number;
-
+    continuousHours: number;
     totalOccupancy: number;
     occupancyRate: number;
     balance: number;
@@ -345,7 +345,11 @@ export const getUserAvailabilityInRange = (
         (a.status === 'aprovada_gestao' || a.status === 'aprovada_rh' || a.status === 'finalizada_dp')
     );
     const workingDays = getWorkingDaysInRange(startDate, endDate, holidays, userAbsences);
-    const capacity = dailyGoal * workingDays;
+
+    // Prioritize manual monthly meta if set, otherwise calculate based on daily goal * working days
+    const capacity = (user.monthlyAvailableHours && user.monthlyAvailableHours > 0)
+        ? user.monthlyAvailableHours
+        : (dailyGoal * workingDays);
 
     // 1. Calcular detalhamento de projetos (Baseado estritamente em horas alocadas às tarefas)
     const plannedProjectsBreakdown: { id: string; name: string; hours: number }[] = [];

@@ -24,63 +24,39 @@ export async function getApiBaseUrl(): Promise<string> {
 }
 
 /**
- * Helper centralizado para chamadas à API
- * Nota: Use apenas para funções legadas. Para novas funcionalidades, use o supabaseClient.ts
+ * Aplica transformações específicas para o PostgREST do Supabase.
  */
-export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const baseUrl = await getApiBaseUrl();
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-    if (!baseUrl) {
-        throw new Error("Configuração da API não encontrada. Verifique as variáveis de ambiente.");
-    }
-
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-
-    // Mapeamento e Higienização para Supabase REST
+function applyPostgrestTransformations(path: string, options: RequestInit): { finalPath: string; fetchOptions: RequestInit } {
     let finalPath = path;
+    const fetchOptions = { ...options };
 
-    // 1. Mapeia /support/... para /support_... (vistas criadas)
     if (finalPath.startsWith('/support/')) {
         finalPath = finalPath.replace('/support/', '/support_');
     }
-
-    // 2. Mapeia audit-logs (hífen) para audit_logs (underscore) se houver hífen na rota base
     if (finalPath.includes('/audit-logs')) {
         finalPath = finalPath.replace('/audit-logs', '/audit_logs');
     }
 
-    // 3. Suporte para IDs RESTful legados (Ex: /colaboradores/41 -> /colaboradores?id=eq.41)
     const urlParts = finalPath.split('?')[0].split('/');
-    if (urlParts.length > 2 && !isNaN(Number(urlParts[urlParts.length - 1]))) {
-        const id = urlParts.pop();
+    const lastPart = urlParts.at(-1);
+    if (urlParts.length > 2 && lastPart && !Number.isNaN(Number(lastPart))) {
+        urlParts.pop();
         const resource = urlParts.join('/');
-        finalPath = `${resource}?id=eq.${id}${finalPath.includes('?') ? '&' + finalPath.split('?')[1] : ''}`;
+        finalPath = `${resource}?id=eq.${lastPart}${finalPath.includes('?') ? '&' + finalPath.split('?')[1] : ''}`;
     }
 
-    // Garante que o finalPath sempre comece com / antes de concatenar com baseUrl
-    if (!finalPath.startsWith('/')) {
-        finalPath = '/' + finalPath;
-    }
-
-    // 4. Ajuste de método HTTP para PostgREST (Supabase)
-    const fetchOptions = { ...options };
     if (fetchOptions.method === 'PUT') {
         fetchOptions.method = 'PATCH';
     }
 
-    // 5. Remove parâmetros que o PostgREST não reconhece (Ex: includeInactive=true)
     if (finalPath.includes('?')) {
-        const parts = finalPath.split('?');
-        const urlStr = parts[0];
-        const paramsStr = parts[1];
+        const [urlStr, paramsStr] = finalPath.split('?');
         const searchParams = new URLSearchParams(paramsStr);
-
-        const postgrestReserves = ['select', 'limit', 'offset', 'order', 'columns', 'or', 'and'];
+        const postgrestReserves = new Set(['select', 'limit', 'offset', 'order', 'columns', 'or', 'and']);
         const suspiciousKeys: string[] = [];
 
         searchParams.forEach((val, key) => {
-            if (!postgrestReserves.includes(key) && !val.includes('.')) {
+            if (!postgrestReserves.has(key) && !val.includes('.')) {
                 suspiciousKeys.push(key);
             }
         });
@@ -90,31 +66,48 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
         finalPath = newQuery ? `${urlStr}?${newQuery}` : urlStr;
     }
 
+    return { finalPath, fetchOptions };
+}
+
+/**
+ * Helper centralizado para chamadas à API
+ */
+export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const baseUrl = await getApiBaseUrl();
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+    if (!baseUrl) throw new Error("Configuração da API não encontrada.");
+
+    const isPostgrest = baseUrl.includes('.supabase.co/rest/v1');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    let finalPath = path;
+    let fetchOptions = { ...options };
+
+    if (isPostgrest) {
+        ({ finalPath, fetchOptions } = applyPostgrestTransformations(path, options));
+    }
+
+    if (!finalPath.startsWith('/')) finalPath = '/' + finalPath;
+
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'apikey': supabaseKey, // Obrigatório para o REST do Supabase
+        'apikey': supabaseKey,
         'ngrok-skip-browser-warning': 'true',
-        'Prefer': 'return=representation', // Força o Supabase a retornar os dados após Insert/Update
+        'Prefer': 'return=representation',
         ...(options.headers as any),
     };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const response = await fetch(`${baseUrl}${finalPath}`, {
-        ...fetchOptions,
-        headers,
-    });
+    const response = await fetch(`${baseUrl}${finalPath}`, { ...fetchOptions, headers });
 
-    if (response.status === 401) {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-    }
+    if (response.status === 401) localStorage.removeItem(AUTH_TOKEN_KEY);
 
     if (!response.ok) {
-        const text = await response.text();
         let errorMsg = response.statusText;
         try {
+            const text = await response.text();
             const errJson = JSON.parse(text);
             errorMsg = errJson.error || errorMsg;
         } catch (e) { }
@@ -125,9 +118,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     const result = await response.json();
 
     if (result && typeof result === 'object' && 'success' in result) {
-        if (!result.success) {
-            throw new Error(result.error || 'Erro desconhecido na API');
-        }
+        if (!result.success) throw new Error(result.error || 'Erro desconhecido na API');
         return result.data as T;
     }
 
