@@ -1,7 +1,7 @@
 // contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback, PropsWithChildren } from 'react';
 import { User } from '@/types';
-import { apiRequest } from '@/services/apiClient';
+import { supabase } from '@/services/supabaseClient';
 
 interface AuthContextType {
     currentUser: User | null;
@@ -34,23 +34,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const [authReady, setAuthReady] = useState(false);
 
     const init = useCallback(async () => {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
-        const cachedUser = localStorage.getItem(USER_CACHE_KEY);
-
-        if (!token || !cachedUser) {
-            setCurrentUser(null);
-            setAuthReady(true);
-            setIsLoading(false);
-            return;
-        }
-
         try {
-            // Opcional: Validar token com o backend (/api/auth/me ou similar)
-            // Por enquanto, confiamos no cache e o apiClient lidará com 401
-            setCurrentUser(JSON.parse(cachedUser));
+            // Verifica se existe sessão ativa no Supabase SDK
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session?.access_token) {
+                // Sessão válida — atualiza o token no localStorage
+                localStorage.setItem(AUTH_TOKEN_KEY, session.access_token);
+
+                // Mantém o perfil do cache se existir
+                const cachedUser = localStorage.getItem(USER_CACHE_KEY);
+                if (cachedUser) {
+                    setCurrentUser(JSON.parse(cachedUser));
+                }
+            } else {
+                // Sem sessão válida no Supabase — limpa tudo
+                const localToken = localStorage.getItem(AUTH_TOKEN_KEY);
+                if (localToken) {
+                    // Token no localStorage mas sem sessão Supabase = token velho/corrompido
+                    console.warn('[Auth] Token no localStorage sem sessão Supabase. Limpando.');
+                    localStorage.removeItem(AUTH_TOKEN_KEY);
+                    localStorage.removeItem(USER_CACHE_KEY);
+                    setCurrentUser(null);
+                } else {
+                    setCurrentUser(null);
+                }
+            }
         } catch (e) {
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            localStorage.removeItem(USER_CACHE_KEY);
+            console.error('[Auth] Erro ao inicializar sessão:', e);
             setCurrentUser(null);
         } finally {
             setAuthReady(true);
@@ -60,6 +71,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     useEffect(() => {
         init();
+
+        // Listener para eventos de autenticação do Supabase
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') {
+                setCurrentUser(null);
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+                localStorage.removeItem(USER_CACHE_KEY);
+            } else if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+                // Atualiza o token no localStorage automaticamente quando o SDK faz refresh
+                localStorage.setItem(AUTH_TOKEN_KEY, session.access_token);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, [init]);
 
     const login = (user: User, token: string) => {

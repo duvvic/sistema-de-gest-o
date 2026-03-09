@@ -14,13 +14,31 @@ export async function authMiddleware(req, res, next) {
             return sendError(res, "Token não enviado", 401);
         }
 
-        const token = authHeader.replace("Bearer ", "");
+        const token = authHeader.split(' ')[1]?.trim();
+
+        if (!token) {
+            logger.warn('Token ausente ou malformado após Bearer', 'AuthMiddleware');
+            return sendError(res, "Token malformado", 401);
+        }
+
+        // Log para depuração de token (mascarado)
+        if (token.length < 20) {
+            logger.warn(`Token suspeito (muito curto): "${token}"`, 'AuthMiddleware');
+        }
 
         // Valida o token diretamente com o Supabase Auth
         const { data, error } = await supabaseAdmin.auth.getUser(token);
 
         if (error || !data?.user) {
-            logger.warn(`Token inválido ou expirado`, 'AuthMiddleware');
+            let decoded = null;
+            try {
+                const jwt = await import('jsonwebtoken');
+                decoded = jwt.default.decode(token);
+            } catch (e) {
+                logger.error('Erro ao decodificar token para log', 'AuthMiddleware');
+            }
+
+            logger.warn(`Token inválido ou expirado. Erro: ${error?.message || 'Nenhum erro retornado'}. Payload decodificado: ${JSON.stringify(decoded)}`, 'AuthMiddleware');
             return sendError(res, "Sessão inválida ou expirada", 401);
         }
 

@@ -1,7 +1,38 @@
 // frontend/src/services/apiClient.ts
 // Cliente de API centralizado para o Backend Express
+import { supabase } from './supabaseClient';
 
-const AUTH_TOKEN_KEY = 'nic_labs_auth_token';
+const AUTH_TOKEN_KEY = 'nic_labs_auth_token'; // mantido para compatibilidade de logout
+
+/**
+ * Obtém o token JWT sempre fresco do Supabase SDK.
+ * O SDK gerencia refresh automático de tokens, garantindo validade.
+ */
+async function getValidToken(): Promise<string | null> {
+    try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+            // Fallback: tenta o token do localStorage (compatibilidade)
+            const localToken = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (localToken && localToken !== 'undefined' && localToken !== 'null' && localToken.length > 20) {
+                return localToken;
+            }
+            return null;
+        }
+        // Verifica se o token vai expirar em menos de 30 segundos e faz refresh
+        const expiresAt = session.expires_at ?? 0;
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (expiresAt - nowSec < 30) {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            return refreshed.session?.access_token ?? null;
+        }
+        return session.access_token;
+    } catch (e) {
+        // Fallback para localStorage
+        const localToken = localStorage.getItem(AUTH_TOKEN_KEY);
+        return (localToken && localToken !== 'undefined' && localToken.length > 20) ? localToken : null;
+    }
+}
 
 /**
  * Obtém a URL base da API a partir do ambiente ou fallback seguro.
@@ -26,7 +57,6 @@ export async function getApiBaseUrl(): Promise<string> {
  */
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
     const baseUrl = await getApiBaseUrl();
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
 
     if (!baseUrl) throw new Error("Configuração da API não encontrada.");
 
@@ -37,7 +67,10 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     }
 
     // Limpar barra inicial para concatenação
-    let finalPath = path.startsWith('/') ? path.substring(1) : path;
+    const finalPath = path.startsWith('/') ? path.substring(1) : path;
+
+    // Obtém token sempre fresco via Supabase SDK (com refresh automático)
+    const token = await getValidToken();
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -55,21 +88,34 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     const response = await fetch(fullUrl, { ...options, headers });
 
     if (response.status === 401) {
+        // Token inválido — limpa sessão e redireciona para login
         localStorage.removeItem(AUTH_TOKEN_KEY);
+        await supabase.auth.signOut();
+        globalThis.location.href = '/login';
+        throw new Error("Sessão expirada. Por favor, faça login novamente.");
     }
 
     if (!response.ok) {
         let errorMsg = response.statusText;
         try {
             const errData = await response.json();
-            errorMsg = errData.message || JSON.stringify(errData);
+            errorMsg = errData.error || errData.message || JSON.stringify(errData);
         } catch (e) { /* ignore */ }
         throw new Error(`Erro na API (${response.status}): ${errorMsg}`);
     }
 
-    // No backend customizado, o retorno já vem desempacotado
+    // O backend customizado retorna no formato { success: true, data: ... }
     const responseData = await response.json();
-    return responseData as T;
+
+    if (responseData?.success === true) {
+        // SEMPRE prioriza o campo 'data'. Se não existir, retorna [] como fallback seguro para listagens
+        return (responseData.data !== undefined ? responseData.data : []) as T;
+    }
+
+    // Se success for false, extraímos a mensagem de erro do campo 'error'
+    const errorMessage = responseData?.error || responseData?.message || 'Erro desconhecido na resposta da API';
+    console.error(`[API] Erro (${response.status}):`, errorMessage, responseData);
+    throw new Error(errorMessage);
 }
 
 /**

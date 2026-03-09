@@ -26,11 +26,11 @@ export const timesheetRepository = {
             query.limit = 500;
         }
 
-        return await dbFindAll('horas_trabalhadas', query);
+        return await dbFindAll('timesheets', query);
     },
 
     async findById(id) {
-        return await dbFindById('horas_trabalhadas', { ID_Horas_Trabalhadas: id }, {
+        return await dbFindById('timesheets', { ID_Horas_Trabalhadas: id }, {
             select: `
                 *,
                 colaborador:dim_colaboradores(NomeColaborador:nome_colaborador)
