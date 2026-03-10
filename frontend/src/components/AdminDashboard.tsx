@@ -1470,10 +1470,10 @@ const AdminDashboard: React.FC = () => {
                           className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer flex flex-col h-[220px]"
                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                         >
-                          <div className="flex-1 bg-white p-6 flex items-center justify-center border-b border-[var(--border)]">
+                          <div className="flex-1 min-h-0 overflow-hidden bg-white p-6 flex items-center justify-center border-b border-[var(--border)]">
                             <img src={partner.logoUrl} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt={partner.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }} />
                           </div>
-                          <div className="px-4 py-3 flex flex-col justify-center text-center bg-slate-50 dark:bg-slate-900/20 shadow-inner">
+                          <div className="shrink-0 px-4 py-3 flex flex-col justify-center text-center bg-slate-50 dark:bg-slate-900/20 shadow-inner">
                             <h3 className="text-[11px] font-black truncate uppercase tracking-tight mb-0.5" style={{ color: 'var(--text)' }}>{partner.name}</h3>
                             <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.clients.length} {partner.clients.length === 1 ? 'CLIENTE' : 'CLIENTES'}</div>
                           </div>
