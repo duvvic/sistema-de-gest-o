@@ -1475,7 +1475,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="px-4 py-3 flex flex-col justify-center text-center bg-slate-50 dark:bg-slate-900/20 shadow-inner">
                             <h3 className="text-[11px] font-black truncate uppercase tracking-tight mb-0.5" style={{ color: 'var(--text)' }}>{partner.name}</h3>
-                            <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.projectCount} {partner.projectCount === 1 ? 'PROJETO' : 'PROJETOS'}</div>
+                            <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.clients.length} {partner.clients.length === 1 ? 'CLIENTE' : 'CLIENTES'}</div>
                           </div>
                         </div>
                       ))}
@@ -1495,7 +1495,7 @@ const AdminDashboard: React.FC = () => {
                             <div>
                               <h3 className="text-sm font-black text-[var(--textTitle)] uppercase tracking-[0.05em]">{partner.name}</h3>
                               <div className="flex items-center gap-3 mt-1 underline-offset-4">
-                                <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.projectCount} Contas Ativas</span>
+                                <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">{partner.clients.length} {partner.clients.length === 1 ? 'Cliente Vinculado' : 'Clientes Vinculados'}</span>
                                 <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>{partner.tenure}</span>
                               </div>
                             </div>
