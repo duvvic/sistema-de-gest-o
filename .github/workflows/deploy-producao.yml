@@ -12,20 +12,20 @@ jobs:
     steps:
       - name: Tratar permissões (Git Safe Directory)
         run: |
-          sudo git config --global --add safe.directory /opt/nic-labs/core/sistema-de-gestao
+          git config --global --add safe.directory /opt/nic-labs/core/sistema-de-gestao
 
       - name: Atualizar o código-fonte (Git Pull)
         run: |
           cd /opt/nic-labs/core/sistema-de-gestao
-          sudo git fetch --all
-          sudo git reset --hard origin/main
+          git fetch --all
+          git reset --hard origin/main
 
       - name: Reconstruir e reiniciar contêineres (Docker Compose)
         run: |
           cd /opt/nic-labs/core
           # Reconstrói apenas as imagens do sistema de gestão
-          sudo docker compose build gestao_backend gestao_frontend
-          sudo docker compose up -d gestao_backend gestao_frontend
+          docker compose build gestao_backend gestao_frontend
+          docker compose up -d gestao_backend gestao_frontend
           
           # Limpeza do disco
-          sudo docker image prune -f
+          docker image prune -f
