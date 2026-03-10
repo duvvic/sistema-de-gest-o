@@ -31,6 +31,7 @@ import collaboratorRoutes from "./routes/collaborators.js";
 import supportRoutes from "./routes/support.js";
 
 const app = express();
+app.set('trust proxy', 1);
 const store = new ExpressBrute.MemoryStore();
 const bruteForce = new ExpressBrute(store);
 const startTime = Date.now();
