@@ -725,7 +725,7 @@ const TeamMemberDetail: React.FC = () => {
                                        disabled={!isEditing}
                                        className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold focus:ring-2 focus:ring-[var(--primary)]/20 outline-none disabled:bg-transparent disabled:px-0 disabled:border-none disabled:appearance-none disabled:text-[var(--primary)]"
                                     >
-                                       <option value="developer">Operacional / Consultor</option>
+                                       <option value="developer">Padrão</option>
                                        <option value="tech_lead">Tech Lead / Liderança</option>
                                        <option value="pmo">Planejamento / PMO</option>
                                        <option value="executive">Gestão Executiva / Executivo</option>
