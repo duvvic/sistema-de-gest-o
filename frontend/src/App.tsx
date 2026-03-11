@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import AppRoutes from './routes/AppRoutes';
 import * as serviceWorkerRegistration from './utils/serviceWorkerRegistration';
 
@@ -53,10 +54,14 @@ function AppContent() {
         saveTheme(currentUser.id, nextMode);
     };
 
+    const themeValue = React.useMemo(() => ({ themeMode, toggleTheme }), [themeMode, toggleTheme]);
+
     return (
-        <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
+        <ThemeContext.Provider value={themeValue}>
             <DataProvider>
-                <AppRoutes />
+                <NotificationProvider>
+                    <AppRoutes />
+                </NotificationProvider>
             </DataProvider>
         </ThemeContext.Provider>
     );

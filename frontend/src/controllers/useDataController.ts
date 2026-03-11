@@ -8,6 +8,7 @@ import * as userService from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
 import { enrichProjectsWithTaskDates } from '@/utils/projectUtils';
 import { apiRequest } from '@/services/apiClient';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export const useDataController = () => {
     const {
@@ -25,6 +26,7 @@ export const useDataController = () => {
     } = useData();
 
     const { currentUser } = useAuth();
+    const { showDeleteSuccess } = useNotifications();
 
     // === HELPERS ===
     const safeNum = (val: any) => {
@@ -219,6 +221,7 @@ export const useDataController = () => {
         deleteTask: async (taskId: string, force: boolean = false, deleteHours: boolean = false) => {
             const previousTasks = [...tasks];
             setTasks(prev => prev.filter(t => t.id !== taskId));
+            showDeleteSuccess('Tarefa Excluída');
 
             try {
                 await taskService.deleteTask(taskId, force, deleteHours);
