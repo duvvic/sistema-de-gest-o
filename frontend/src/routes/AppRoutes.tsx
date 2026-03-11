@@ -494,10 +494,12 @@ const RoleBasedRedirect = () => {
     if (!currentUser) return <Navigate to="/login" replace />;
 
     const adminRoles: Role[] = ADMIN_ROLES;
+    const normalizedRole = String(currentUser.role || '').trim().toLowerCase().replace(/\s+/g, '_');
 
-    if (adminRoles.includes(currentUser.role)) {
+    if (adminRoles.includes(normalizedRole as Role)) {
         return <Navigate to="/admin/clients" replace />;
     }
+
     return <Navigate to="/developer/projects" replace />;
 }
 

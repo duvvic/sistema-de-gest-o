@@ -61,7 +61,8 @@ const MainLayout: React.FC = () => {
 
     const adminRoles: Role[] = ['admin', 'gestor', 'diretoria', 'pmo', 'financeiro', 'tech_lead', 'system_admin', 'executive', 'ceo'];
 
-    const menuItems = adminRoles.includes(currentUser?.role as Role)
+    const normalizedRole = String(currentUser?.role || '').trim().toLowerCase().replace(/\s+/g, '_');
+    const menuItems = adminRoles.includes(normalizedRole as Role)
         ? adminMenuItems
         : developerMenuItems;
 
