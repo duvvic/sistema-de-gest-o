@@ -4,9 +4,10 @@ import { useDataController } from '../controllers/useDataController';
 import {
     Search, Calendar, ArrowRight, Info, CheckCircle2,
     PlusCircle, FolderPlus, Clock, Palmtree, Eye,
-    Activity, TrendingUp, Users
+    Activity, TrendingUp, Users, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface UserNotification {
     id: string;
@@ -25,6 +26,7 @@ interface UserNotification {
 }
 
 export const SystemTimelinePage: React.FC = () => {
+    const navigate = useNavigate();
     const { users, clients, projects, timesheetEntries, loading: dataLoading } = useDataController();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
@@ -38,6 +40,84 @@ export const SystemTimelinePage: React.FC = () => {
     const [clientFilter, setClientFilter] = useState('');
 
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+
+    const renderVisualData = (data: any, isOld: boolean) => {
+        if (!data || Object.keys(data).length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 italic p-6 text-sm">
+                    {isOld ? '✓ Nenhum dado anterior registrado ou registro criado' : '✓ Registro excluído ou operação nula'}
+                </div>
+            );
+        }
+
+        const keysToIgnore = ['id', 'ID', 'Id', 'updated_at', 'created_at', 'tenant_id', 'is_active', 'deleted_at'];
+
+        return (
+            <div className="space-y-3 relative p-2">
+                {Object.entries(data).map(([key, value]) => {
+                    if (keysToIgnore.includes(key.toLowerCase()) || value === null || value === undefined) return null;
+
+                    let displayValue = String(value);
+                    if (typeof value === 'object') {
+                        displayValue = JSON.stringify(value);
+                    } else if (value === '') {
+                        displayValue = '(vazio)';
+                    } else if (key === 'ID_Colaborador' || key === 'colaborador_id' || key === 'user_id' || key === 'responsavel_id') {
+                        const foundUser = users.find((u: any) => String(u.id) === String(value));
+                        if (foundUser) displayValue = foundUser.name;
+                    }
+
+                    const friendlyKey = key.replace(/_/g, ' ');
+
+                    // Se estamos na seção OLD e é diferente do NEW, destacamos
+                    let isHighlighted = false;
+                    if (isOld && selectedLog?.new_data && selectedLog.new_data[key] !== value) {
+                        isHighlighted = true;
+                    } else if (!isOld && selectedLog?.old_data && selectedLog.old_data[key] !== value) {
+                        isHighlighted = true;
+                    }
+
+                    return (
+                        <div key={key} className={`flex justify-between items-center p-3.5 rounded-xl border transition-colors
+                            ${isHighlighted
+                                ? (isOld ? 'bg-rose-500/10 border-rose-500/20 shadow-[inset_0_1px_4px_rgba(244,63,94,0.1)]' : 'bg-emerald-500/10 border-emerald-500/20 shadow-[inset_0_1px_4px_rgba(16,185,129,0.1)]')
+                                : 'bg-slate-800/50 border-slate-700/50'
+                            }`}
+                        >
+                            <span className="font-semibold text-xs text-slate-400 capitalize tracking-wider">{friendlyKey}</span>
+                            <span
+                                className={`text-sm font-medium text-right max-w-[65%] leading-tight break-words
+                                    ${isHighlighted ? (isOld ? 'text-rose-300' : 'text-emerald-400') : 'text-slate-300'}
+                                `}
+                            >
+                                {displayValue}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const handleAccessRecord = () => {
+        if (!selectedLog) return;
+
+        const entity = selectedLog.entity?.toLowerCase() || '';
+        const action = selectedLog.action?.toUpperCase() || '';
+
+        if (action === 'DELETE') return; // Cannot access deleted records
+
+        if (entity === 'fato_tarefas') {
+            const taskId = selectedLog.new_data?.id || selectedLog.old_data?.id || selectedLog.entity_id;
+            if (taskId) navigate(`/tasks/${taskId}`);
+        } else if (entity === 'dim_projetos') {
+            const pId = selectedLog.new_data?.id || selectedLog.new_data?.ID_Projeto || selectedLog.old_data?.id || selectedLog.entity_id;
+            if (pId) navigate(`/admin/projects/${pId}`);
+        } else if (entity === 'dim_clientes') {
+            const cId = selectedLog.new_data?.id || selectedLog.new_data?.ID_Cliente || selectedLog.old_data?.id || selectedLog.entity_id;
+            if (cId) navigate(`/admin/clients/${cId}`);
+        }
+    };
 
     const fetchLogs = async () => {
         setLoadingLogs(true);
@@ -514,7 +594,7 @@ export const SystemTimelinePage: React.FC = () => {
                                         <Eye className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Dados Técnicos da Alteração</h3>
+                                        <h3 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Dados da Alteração</h3>
                                         <p className="font-medium" style={{ color: 'var(--text-muted)' }}>
                                             {users.find((u: any) => String(u.id) === String(selectedLog.user_id))?.name || (selectedLog.user_name && isNaN(Number(selectedLog.user_name)) ? selectedLog.user_name : 'Usuário')} registrou esta ação
                                         </p>
@@ -522,47 +602,58 @@ export const SystemTimelinePage: React.FC = () => {
                                 </div>
                                 <button
                                     onClick={() => setSelectedLog(null)}
-                                    className="w-10 h-10 flex items-center justify-center rounded-full transition-all text-2xl font-light"
+                                    className="w-10 h-10 flex items-center justify-center rounded-full transition-all text-2xl font-light hover:bg-slate-200/50"
                                     style={{ color: 'var(--text-muted)' }}
                                 >
                                     ×
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-auto p-8" style={{ backgroundColor: 'var(--bg)' }}>
+                            <div className="flex-1 overflow-auto p-8 bg-slate-50">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="flex flex-col h-full">
-                                        <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                            <div className="w-2 h-2 rounded-full bg-slate-400" />
-                                            Estado Anterior
-                                        </h4>
-                                        <div className="flex-1 bg-slate-900 rounded-2xl p-6 overflow-auto min-h-[400px] border border-slate-800 shadow-xl font-mono">
-                                            <pre className="text-sm text-slate-400 leading-relaxed break-all whitespace-pre-wrap">
-                                                {selectedLog.old_data && Object.keys(selectedLog.old_data).length > 0 ? JSON.stringify(selectedLog.old_data, null, 2) : '// Sem dados anteriores ou criação'}
-                                            </pre>
+                                    {/* OLD DATA */}
+                                    <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                                            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                                                Estado Anterior
+                                            </h4>
+                                        </div>
+                                        <div className="flex-1 bg-slate-900 p-2 overflow-y-auto min-h-[400px]">
+                                            {renderVisualData(selectedLog.old_data, true)}
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col h-full">
-                                        <h4 className="text-sm font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                            Nova Versão
-                                        </h4>
-                                        <div className="flex-1 bg-slate-900 rounded-2xl p-6 overflow-auto min-h-[400px] border border-slate-800 shadow-xl font-mono">
-                                            <pre className="text-sm text-emerald-400/90 leading-relaxed break-all whitespace-pre-wrap">
-                                                {selectedLog.new_data && Object.keys(selectedLog.new_data).length > 0 ? JSON.stringify(selectedLog.new_data, null, 2) : '// Operação de deleção ou nulo'}
-                                            </pre>
+                                    {/* NEW DATA */}
+                                    <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-emerald-500/30 overflow-hidden ring-4 ring-emerald-500/10">
+                                        <div className="px-6 py-4 bg-emerald-50/50 border-b border-emerald-500/20">
+                                            <h4 className="text-sm font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                                Nova Versão
+                                            </h4>
+                                        </div>
+                                        <div className="flex-1 bg-slate-900 p-2 overflow-y-auto min-h-[400px]">
+                                            {renderVisualData(selectedLog.new_data, false)}
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="px-8 py-5 border-t bg-white flex justify-end" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                            <div className="px-8 py-5 border-t bg-white flex justify-end gap-3" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                {selectedLog.action !== 'DELETE' && (selectedLog.entity === 'fato_tarefas' || selectedLog.entity === 'dim_projetos' || selectedLog.entity === 'dim_clientes') && (
+                                    <button
+                                        onClick={handleAccessRecord}
+                                        className="px-6 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-all active:scale-95 flex items-center gap-2 shadow-sm"
+                                    >
+                                        Acessar Registro
+                                        <ExternalLink className="w-4 h-4" />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setSelectedLog(null)}
-                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 shadow-md"
+                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 shadow-md border-0"
                                 >
-                                    Fechar Detalhes
+                                    Fechar
                                 </button>
                             </div>
                         </motion.div>
