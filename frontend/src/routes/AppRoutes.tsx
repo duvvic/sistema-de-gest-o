@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { useAuth } from '@/contexts/AuthContext';
 import { Role } from '@/types';
 import { RoleGuard } from '@/guards/RoleGuard';
-import { USER_ROLES } from '@/constants/roles';
+import { USER_ROLES, ALL_ADMIN_ROLES } from '@/constants/roles';
 
 // Componentes adaptados
 import Login from '@/components/Login';

@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { Building2, ArrowRight, Clock, Briefcase, Users, TrendingUp, BarChart3, CheckSquare, ChevronDown, ChevronUp, AlertCircle, AlertTriangle } from 'lucide-react';
-import { Project, User, Absence, Task, Client, TimesheetEntry } from '@/types';
+import { Task, Client, Project, User, TimesheetEntry, ProjectMember } from '@/types';
 import { formatDecimalToTime } from '@/utils/normalizers';
 import { getUserStatus } from '@/utils/userStatus';
 import { ALL_ADMIN_ROLES } from '@/constants/roles';
@@ -64,7 +64,6 @@ const TimesheetAdminDashboard: React.FC = () => {
       }
 
       const monitoredCollaborators = users.filter((u: User) => {
-         const normalizedRole = String(u.role || '').trim().toLowerCase().replace(/\s+/g, '_');
          return true; // Exibir todos conforme solicitado
       });
 
@@ -77,7 +76,7 @@ const TimesheetAdminDashboard: React.FC = () => {
 
          const datesWithEntries = new Set(userEntries.map((e: TimesheetEntry) => e.date));
 
-         const isExempt = ['ceo', 'diretoria', 'executive'].includes(user.role?.toLowerCase() || '') || user.torre?.toLowerCase() === 'pmo' || user.torre === 'N/A';
+         const isExempt = false; // Exibir para todos conforme solicitado
          const missingDays = isExempt ? [] : workDaysInPeriod.filter(day => !datesWithEntries.has(day));
 
          const dailyGoal = user.dailyAvailableHours || 8;
@@ -224,7 +223,7 @@ const TimesheetAdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
                <div>
                   <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-                     {activeTab === 'status' ? '📊 Status Geral' : '⏰ Gestão de Horas'}
+                     {activeTab === 'status' ? '📊 Status do Time' : '⏰ Gestão de Horas'}
                   </h1>
                   <p className="text-white/80 text-sm mt-1">
                      {activeTab === 'status'
@@ -268,7 +267,7 @@ const TimesheetAdminDashboard: React.FC = () => {
                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold flex items-center gap-2 border border-white/20 transition-all shadow-sm"
                   >
                      {activeTab === 'projects' ? <BarChart3 className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
-                     {activeTab === 'projects' ? 'Ver Status Geral' : 'Ver Clientes'}
+                     {activeTab === 'projects' ? 'Ver Status do Time' : 'Ver Clientes'}
                   </button>
 
                   {selectedClientId && (

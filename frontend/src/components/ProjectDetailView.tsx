@@ -548,6 +548,7 @@ const ProjectDetailView: React.FC = () => {
   }, [project, projectId, performance, projectTasks, timesheetEntries, updateProject, isAdmin]);
 
   const handleSaveProject = async () => {
+    if (loading) return;
     if (!isNew && (!project || !projectId)) return;
 
     // Bloqueio removido conforme solicitação: permitir salvar mesmo incompleto.

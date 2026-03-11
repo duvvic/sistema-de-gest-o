@@ -1133,17 +1133,16 @@ export const KanbanBoard = () => {
             <Archive size={18} />
           </button>
 
-          {/* Botão Nova Tarefa (Pode ser criado por admin em qualquer lugar ou dev em sua página) */}
-          {(isAdmin || location.pathname.includes('/developer/tasks')) && (
-            <button
-              className="text-white px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 font-bold text-sm whitespace-nowrap active:scale-95"
-              style={{ backgroundColor: 'var(--primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}
-              onClick={() => setShowTaskCreationModal(true)}
-            >
-              + Nova Tarefa
-            </button>
+          {/* Botão Nova Tarefa (Disponível para todos os usuários) */}
+          <button
+            className="text-white px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 font-bold text-sm whitespace-nowrap active:scale-95"
+            style={{ backgroundColor: 'var(--primary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}
+            onClick={() => setShowTaskCreationModal(true)}
+          >
+            + Nova Tarefa
+          </button>
           )}
         </div>
       </div>
