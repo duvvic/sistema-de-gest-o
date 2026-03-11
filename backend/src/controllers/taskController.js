@@ -1,5 +1,4 @@
 import { taskService } from '../services/taskService.js';
-import { adminService } from '../services/adminService.js';
 import { sendSuccess, handleRouteError } from '../utils/responseHelper.js';
 
 export const taskController = {
@@ -47,7 +46,7 @@ export const taskController = {
         try {
             const { id } = req.params;
             const { force, deleteHours } = req.query;
-            await adminService.deactivateTask(id, force === 'true', deleteHours === 'true', req.user);
+            await taskService.deleteTask(req.user, id, deleteHours === 'true', force === 'true');
             return sendSuccess(res, { message: 'Tarefa excluída com sucesso.' });
         } catch (e) {
             return handleRouteError(res, e, 'TaskController.deleteTask');

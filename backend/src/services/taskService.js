@@ -210,9 +210,30 @@ export const taskService = {
     },
 
     async deleteTask(user, id, deleteHours = false, force = false) {
-        const oldTask = await this.getTaskById(user, id).catch(() => null);
+        // Verifica existência e permissão básica (assigned ou vinculado)
+        const task = await this.getTaskById(user, id);
+
+        const hasHours = await projectService.checkTaskHasHours(id);
+
+        if (hasHours && !force) {
+            const error = new Error('Não é possível excluir esta tarefa pois existem horas apontadas nela.');
+            error.status = 400;
+            error.hasHours = true;
+            throw error;
+        }
+
+        if (hasHours && force && !isAdmUser(user)) {
+            const error = new Error('Apenas Administradores podem realizar a exclusão forçada de tarefas com horas.');
+            error.status = 403;
+            throw error;
+        }
 
         await taskRepository.delete(id);
+
+        if (deleteHours && hasHours) {
+            const now = new Date().toISOString();
+            await taskRepository.softDeleteHours(id, now);
+        }
 
         const context = auditContext.getStore() || {};
         await auditService.logAction({
@@ -220,7 +241,7 @@ export const taskService = {
             action: 'DELETE',
             entity: 'fato_tarefas',
             entityId: id,
-            oldData: oldTask,
+            oldData: task,
             ip: context.ip
         });
 
