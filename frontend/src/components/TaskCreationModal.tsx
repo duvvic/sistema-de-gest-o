@@ -111,10 +111,25 @@ export const TaskCreationModal: React.FC<TaskCreationModalProps> = ({ isOpen, on
 
 
     const eligibleUsers = useMemo(() => {
-        return projectId
-            ? users.filter((u: User) => u.active !== false && projectMembers.some((pm: any) => String(pm.id_projeto) === String(projectId) && String(pm.id_colaborador) === String(u.id)))
-            : users.filter((u: User) => u.active !== false);
-    }, [users, projectId, projectMembers]);
+        const activeUsers = users.filter((u: User) => u.active !== false);
+
+        if (projectId) {
+            // Quando há projeto: filtra por membros do projeto
+            // Admins veem todos os ativos; Colaboradores só veem membros do projeto
+            const projectMemberIds = new Set(
+                projectMembers
+                    .filter((pm: any) => String(pm.id_projeto) === String(projectId))
+                    .map((pm: any) => String(pm.id_colaborador))
+            );
+            if (isAdmin) {
+                return activeUsers;
+            }
+            return activeUsers.filter((u: User) => projectMemberIds.has(String(u.id)));
+        }
+
+        // Sem projeto selecionado: admins veem tudo, colaboradores não veem ninguém ainda
+        return isAdmin ? activeUsers : [];
+    }, [users, projectId, projectMembers, isAdmin]);
 
     const handleSave = async () => {
         if (!title.trim()) {

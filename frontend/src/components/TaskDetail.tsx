@@ -1354,13 +1354,23 @@ const TaskDetail: React.FC = () => {
 
               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 p-1 pr-2">
                 {(() => {
+                  const projectMemberIds = new Set(
+                    projectMembers
+                      .filter((pm: any) => String(pm.id_projeto) === String(formData.projectId))
+                      .map((pm: any) => String(pm.id_colaborador))
+                  );
+
                   const filtered = (users || [])
                     .filter((u: any) => {
                       const status = getUserStatus(u, tasks, projects, clients, absences);
                       const isForaDoFluxo = status.label === 'Fora do Fluxo';
                       const isAlreadySelected = formData.collaboratorIds?.includes(u.id) || u.id === formData.developerId;
 
+                      // Colaboradores só veem membros do mesmo projeto
+                      const isProjectMember = isAdmin || projectMemberIds.has(String(u.id));
+
                       return u.active !== false &&
+                        isProjectMember &&
                         (!isForaDoFluxo || isAlreadySelected) &&
                         (u.name.toLowerCase().includes(memberSearch.toLowerCase()) || (u.cargo || '').toLowerCase().includes(memberSearch.toLowerCase()));
                     })
