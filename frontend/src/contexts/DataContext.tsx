@@ -18,7 +18,7 @@ interface DataContextType {
     holidays: Holiday[];
     loading: boolean;
     error: string | null;
-    refreshData: () => Promise<void>;
+    refreshData: (force?: boolean) => Promise<void>;
 
     // Actions (para updates otimistas se necessário)
     setClients: React.Dispatch<React.SetStateAction<Client[]>>;

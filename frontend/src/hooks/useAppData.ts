@@ -93,12 +93,12 @@ export function useAppData(): AppData {
     }
   }, []);
 
-  async function refreshData() {
+  async function refreshData(force: boolean = false) {
     if (isRefreshing) return;
 
-    // Throttle: evita refresh completo se o último foi há menos de 5 segundos
+    // Throttle: evita refresh completo se o último foi há menos de 5 segundos (a menos que seja forçado)
     const now = Date.now();
-    if (now - lastRefreshTime < 5000) {
+    if (!force && now - lastRefreshTime < 5000) {
       console.log('[useAppData] Refresh ignorado por throttle (intervalo < 5s)');
       return;
     }

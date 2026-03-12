@@ -197,9 +197,12 @@ const TimesheetForm: React.FC = () => {
 
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    // Inicia o carregamento IMEDIATAMENTE para evitar clique duplo
+    setLoading(true);
+
     if (!formData.clientId || !formData.projectId || !formData.taskId || !formData.date || !formData.startTime || !formData.endTime) {
       alert("Por favor, preencha todos os campos obrigatórios (Cliente, Projeto, Tarefa, Data e Horários).");
+      setLoading(false);
       return;
     }
 
@@ -209,6 +212,7 @@ const TimesheetForm: React.FC = () => {
     // Check for time conflicts
     if (hasTimeConflict) {
       alert("Conflito de horário! Você já tem um apontamento neste período. Por favor, ajuste o horário.");
+      setLoading(false);
       return;
     }
 
@@ -239,6 +243,7 @@ const TimesheetForm: React.FC = () => {
     if (willBeCompleted) {
       setPendingSave(entry);
       setCompletionModalOpen(true);
+      setLoading(false); // Permite interagir com o modal que acaba de abrir
       return;
     }
 
@@ -246,7 +251,6 @@ const TimesheetForm: React.FC = () => {
   };
 
   const saveEntry = async (entry: TimesheetEntry, progressToUpdate?: number) => {
-    setLoading(true);
     try {
       // Update task progress if needed
       if (progressToUpdate !== undefined && entry.taskId) {
@@ -255,11 +259,14 @@ const TimesheetForm: React.FC = () => {
 
       if (isNew) {
         await createTimesheet(entry);
-        alert("Apontamento criado com sucesso!");
       } else {
         await updateTimesheet(entry);
-        alert("Apontamento atualizado!");
       }
+
+      // Forçamos a atualização dos dados globais (ignorando throttle) para garantir que o calendário veja o novo apontamento
+      await refreshData(true);
+
+      alert(isNew ? "Apontamento criado com sucesso!" : "Apontamento atualizado!");
 
       discardChanges();
       navigate(-1);
@@ -272,13 +279,19 @@ const TimesheetForm: React.FC = () => {
 
   const handleConfirmCompletion = async () => {
     if (!pendingSave) return;
+    setLoading(true);
     // Mark as Done (100%)
-    if (pendingSave.taskId) {
-      await updateTask(pendingSave.taskId, { progress: 100, status: 'Done', actualDelivery: new Date().toISOString() });
+    try {
+      if (pendingSave.taskId) {
+        await updateTask(pendingSave.taskId, { progress: 100, status: 'Done', actualDelivery: new Date().toISOString() });
+      }
+      await saveEntry(pendingSave);
+    } catch (e) {
+      setLoading(false);
+    } finally {
+      setCompletionModalOpen(false);
+      setPendingSave(null);
     }
-    await saveEntry(pendingSave);
-    setCompletionModalOpen(false);
-    setPendingSave(null);
   };
 
   const handleDelete = async () => {
@@ -286,6 +299,7 @@ const TimesheetForm: React.FC = () => {
     setLoading(true);
     try {
       await deleteTimesheet(initialEntry.id);
+      await refreshData(true);
       setDeleteModalOpen(false);
       navigate(-1);
     } catch (e) {
@@ -301,7 +315,7 @@ const TimesheetForm: React.FC = () => {
   }, [requestBack, navigate]);
 
   // Filter Logic
-  const { projectMembers } = useDataController();
+  const { projectMembers, refreshData } = useDataController();
 
   const availableProjectsIds = React.useMemo(() => {
     const targetUserId = formData.userId || currentUser?.id;
@@ -464,9 +478,13 @@ const TimesheetForm: React.FC = () => {
             <button
               onClick={handleSubmit}
               disabled={loading || !canEnterTime}
-              className="bg-white hover:bg-slate-50 text-[var(--primary)] px-4 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-2 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-white hover:bg-slate-50 text-[var(--primary)] px-4 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-2 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <Save className="w-3 h-3" />
+              {loading ? (
+                <div className="w-3 h-3 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Save className="w-3 h-3 group-hover:scale-110 transition-transform" />
+              )}
               {loading ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
@@ -794,7 +812,11 @@ const TimesheetForm: React.FC = () => {
         title="Concluir Tarefa?"
         message="A tarefa atingiu 100% de progresso. Deseja marcá-la como concluída e salvar?"
         onConfirm={handleConfirmCompletion}
-        onCancel={() => { setCompletionModalOpen(false); setPendingSave(null); }}
+        onCancel={() => {
+          setCompletionModalOpen(false);
+          setPendingSave(null);
+          setLoading(false);
+        }}
         disabled={loading}
       />
       <ConfirmationModal

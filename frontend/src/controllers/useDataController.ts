@@ -22,7 +22,8 @@ export const useDataController = () => {
         absences, setAbsences,
         holidays, setHolidays,
         loading,
-        error
+        error,
+        refreshData
     } = useData();
 
     const { currentUser } = useAuth();
@@ -182,7 +183,7 @@ export const useDataController = () => {
     // Para simplificar e garantir que não quebre, vou manter as assinaturas.
 
     return {
-        clients, projects, tasks, users, timesheetEntries, projectMembers, absences, holidays, loading, error,
+        clients, projects, tasks, users, timesheetEntries, projectMembers, absences, holidays, loading, error, refreshData,
         getClientById, getActiveClients: () => clients.filter(c => c.active !== false),
         createClient, updateClient, deactivateClient, deleteClient,
         getProjectById, getProjectsByClient: (clientId: string) => projects.filter(p => p.clientId === clientId && p.active !== false),
