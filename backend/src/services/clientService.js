@@ -51,7 +51,6 @@ export const clientService = {
         // Formata os dados conforme a tabela dim_clientes
         const payload = {
             NomeCliente: data.NomeCliente?.trim() || "(Sem nome)",
-            "E-mail": data["E-mail"] || data.email || null,
             email: data.email || data["E-mail"] || null,
             ativo: data.ativo ?? true,
             Responsavel: data.Responsavel || data.responsavel_externo || null,
@@ -93,6 +92,10 @@ export const clientService = {
         if (!client) throw new Error('Cliente não encontrado');
 
         const payload = { ...data };
+
+        // Remover campos que não existem no banco ou causam conflito
+        delete payload["E-mail"];
+        delete payload["logoUrl"];  // coluna correta é NewLogo
 
         // Garantir que campos vazios sejam nulos para o banco
         Object.keys(payload).forEach(key => {
