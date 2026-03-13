@@ -1,6 +1,6 @@
 // hooks/useAppData.ts
 // Hook principal para carregar dados do Backend
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Client,
   Project,
@@ -30,7 +30,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   formatDate,
   mapDbTaskToTask,
-  mapDbAbsenceToAbsence
+  mapDbAbsenceToAbsence,
+  mapDbTimesheetToEntry
 } from "@/utils/normalizers";
 
 interface AppData {
@@ -93,7 +94,7 @@ export function useAppData(): AppData {
     }
   }, []);
 
-  async function refreshData(force: boolean = false) {
+  const refreshData = React.useCallback(async (force: boolean = false) => {
     if (isRefreshing) return;
 
     // Throttle: evita refresh completo se o último foi há menos de 5 segundos (a menos que seja forçado)
@@ -120,26 +121,20 @@ export function useAppData(): AppData {
         return;
       }
 
-      const batch1 = await Promise.allSettled([
-        fetchUsers(),
-        fetchClients(),
-        fetchProjects(),
-        fetchTasks(),
-        fetchTaskCollaborators()
+      const allSettledResults = await Promise.allSettled([
+        fetchUsers(),             // 0
+        fetchClients(),           // 1
+        fetchProjects(),          // 2
+        fetchTasks(),             // 3
+        fetchTaskCollaborators(), // 4
+        fetchProjectMembers(),    // 5
+        fetchTimesheets(),        // 6
+        fetchAbsences(),          // 7
+        fetchHolidays(),          // 8
+        fetchAllocations()        // 9
       ]);
 
-      // Pequeno delay entre batches para evitar burst
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      const batch2 = await Promise.allSettled([
-        fetchProjectMembers(),
-        fetchTimesheets(),
-        fetchAbsences(),
-        fetchHolidays(),
-        fetchAllocations()
-      ]);
-
-      const results = [...batch1, ...batch2];
+      const results = allSettledResults;
 
       const safeResult = <T>(result: PromiseSettledResult<T>, fallback: T, name: string): T => {
         if (result.status === 'rejected') {
@@ -182,46 +177,7 @@ export function useAppData(): AppData {
       const taskExternalMap = new Map(tasksData.filter(t => t.ID_Tarefa).map(t => [String(t.ID_Tarefa).toLowerCase(), String(t.id_tarefa_novo)]));
 
       const timesheetMapped: TimesheetEntry[] = (rawTimesheets || []).map((r: any) => {
-        const getV = (obj: any, keys: string[]) => {
-          const lowerObj: any = {};
-          Object.keys(obj).forEach(k => lowerObj[k.toLowerCase()] = obj[k]);
-          for (const k of keys) {
-            const val = lowerObj[k.toLowerCase()];
-            if (val !== undefined && val !== null) return val;
-          }
-          return null;
-        };
-
-        let taskId = String(getV(r, ['id_tarefa_novo', 'taskId']) || '');
-        if (!taskId || taskId === 'null' || taskId === '0') {
-          const extId = String(getV(r, ['ID_Tarefa', 'id_tarefa']) || '').toLowerCase();
-          if (extId && taskExternalMap.has(extId)) {
-            taskId = taskExternalMap.get(extId)!;
-          } else {
-            taskId = extId;
-          }
-        }
-
-        const userId = String(getV(r, ['ID_Colaborador', 'id_colaborador', 'userId']) || '').trim();
-        const clientId = String(getV(r, ['ID_Cliente', 'id_cliente', 'clientId']) || '').trim();
-        const projectId = String(getV(r, ['ID_Projeto', 'id_projeto', 'projectId']) || '').trim();
-        const entryId = String(getV(r, ['ID_Horas_Trabalhadas', 'id_horas_trabalhadas', 'id']) || crypto.randomUUID()).trim();
-        const rawDate = getV(r, ['Data', 'data', 'date']);
-
-        return {
-          id: entryId,
-          userId: userId,
-          userName: userMap.get(userId)?.name || getV(r, ['userName', 'nome_colaborador']) || '',
-          clientId: clientId,
-          projectId: projectId,
-          taskId: taskId,
-          date: rawDate ? (String(rawDate).includes('T') ? String(rawDate).split('T')[0] : String(rawDate).split(' ')[0]) : formatDate(null),
-          startTime: getV(r, ['Hora_Inicio', 'startTime']) || '09:00',
-          endTime: getV(r, ['Hora_Fim', 'endTime']) || '18:00',
-          totalHours: Number(getV(r, ['Horas_Trabalhadas', 'hours', 'totalHours']) || 0),
-          lunchDeduction: !!getV(r, ['Almoco_Deduzido', 'lunchDeduction']),
-          description: getV(r, ['Descricao', 'description']) || undefined,
-        };
+        return mapDbTimesheetToEntry(r, taskExternalMap);
       });
 
       const absencesMapped = (absencesData || []).map(mapDbAbsenceToAbsence);
@@ -290,7 +246,6 @@ export function useAppData(): AppData {
           try { localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData)); } catch { /* ignora */ }
         }
       }
-
     } catch (err) {
       console.error('[useAppData] Erro:', err);
       setError(err instanceof Error ? err.message : "Falha ao carregar dados do banco.");
@@ -298,7 +253,7 @@ export function useAppData(): AppData {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }
+  }, [isRefreshing, lastRefreshTime, users.length, tasks.length, currentUser, authLoading]);
 
   useEffect(() => {
     if (!authLoading) {

@@ -102,7 +102,11 @@ export const clientService = {
         });
 
         if (payload.tipo_cliente === 'cliente_final' && !payload.partner_id) {
-            throw new Error('Todo cliente deve estar obrigatoriamente vinculado a um parceiro responsável.');
+            // Só bloqueia se partner_id não estiver presente nem no payload nem no registro existente
+            const effectivePartnerId = payload.partner_id ?? client.partner_id;
+            if (!effectivePartnerId) {
+                throw new Error('Todo cliente deve estar obrigatoriamente vinculado a um parceiro responsável.');
+            }
         }
 
         const updated = await clientRepository.update(client.ID_Cliente || id, payload);

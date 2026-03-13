@@ -287,19 +287,28 @@ const AdminDashboard: React.FC = () => {
     [safeClients, safeProjects]
   );
 
-  // Tarefa mais recente de um cliente
-  const getMostRecentTaskDate = (clientId: string): Date | null => {
-    const clientTasks = safeTasks.filter((t: Task) => t.clientId === clientId);
-    if (clientTasks.length === 0) return null;
+  // Data handling moved to useDataController
+  // Otimização: Pre-calcular mapas de busca para evitar filtros O(n) dentro de loops e sorts
+  const { tasksByClient, projectsByClient, recentTaskDateByClient } = useMemo(() => {
+    const tbc: Record<string, Task[]> = {};
+    const pbc: Record<string, Project[]> = {};
+    const rtd: Record<string, number> = {};
 
-    const dates = clientTasks
-      .map((t: Task) => t.actualStart)
-      .filter(Boolean)
-      .map((d: string | undefined | null) => new Date(d!));
+    safeTasks.forEach(t => {
+      if (!tbc[t.clientId]) tbc[t.clientId] = [];
+      tbc[t.clientId].push(t);
 
-    if (dates.length === 0) return null;
-    return new Date(Math.max(...dates.map((d: Date) => d.getTime())));
-  };
+      const d = t.actualStart ? new Date(t.actualStart).getTime() : 0;
+      if (d > (rtd[t.clientId] || 0)) rtd[t.clientId] = d;
+    });
+
+    safeProjects.forEach(p => {
+      if (!pbc[p.clientId]) pbc[p.clientId] = [];
+      pbc[p.clientId].push(p);
+    });
+
+    return { tasksByClient: tbc, projectsByClient: pbc, recentTaskDateByClient: rtd };
+  }, [safeTasks, safeProjects]);
 
   // Filtrar e Ordenar clientes
   const filteredSortedClients = useMemo(() => {
@@ -316,7 +325,7 @@ const AdminDashboard: React.FC = () => {
         if (clientWords.some((word: string) => word.startsWith(term)) || clientName.includes(term)) return true;
 
         // 2. Match Nome de Projetos do Cliente
-        const clientProjects = safeProjects.filter((p: Project) => String(p.clientId) === String(c.id));
+        const clientProjects = projectsByClient[c.id] || [];
         const matchesProject = clientProjects.some((p: Project) => {
           const name = p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
           return name.includes(term);
@@ -324,20 +333,16 @@ const AdminDashboard: React.FC = () => {
         if (matchesProject) return true;
 
         // 3. Match Nome de Tarefas ou Colaboradores
-        const clientTasks = safeTasks.filter((t: Task) => String(t.clientId) === String(c.id));
+        const clientTasks = tasksByClient[c.id] || [];
         const matchesTaskOrCollab = clientTasks.some((t: Task) => {
           // Título da tarefa
           const title = (t.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
           if (title.includes(term)) return true;
 
-          // Colaborador (Responsável)
+          // Colaborador (Responsável) - O(1) user lookup suggested but users is small usually
           const dev = users.find((u: User) => u.id === t.developerId);
           const devName = (dev?.name || t.developer || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
           if (devName.includes(term)) return true;
-
-          // Outros Colaboradores
-          const otherColabs = (t.collaboratorIds || []).map(id => users.find((u: User) => u.id === id)).filter(Boolean);
-          if (otherColabs.some(u => (u?.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").includes(term))) return true;
 
           return false;
         });
@@ -351,26 +356,22 @@ const AdminDashboard: React.FC = () => {
       const ongoingStatuses: Array<Task['status']> = ['Todo', 'Review', 'In Progress', 'Testing'];
 
       result = result.filter((client: Client) => {
-        const clientTasks = safeTasks.filter((t: Task) => String(t.clientId) === String(client.id));
+        const clientTasks = tasksByClient[client.id] || [];
 
         if (taskStatusFilter === 'late') {
-          // Atrasado = Sub-filtro do 'Em Andamento' (deve estar no fluxo ativo E ter atraso)
           return clientTasks.some((t: Task) => ongoingStatuses.includes(t.status) && (t.daysOverdue ?? 0) > 0);
         }
 
         if (taskStatusFilter === 'ongoing') {
-          // Em andamento = todos que estão no fluxo ativo (não mostrar os que já saíram do fluxo)
           return clientTasks.some((t: Task) => ongoingStatuses.includes(t.status));
         }
 
         if (taskStatusFilter === 'done') {
-          // Concluido = quando todos estão concluidos
-          const clientProjects = safeProjects.filter((p: Project) => String(p.clientId) === String(client.id));
+          const clientProjects = projectsByClient[client.id] || [];
           const hasTasks = clientTasks.length > 0;
           const allTasksDone = hasTasks && clientTasks.every((t: Task) => t.status === 'Done');
           const allProjectsDone = clientProjects.length > 0 && clientProjects.every((p: Project) => p.status === 'Concluído');
 
-          // Se tiver tarefas, todas devem estar Done. Se tiver projetos, todos devem estar Concluído.
           return (hasTasks || clientProjects.length > 0) &&
             (hasTasks ? allTasksDone : true) &&
             (clientProjects.length > 0 ? allProjectsDone : true);
@@ -388,15 +389,12 @@ const AdminDashboard: React.FC = () => {
           return a.id.localeCompare(b.id);
         case 'recent':
         default:
-          const dateA = getMostRecentTaskDate(a.id);
-          const dateB = getMostRecentTaskDate(b.id);
-          if (!dateA && !dateB) return 0;
-          if (!dateA) return 1;
-          if (!dateB) return -1;
-          return dateB.getTime() - dateA.getTime();
+          const dateA = recentTaskDateByClient[a.id] || 0;
+          const dateB = recentTaskDateByClient[b.id] || 0;
+          return dateB - dateA;
       }
     });
-  }, [activeClients, sortBy, taskStatusFilter, safeTasks, searchTerm, projects, safeProjects, users]);
+  }, [activeClients, sortBy, taskStatusFilter, tasksByClient, projectsByClient, recentTaskDateByClient, searchTerm, users]);
 
   // Filtros Executivos (Excel-like)
   const [executiveFilters, setExecutiveFilters] = useState<{
@@ -473,6 +471,17 @@ const AdminDashboard: React.FC = () => {
   const groupedData = useMemo(() => {
     const tasksByProj: Record<string, Task[]> = {};
     const timesByProj: Record<string, typeof portfolioTimesheets> = {};
+    const clientToProjects: Record<string, Project[]> = {};
+    const userCostMap: Record<string, number> = {};
+
+    users.forEach(u => {
+      userCostMap[u.id] = u.hourlyCost || 0;
+    });
+
+    safeProjects.forEach(p => {
+      if (!clientToProjects[p.clientId]) clientToProjects[p.clientId] = [];
+      clientToProjects[p.clientId].push(p);
+    });
 
     safeTasks.forEach(t => {
       if (!tasksByProj[t.projectId]) tasksByProj[t.projectId] = [];
@@ -484,8 +493,8 @@ const AdminDashboard: React.FC = () => {
       timesByProj[e.projectId].push(e);
     });
 
-    return { tasksByProj, timesByProj };
-  }, [safeTasks, portfolioTimesheets]);
+    return { tasksByProj, timesByProj, clientToProjects, userCostMap };
+  }, [safeTasks, portfolioTimesheets, safeProjects, users]);
 
   const executiveMetrics = useMemo(() => {
     // Usar PROJETOS FILTRADOS para os cálculos e cards
@@ -507,10 +516,10 @@ const AdminDashboard: React.FC = () => {
       const projectTasks = groupedData.tasksByProj[project.id] || [];
       const pTimesheets = groupedData.timesByProj[project.id] || [];
 
-      // Custo do Projeto
+      // Custo do Projeto - O(n) now
       const projectCost = pTimesheets.reduce((acc, entry) => {
-        const u = users.find(user => user.id === entry.userId);
-        return acc + (entry.totalHours * (u?.hourlyCost || 0));
+        const hourlyCost = groupedData.userCostMap[entry.userId] || 0;
+        return acc + (entry.totalHours * hourlyCost);
       }, 0);
       totalCommitted += projectCost;
 
@@ -547,7 +556,7 @@ const AdminDashboard: React.FC = () => {
         ).length;
       })()
     };
-  }, [safeProjects, safeTasks, portfolioTimesheets, users, filteredExecutiveProjects]);
+  }, [safeProjects, safeTasks, portfolioTimesheets, users, filteredExecutiveProjects, groupedData]);
 
   // --- CÁLCULO DE MÉTRICAS DE PARCEIROS ---
   const partnerMetrics = useMemo(() => {
@@ -1187,11 +1196,11 @@ const AdminDashboard: React.FC = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-8 pb-10 flex flex-col h-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-1.5 rounded-2xl border-2 overflow-hidden flex items-center justify-center bg-white shadow-lg mx-auto md:mx-0" style={{ borderColor: 'var(--border)', width: '64px', height: '64px' }}>
+                <div className="rounded-2xl border-2 overflow-hidden flex items-center justify-center bg-white shadow-lg mx-auto md:mx-0" style={{ borderColor: 'var(--border)', width: '64px', height: '64px' }}>
                   {selectedPartnerId && partnerMetrics.find(p => p.id === selectedPartnerId)?.logoUrl ? (
                     <img
                       src={partnerMetrics.find(p => p.id === selectedPartnerId)?.logoUrl}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                       alt="Logo Parceiro"
                     />
                   ) : (
@@ -1482,8 +1491,8 @@ const AdminDashboard: React.FC = () => {
                           className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer flex flex-col h-[220px]"
                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                         >
-                          <div className="flex-1 min-h-0 overflow-hidden bg-white p-6 flex items-center justify-center border-b border-[var(--border)]">
-                            <img src={partner.logoUrl} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt={partner.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }} />
+                          <div className="flex-1 min-h-0 overflow-hidden bg-white flex items-center justify-center border-b border-[var(--border)]">
+                            <img src={partner.logoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={partner.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }} />
                           </div>
                           <div className="shrink-0 px-4 py-3 flex flex-col justify-center text-center bg-slate-50 dark:bg-slate-900/20 shadow-inner">
                             <h3 className="text-[11px] font-black truncate uppercase tracking-tight mb-0.5" style={{ color: 'var(--text)' }}>{partner.name}</h3>
@@ -1501,8 +1510,8 @@ const AdminDashboard: React.FC = () => {
                           className="flex items-center justify-between p-5 bg-white border border-[var(--border)] rounded-[2rem] hover:shadow-lg transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-6">
-                            <div className="w-14 h-14 bg-slate-50 rounded-2xl p-2 border border-slate-100 flex items-center justify-center overflow-hidden">
-                              <img src={partner.logoUrl} className="w-full h-full object-contain" alt={partner.name} />
+                            <div className="w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden">
+                              <img src={partner.logoUrl} className="w-full h-full object-cover" alt={partner.name} />
                             </div>
                             <div>
                               <h3 className="text-sm font-black text-[var(--textTitle)] uppercase tracking-[0.05em]">{partner.name}</h3>
@@ -1737,11 +1746,11 @@ const AdminDashboard: React.FC = () => {
                       }}
                     >
 
-                      <div className="w-full flex-1 bg-white dark:bg-white/95 p-3 flex items-center justify-center transition-all overflow-hidden border-b border-[var(--border)]">
+                      <div className="w-full flex-1 bg-white dark:bg-white/95 flex items-center justify-center transition-all overflow-hidden border-b border-[var(--border)]">
                         <img
                           src={client.logoUrl}
                           alt={client.name}
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           onError={(e) => (e.currentTarget.src = "https://placehold.co/200x200?text=Logo")}
                         />
                       </div>
@@ -1784,11 +1793,11 @@ const AdminDashboard: React.FC = () => {
                             navigate(`/admin/clients/${client.id}`);
                           }}
                         >
-                          <div className="w-16 h-16 rounded-xl border p-2 flex items-center justify-center shadow-lg bg-white border-white/20">
+                          <div className="w-16 h-16 rounded-xl border flex items-center justify-center shadow-lg bg-white border-white/20 overflow-hidden">
                             <img
                               src={client.logoUrl}
                               alt={client.name}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-cover"
                               onError={(e) => (e.currentTarget.src = "https://placehold.co/100x100?text=Logo")}
                             />
                           </div>
@@ -2216,10 +2225,10 @@ const AdminDashboard: React.FC = () => {
                         <X size={20} className="text-[var(--text)]" />
                       </button>
                       <div className="flex items-center gap-5 mt-4">
-                        <div className="w-20 h-20 rounded-3xl p-3 shadow-xl border border-[var(--border)]" style={{ backgroundColor: 'var(--surface)' }}>
+                        <div className="w-20 h-20 rounded-3xl shadow-xl border border-[var(--border)] overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
                           <img
                             src={partner.logoUrl}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-cover"
                             alt={partner.name}
                             onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }}
                           />
@@ -2388,10 +2397,10 @@ const AdminDashboard: React.FC = () => {
                         <X size={20} className="text-[var(--text)]" />
                       </button>
                       <div className="flex items-center gap-5 mt-4">
-                        <div className="w-20 h-20 rounded-3xl p-3 shadow-xl border border-[var(--border)]" style={{ backgroundColor: 'var(--surface)' }}>
+                        <div className="w-20 h-20 rounded-3xl shadow-xl border border-[var(--border)] overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
                           <img
                             src={client.logoUrl}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-cover"
                             alt={client.name}
                             onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${client.name.charAt(0)}`; }}
                           />
@@ -2630,10 +2639,10 @@ const AdminDashboard: React.FC = () => {
                             }`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-9 h-9 rounded-lg border bg-white p-1.5 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm" style={{ borderColor: 'var(--border)' }}>
+                            <div className="w-9 h-9 rounded-lg border bg-white overflow-hidden flex items-center justify-center flex-shrink-0 shadow-sm" style={{ borderColor: 'var(--border)' }}>
                               <img
                                 src={client.logoUrl}
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-cover"
                                 alt={client.name}
                                 onError={(e) => { e.currentTarget.src = `https://placehold.co/100x100?text=${client.name.charAt(0)}`; }}
                               />
