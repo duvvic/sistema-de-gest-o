@@ -99,16 +99,15 @@ const TaskDetail: React.FC = () => {
 
   const parseTimeToDecimal = (timeStr: string): number => {
     if (!timeStr) return 0;
-    let val = timeStr.trim().replace(',', '.');
-    val = val.replace('h', '');
 
-    // Caso 1: Tem dois pontos (HH:MM)
-    if (val.includes(':')) {
-      const parts = val.split(':');
-      const h = parseInt(parts[0], 10) || 0;
-      const m = parseInt(parts[1], 10) || 0;
+    // Tratamento para o formato HH:MM (ex: 12:30 -> 12.5)
+    if (timeStr.includes(':')) {
+      const [h, m] = timeStr.split(':').map(n => parseInt(n, 10) || 0);
       return h + (m / 60);
     }
+
+    let val = timeStr.trim().replace(',', '.');
+    val = val.replace('h', '');
 
     // Caso 2: Tem ponto (Decimal 8.5)
     if (val.includes('.')) {
@@ -116,9 +115,6 @@ const TaskDetail: React.FC = () => {
     }
 
     // Caso 3: Apenas números
-    // Se for um bloco compacto de 4 dígitos (ex: 0830, 2245), tratamos como HH:MM
-    // Se for 3 dígitos mas começar com 0 (ex: 030), tratamos como HH:MM
-    // Senão, tratamos como HORAS INTEIRAS (ex: 100 -> 100.0)
     if (/^\d{3,4}$/.test(val)) {
       if (val.length === 4 || (val.length === 3 && val.startsWith('0'))) {
         const h = parseInt(val.slice(0, val.length - 2), 10) || 0;
@@ -128,6 +124,43 @@ const TaskDetail: React.FC = () => {
     }
 
     return parseFloat(val) || 0;
+  };
+
+  const handleTimeMask = (val: string, maxDigits?: number) => {
+    let digits = val.replace(/\D/g, '');
+    const max = maxDigits || 6;
+    if (digits.length > max) digits = digits.slice(0, max);
+
+    if (digits.length === 0) return '';
+
+    // Se tiver apenas 1 ou 2 dígitos, são as horas (esquerda para direita)
+    if (digits.length <= 2) return digits;
+
+    // De 3 a max dígitos: os últimos 2 são sempre minutos
+    const mins = digits.slice(-2);
+    const hrs = digits.slice(0, -2);
+    return `${hrs}:${mins}`;
+  };
+
+  const suggestDistribution = () => {
+    const limit = Number(formData.estimatedHours) || 0;
+    const teamIds = Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])])).filter(Boolean);
+    if (teamIds.length === 0 || limit === 0) return;
+
+    const perMember = limit / teamIds.length;
+    const newAllocations: Record<string, number> = {};
+    const newEditingHours: Record<string, string> = {};
+
+    teamIds.forEach(id => {
+      newAllocations[id] = perMember;
+      const h = Math.floor(perMember);
+      const m = Math.round((perMember - h) * 60);
+      newEditingHours[id] = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    });
+
+    setLocalTaskAllocations(newAllocations);
+    setEditingMemberHours(newEditingHours);
+    markDirty();
   };
 
   // Validação Reativa
@@ -280,6 +313,17 @@ const TaskDetail: React.FC = () => {
   const canEditEverything = isAdmin || isNew;
   const canEditProgressStatus = isAdmin || isOwner || isCollaborator || isNew;
 
+  const teamMembers = useMemo(() => Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])])).filter(Boolean), [formData.developerId, formData.collaboratorIds]);
+
+  const currentTotalAllocated = useMemo(() => {
+    const limit = Number(formData.estimatedHours) || 0;
+    const currentAllocations = { ...localTaskAllocations };
+    Object.entries(editingMemberHours).forEach(([uid, val]) => {
+      currentAllocations[uid] = parseTimeToDecimal(val);
+    });
+    return teamMembers.reduce((sum, id) => sum + (currentAllocations[id] || 0), 0);
+  }, [formData.estimatedHours, localTaskAllocations, editingMemberHours, teamMembers]);
+
   const getDelayDays = () => {
     if (formData.status === 'Done' || formData.status === 'Review' || !formData.estimatedDelivery) return 0;
     const today = new Date(); today.setHours(12, 0, 0, 0);
@@ -313,6 +357,13 @@ const TaskDetail: React.FC = () => {
     if (isFieldMissing('scheduledStart')) errors.push('scheduledStart');
     if (isFieldMissing('estimatedDelivery')) errors.push('estimatedDelivery');
     if (isFieldMissing('estimatedHours')) errors.push('estimatedHours');
+
+    // Validação de soma das horas alocadas
+    const limit = Number(formData.estimatedHours) || 0;
+    if (currentTotalAllocated > limit + 0.01) {
+      alert(`A soma das horas alocadas (${formatDecimalToTime(currentTotalAllocated)}) não pode ultrapassar o total da tarefa (${formatDecimalToTime(limit)}). Por favor, ajuste a distribuição da equipe.`);
+      return;
+    }
 
     if (errors.length > 0) {
       const missingFields = errors.map(e => {
@@ -824,11 +875,11 @@ const TaskDetail: React.FC = () => {
                         <label className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 block group-focus-within/fc:text-blue-500 transition-colors ${!formData.estimatedHours ? 'text-yellow-500' : 'opacity-40'}`}>Horas da Tarefa *</label>
                         <input
                           type="text"
-                          value={editingMainHours !== null ? editingMainHours : formatDecimalToTime(formData.estimatedHours || 0)}
+                          value={editingMainHours !== null ? editingMainHours : (formData.estimatedHours ? formatDecimalToTime(formData.estimatedHours) : '')}
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (!/^[0-9:.,]*$/.test(val)) return;
-                            setEditingMainHours(val);
+                            if (!/^[0-9:]*$/.test(val)) return;
+                            setEditingMainHours(handleTimeMask(val));
                             markDirty();
                           }}
                           onBlur={() => {
@@ -960,6 +1011,15 @@ const TaskDetail: React.FC = () => {
                           {Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])])).filter(Boolean).length} MEMBROS
                         </span>
                       </h4>
+                      {Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])])).filter(Boolean).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={suggestDistribution}
+                          className="mt-1 text-[7px] font-black uppercase bg-indigo-500/10 text-indigo-500 px-1.5 py-0.5 rounded-lg hover:bg-indigo-500/20 transition-all border border-indigo-500/20"
+                        >
+                          Sugerir Distribuição
+                        </button>
+                      )}
                     </div>
                   </div>
                   <button type="button" onClick={() => setIsAddMemberOpen(true)} disabled={loading} className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"><Plus size={16} /></button>
@@ -967,28 +1027,24 @@ const TaskDetail: React.FC = () => {
 
                 {/* Progress bar alocação vs estimado */}
                 {(() => {
-                  const limit = formData.estimatedHours || 0;
-                  const hasAnyAllocation = Object.values(localTaskAllocations).some(val => val > 0);
-                  const teamIds = Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])])).filter(Boolean);
-                  const totalAllocated = !hasAnyAllocation && limit > 0 ? limit : teamIds.reduce((sum, id) => sum + (localTaskAllocations[id] || 0), 0);
-
+                  const limit = Number(formData.estimatedHours) || 0;
                   if (limit === 0) return null;
 
                   let barColor = 'bg-indigo-500';
-                  if (Math.abs(totalAllocated - limit) < 0.01) barColor = 'bg-emerald-500';
-                  else if (totalAllocated > limit) barColor = 'bg-red-500 animate-pulse';
+                  if (Math.abs(currentTotalAllocated - limit) < 0.01) barColor = 'bg-emerald-500';
+                  else if (currentTotalAllocated > limit) barColor = 'bg-red-500 animate-pulse';
                   else barColor = 'bg-amber-500';
 
                   return (
                     <div className="mb-6 px-1">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[9px] font-black uppercase opacity-40">Reserva de Horas</span>
-                        <span className={`text-[10px] font-black ${totalAllocated > limit ? 'text-red-500' : 'text-[var(--text)]'}`}>
-                          {formatDecimalToTime(totalAllocated)} / {formatDecimalToTime(limit)}
+                        <span className={`text-[10px] font-black ${currentTotalAllocated > limit ? 'text-red-500' : 'text-[var(--text)]'}`}>
+                          {formatDecimalToTime(currentTotalAllocated)} / {formatDecimalToTime(limit)}
                         </span>
                       </div>
                       <div className="h-1.5 w-full bg-[var(--surface-2)] rounded-full overflow-hidden">
-                        <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, (totalAllocated / limit) * 100)}%` }}></div>
+                        <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, (currentTotalAllocated / limit) * 100)}%` }}></div>
                       </div>
                     </div>
                   );
@@ -1035,12 +1091,8 @@ const TaskDetail: React.FC = () => {
                       // Baseado no Esforço Operacional (Horas da Tarefa)
                       const totalTaskHours = Number(formData.estimatedHours) || 0;
 
-                      // Se o membro já tem uma alocação local salva, usamos ela. Caso contrário, se há horas de tarefa mas nenhum membro tem reserva, dividimos igualmente.
-                      const hasAnyAllocation = Object.values(localTaskAllocations).some(val => val > 0);
-                      let currentForecast = localTaskAllocations[id] || 0;
-                      if (!hasAnyAllocation && totalTaskHours > 0) {
-                        currentForecast = totalTaskHours / teamCount;
-                      }
+                      // Se o membro já tem uma alocação local salva, usamos ela. Caso contrário é 0.
+                      const currentForecast = localTaskAllocations[id] || 0;
 
                       const memberRealHours = taskHours.filter((h: any) => h.userId === id).reduce((sum: number, h: any) => sum + (Number(h.totalHours) || 0), 0);
                       const distributionPercent = totalTaskHours > 0 ? (currentForecast / totalTaskHours) * 100 : 0;
@@ -1094,16 +1146,35 @@ const TaskDetail: React.FC = () => {
                               <span className="text-[7px] font-black uppercase opacity-30 tracking-tighter">ALOCADO</span>
                               <input
                                 type="text"
-                                value={editingMemberHours[id] !== undefined ? editingMemberHours[id] : formatDecimalToTime(currentForecast)}
+                                value={editingMemberHours[id] !== undefined ? editingMemberHours[id] : (currentForecast > 0 ? formatDecimalToTime(currentForecast) : '')}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  if (!/^[0-9:.,]*$/.test(val)) return;
-                                  setEditingMemberHours(prev => ({ ...prev, [id]: val }));
+                                  if (!/^[0-9:]*$/.test(val)) return;
+
+                                  // Calcula o máximo de dígitos baseado no tempo total da tarefa
+                                  const mainTimeStr = formatDecimalToTime(Number(formData.estimatedHours) || 0);
+                                  const maxDigits = mainTimeStr.replace(/\D/g, '').length;
+
+                                  setEditingMemberHours(prev => ({ ...prev, [id]: handleTimeMask(val, Math.max(4, maxDigits)) }));
                                   markDirty();
                                 }}
                                 onBlur={() => {
                                   if (editingMemberHours[id] !== undefined) {
-                                    const dec = parseTimeToDecimal(editingMemberHours[id]);
+                                    const limit = Number(formData.estimatedHours) || 0;
+                                    let dec = parseTimeToDecimal(editingMemberHours[id]);
+
+                                    // Calcula quanto os OUTROS já ocuparam
+                                    const otherAllocated = teamMembers
+                                      .filter(mid => mid !== id)
+                                      .reduce((sum, mid) => sum + (localTaskAllocations[mid] || 0), 0);
+
+                                    // Se o novo valor ultrapassar o limite total, trava no máximo disponível
+                                    if (otherAllocated + dec > limit + 0.01) {
+                                      dec = Math.max(0, limit - otherAllocated);
+                                      // Opcional: Se quiser avisar o usuário que foi travado
+                                      console.log(`Allocation capped at ${dec} for user ${id}`);
+                                    }
+
                                     setLocalTaskAllocations((prev: any) => ({ ...prev, [id]: dec }));
                                     setEditingMemberHours((prev: any) => {
                                       const next = { ...prev };
@@ -1115,7 +1186,8 @@ const TaskDetail: React.FC = () => {
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') e.currentTarget.blur();
                                 }}
-                                className="text-[10px] font-black text-blue-500 bg-transparent border-none outline-none p-0 w-full text-center tabular-nums"
+                                className={`text-[10px] font-black bg-yellow-400/5 border border-dashed rounded-lg py-0.5 outline-none w-full text-center tabular-nums transition-all hover:bg-yellow-400/10 focus:bg-yellow-400/10 focus:border-yellow-400/50 ${currentForecast > 0 ? (currentTotalAllocated > (Number(formData.estimatedHours) || 0) + 0.01 ? 'border-red-500/50 text-red-500' : 'border-yellow-400/20 text-yellow-500 hover:border-yellow-400/40') : 'border-yellow-400/10 text-yellow-500/40 hover:border-yellow-400/30'}`}
+                                placeholder="00:00"
                               />
                             </div>
 
