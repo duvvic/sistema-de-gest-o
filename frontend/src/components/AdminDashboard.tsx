@@ -1507,28 +1507,26 @@ const AdminDashboard: React.FC = () => {
                         <div
                           key={partner.id}
                           onClick={() => setSelectedPartnerId(partner.id)}
-                          className="flex flex-col md:flex-row items-start md:items-center justify-between p-5 rounded-[2rem] border group transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-pointer"
-                          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                          className="flex flex-col md:flex-row items-start md:items-center justify-between p-5 rounded-[2rem] border group transition-all shadow-sm hover:shadow-lg relative overflow-hidden cursor-pointer bg-[var(--surface)] border-[var(--border)]"
                         >
-                          <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 bg-white rounded-2xl border flex items-center justify-center overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
-                              <img src={partner.logoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={partner.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }} />
+                          <div className="flex items-center gap-6 z-10">
+                            <div className="w-16 h-16 bg-white rounded-2xl border flex items-center justify-center overflow-hidden shadow-sm border-[var(--border)] p-1 shrink-0">
+                              <img src={partner.logoUrl} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt={partner.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/200x200?text=${partner.name.charAt(0)}`; }} />
                             </div>
                             <div>
-                              <h3 className="text-sm font-black uppercase tracking-[0.05em] mb-1" style={{ color: 'var(--text)' }}>{partner.name}</h3>
+                              <h3 className="text-sm font-black uppercase tracking-[0.05em] mb-1 text-[var(--text)]">{partner.name}</h3>
                               <div className="flex items-center gap-3 mt-1">
-                                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+                                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--border)]">
                                   {partner.clients.length} {partner.clients.length === 1 ? 'Cliente Vinculado' : 'Clientes Vinculados'}
                                 </span>
-                                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>
+                                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-[var(--primary-soft)] text-[var(--primary)]">
                                   {partner.tenure}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <button className="mt-4 md:mt-0 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all shadow-sm flex items-center gap-2 group-hover:bg-purple-600 group-hover:text-white group-hover:border-purple-600"
-                            style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)', borderColor: 'var(--border)' }}>
+                          <button className="z-10 mt-4 md:mt-0 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all shadow-sm flex items-center gap-2 group-hover:bg-purple-600 group-hover:text-white group-hover:border-purple-600 bg-[var(--surface-2)] text-[var(--text)] border-[var(--border)]">
                             Ver Detalhes
                             <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-all -ml-2 group-hover:ml-0" />
                           </button>
