@@ -42,6 +42,7 @@ const ClientForm: React.FC = () => {
   // Internal Management (Both)
   const [responsavel_interno_id, setResponsavelInternoId] = useState(''); // Our Account Manager/PM
   const [active, setActive] = useState(true);
+  const [doc_nic_ativo, setDocNicAtivo] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -105,6 +106,7 @@ const ClientForm: React.FC = () => {
       setPartnerId(client.partner_id || '');
       setResponsavelInternoId(client.responsavel_interno_id || '');
       setActive(client.active !== false);
+      setDocNicAtivo(client.doc_nic_ativo === true);
 
       // Map other fields from generic JSON or specific columns if they existed
       // For now we map to existing fields or state
@@ -140,6 +142,7 @@ const ClientForm: React.FC = () => {
         partner_id: tipo_cliente === 'cliente_final' ? partner_id : null,
         responsavel_interno_id: responsavel_interno_id || null,
         active,
+        doc_nic_ativo,
 
         // Mapping specific roles to the unified DB columns
         email_contato: tipo_cliente === 'parceiro' ? emailComercial : emailProduto,
@@ -291,6 +294,23 @@ const ClientForm: React.FC = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <FileText className="w-4 h-4 text-purple-500" />
                   <h3 className="text-xs font-black uppercase tracking-widest text-[var(--muted)]">Dados Contratuais</h3>
+                  {isEdit && (
+                    <div
+                      onClick={() => setActive(!active)}
+                      className={`ml-4 px-3 py-1 rounded-full cursor-pointer transition-all border flex items-center gap-2 ${active ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-white/5 border-white/10 text-white/40'}`}
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-widest">{active ? 'Ativo' : 'Inativo'}</span>
+                    </div>
+                  )}
+                  {isEdit && (
+                    <div
+                      onClick={() => setDocNicAtivo(!doc_nic_ativo)}
+                      className={`ml-4 px-3 py-1 rounded-full cursor-pointer transition-all border flex items-center gap-2 ${doc_nic_ativo ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-white/5 border-white/10 text-white/40'}`}
+                    >
+                      <FileText className={`w-3 h-3 ${doc_nic_ativo ? 'text-primary' : 'opacity-30'}`} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">DOC. NIC</span>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
                   <div className="relative">
@@ -481,6 +501,16 @@ const ClientForm: React.FC = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <FileText className="w-4 h-4 text-blue-500" />
                   <h3 className="text-xs font-black uppercase tracking-widest text-[var(--muted)]">Dados Contratuais (Opcional)</h3>
+                  <button
+                    type="button"
+                    id="doc-nic-toggle"
+                    name="doc_nic_ativo"
+                    onClick={() => setDocNicAtivo(!doc_nic_ativo)}
+                    className={`ml-4 px-3 py-1 rounded-full cursor-pointer transition-all border flex items-center gap-2 ${doc_nic_ativo ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-white/5 border-white/10 text-white/40'}`}
+                  >
+                    <FileText className={`w-3 h-3 ${doc_nic_ativo ? 'text-primary' : 'opacity-30'}`} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">DOC. NIC</span>
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
                   <div className="relative">

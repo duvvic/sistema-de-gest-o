@@ -44,6 +44,7 @@ export async function createClient(data: Partial<Client>): Promise<number> {
   if (data.responsavel_interno_id) payload.responsavel_interno_id = data.responsavel_interno_id;
   if (data.responsavel_externo) payload.responsavel_externo = data.responsavel_externo;
   if (data.email_contato) payload.email_contato = data.email_contato;
+  if (data.doc_nic_ativo !== undefined) payload.doc_nic_ativo = data.doc_nic_ativo;
 
   const result = await apiRequest<any>('/clients', {
     method: 'POST',
@@ -75,6 +76,7 @@ export async function updateClient(clientId: string, data: Partial<Client>): Pro
   if (data.responsavel_interno_id !== undefined) payload.responsavel_interno_id = data.responsavel_interno_id;
   if (data.responsavel_externo !== undefined) payload.responsavel_externo = data.responsavel_externo;
   if (data.email_contato !== undefined) payload.email_contato = data.email_contato;
+  if (data.doc_nic_ativo !== undefined) payload.doc_nic_ativo = data.doc_nic_ativo;
 
   await apiRequest(`/clients/${clientId}`, {
     method: 'PUT',

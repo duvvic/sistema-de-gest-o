@@ -12,7 +12,8 @@ const CLIENT_SELECT = [
     '"logoUrl"',
     'contato_principal',
     'tipo_cliente',
-    'partner_id'
+    'partner_id',
+    'doc_nic_ativo'
 ].join(', ');
 
 export const clientRepository = {

@@ -41,7 +41,8 @@ const ClientDetailsView: React.FC = () => {
     tipo_cliente: 'cliente_final' as 'parceiro' | 'cliente_final',
     partner_id: '',
     pais: '',
-    active: true
+    active: true,
+    doc_nic_ativo: false
   });
 
   // Searchable Partner Select States
@@ -99,7 +100,8 @@ const ClientDetailsView: React.FC = () => {
         tipo_cliente: client.tipo_cliente || 'cliente_final',
         partner_id: client.partner_id || '',
         pais: client.pais || '',
-        active: client.active ?? true
+        active: client.active ?? true,
+        doc_nic_ativo: client.doc_nic_ativo ?? false
       });
     }
   }, [client]);
@@ -221,7 +223,8 @@ const ClientDetailsView: React.FC = () => {
         cnpj: formData.cnpj,
         telefone: formData.telefone,
         pais: formData.pais,
-        active: formData.active
+        active: formData.active,
+        doc_nic_ativo: formData.doc_nic_ativo
       } as Partial<Client>);
 
       alert('Cliente atualizado com sucesso!');
@@ -490,6 +493,21 @@ const ClientDetailsView: React.FC = () => {
                         {isEditing && !formData.active && (
                           <p className="mt-2 text-[10px] font-bold text-red-400">Nota: Ao desativar, o cliente será desvinculado dos parceiros.</p>
                         )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--text-muted)' }}>Documentação</label>
+                        <button
+                          type="button"
+                          id="doc-nic-toggle-detail"
+                          name="doc_nic_ativo"
+                          onClick={() => isEditing && setFormData({ ...formData, doc_nic_ativo: !formData.doc_nic_ativo })}
+                          className={`flex items-center gap-3 px-6 py-4 rounded-2xl border-2 transition-all ${formData.doc_nic_ativo ? 'border-primary/30 bg-primary/5 text-primary' : 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--muted)]'}`}
+                          disabled={!isEditing}
+                        >
+                          <FileText className={`w-4 h-4 ${formData.doc_nic_ativo ? 'text-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]' : 'opacity-30'}`} />
+                          <span className="font-black uppercase tracking-widest text-xs">DOC. NIC</span>
+                        </button>
                       </div>
                     </div>
 

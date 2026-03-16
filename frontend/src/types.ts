@@ -41,6 +41,7 @@ export interface Client {
   responsavel_interno_id?: string;
   responsavel_externo?: string;
   email_contato?: string;
+  doc_nic_ativo?: boolean;
 }
 
 export interface Project {

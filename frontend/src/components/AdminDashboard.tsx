@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '@/controllers/useDataController';
 import { Client, Project, Task, User, TimesheetEntry, ProjectMember } from "@/types";
-import { Plus, Building2, Search as SearchIcon, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronDown, Filter, Clock, AlertCircle, AlertTriangle, ArrowUp, Trash2, DollarSign, Target, TrendingUp, BarChart, Users, User as UserIcon, Calendar, PieChart, ArrowRight, Layers, FileSpreadsheet, X, HelpCircle, Info, Handshake, ArrowLeft, Mail, Phone, ExternalLink, Activity, Zap, FolderKanban, UserCheck } from "lucide-react";
+import { Plus, Building2, Search as SearchIcon, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronDown, Filter, Clock, AlertCircle, AlertTriangle, ArrowUp, Trash2, DollarSign, Target, TrendingUp, BarChart, Users, User as UserIcon, Calendar, PieChart, ArrowRight, Layers, FileSpreadsheet, X, HelpCircle, Info, Handshake, ArrowLeft, Mail, Phone, ExternalLink, Activity, Zap, FolderKanban, UserCheck, FileText, FileCheck } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from "framer-motion";
@@ -1789,6 +1789,15 @@ const AdminDashboard: React.FC = () => {
                         navigate(`/admin/clients/${client.id}`);
                       }}
                     >
+                      {/* DOC. NIC Indicator */}
+                      {client.doc_nic_ativo && (
+                        <div className="absolute top-2 right-2 z-30 pointer-events-none">
+                          <div className="bg-emerald-600 text-white px-1.5 py-1 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.4)] border border-emerald-400 flex items-center gap-1 transition-all">
+                            <FileCheck size={10} className="stroke-[3]" />
+                            <span className="text-[8px] font-black uppercase tracking-tight">DOC NIC</span>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="w-full flex-1 bg-white dark:bg-white/95 flex items-center justify-center transition-all overflow-hidden border-b border-[var(--border)]">
                         <img
@@ -1831,6 +1840,16 @@ const AdminDashboard: React.FC = () => {
                           borderWidth: '1px'
                         }}
                       >
+                        {/* DOC. NIC Indicator for List View */}
+                        {client.doc_nic_ativo && (
+                          <div className="absolute top-0 right-10 z-20">
+                            <div className="bg-emerald-600 text-white px-2 py-0.5 rounded-b-lg shadow-[0_2px_6px_rgba(0,0,0,0.3)] border-x border-b border-white/20 flex items-center gap-1 transform hover:translate-y-0.5 transition-transform">
+                              <FileCheck size={9} className="stroke-[3]" />
+                              <span className="text-[7px] font-black uppercase tracking-widest">DOC NIC</span>
+                            </div>
+                          </div>
+                        )}
+
                         <div
                           className="flex items-center gap-5 cursor-pointer flex-1"
                           onClick={() => {

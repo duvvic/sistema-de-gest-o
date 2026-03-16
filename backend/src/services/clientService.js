@@ -62,6 +62,7 @@ export const clientService = {
             contato_principal: data.contato_principal || data.responsavel_externo || data.Responsavel || null,
             telefone: data.telefone || data.Telefone || null,
             cnpj: data.cnpj || null,
+            doc_nic_ativo: data.doc_nic_ativo ?? false,
             Criado: data.Criado || new Date().toISOString().split('T')[0]
         };
 
@@ -90,11 +91,30 @@ export const clientService = {
         const client = await clientRepository.findById(id);
         if (!client) throw new Error('Cliente não encontrado');
 
-        const payload = { ...data };
+        // Mapeamento explícito de campos do frontend para a tabela dim_clientes
+        const payload = {};
 
-        // Remover TODOS os campos que não existem na tabela dim_clientes
-        const INVALID_COLUMNS = ["E-mail", "email", "logoUrl", "Responsavel", "Telefone", "nome", "id"];
-        INVALID_COLUMNS.forEach(col => delete payload[col]);
+        if (data.name !== undefined || data.NomeCliente !== undefined)
+            payload.NomeCliente = (data.name || data.NomeCliente)?.trim();
+
+        if (data.logoUrl !== undefined || data.NewLogo !== undefined)
+            payload.NewLogo = data.logoUrl || data.NewLogo;
+
+        if (data.active !== undefined || data.ativo !== undefined)
+            payload.ativo = data.active ?? data.ativo;
+
+        if (data.pais !== undefined || data.Pais !== undefined)
+            payload.Pais = data.pais || data.Pais;
+
+        if (data.tipo_cliente !== undefined) payload.tipo_cliente = data.tipo_cliente;
+        if (data.partner_id !== undefined) payload.partner_id = data.partner_id;
+        if (data.responsavel_interno_id !== undefined) payload.responsavel_interno_id = data.responsavel_interno_id;
+        if (data.responsavel_externo !== undefined) payload.responsavel_externo = data.responsavel_externo;
+        if (data.email_contato !== undefined) payload.email_contato = data.email_contato;
+        if (data.contato_principal !== undefined) payload.contato_principal = data.contato_principal;
+        if (data.telefone !== undefined) payload.telefone = data.telefone;
+        if (data.cnpj !== undefined) payload.cnpj = data.cnpj;
+        if (data.doc_nic_ativo !== undefined) payload.doc_nic_ativo = data.doc_nic_ativo;
 
         // Se o cliente ficar desativado, ele deve sair do parceiro (unlinking automático)
         if (payload.ativo === false) {
@@ -109,10 +129,9 @@ export const clientService = {
         });
 
         const isCurrentlyActive = payload.ativo ?? client.ativo;
-        if (isCurrentlyActive && (payload.tipo_cliente === 'cliente_final' || client.tipo_cliente === 'cliente_final') && !payload.partner_id) {
-            // Só bloqueia se partner_id não estiver presente nem no payload nem no registro existente
-            const effectivePartnerId = payload.partner_id ?? client.partner_id;
-            if (!effectivePartnerId) {
+        if (isCurrentlyActive && (payload.tipo_cliente === 'cliente_final' || client.tipo_cliente === 'cliente_final')) {
+            const effectivePartnerId = payload.partner_id !== undefined ? payload.partner_id : client.partner_id;
+            if (client.tipo_cliente === 'cliente_final' && !effectivePartnerId) {
                 throw new Error('Todo cliente ATIVO deve estar obrigatoriamente vinculado a um parceiro responsável.');
             }
         }
