@@ -9,7 +9,7 @@ import { auditService } from '../audit/auditService.js';
 
 export const adminService = {
     async listClients(includeInactive) {
-        return await clientRepository.findAll(includeInactive === 'true');
+        return await clientRepository.findAll({ filters: includeInactive === 'true' ? {} : { ativo: true } });
     },
 
     async listProjects(filters) {

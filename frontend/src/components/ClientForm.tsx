@@ -41,6 +41,7 @@ const ClientForm: React.FC = () => {
 
   // Internal Management (Both)
   const [responsavel_interno_id, setResponsavelInternoId] = useState(''); // Our Account Manager/PM
+  const [active, setActive] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -103,6 +104,7 @@ const ClientForm: React.FC = () => {
       setTipoCliente(client.tipo_cliente || 'cliente_final');
       setPartnerId(client.partner_id || '');
       setResponsavelInternoId(client.responsavel_interno_id || '');
+      setActive(client.active !== false);
 
       // Map other fields from generic JSON or specific columns if they existed
       // For now we map to existing fields or state
@@ -137,6 +139,7 @@ const ClientForm: React.FC = () => {
         tipo_cliente,
         partner_id: tipo_cliente === 'cliente_final' ? partner_id : null,
         responsavel_interno_id: responsavel_interno_id || null,
+        active,
 
         // Mapping specific roles to the unified DB columns
         email_contato: tipo_cliente === 'parceiro' ? emailComercial : emailProduto,
@@ -150,11 +153,7 @@ const ClientForm: React.FC = () => {
         await updateClient(clientId, payload);
         alert('Atualizado com sucesso!');
       } else {
-        await createClient({
-          ...payload,
-          active: true,
-          // Pass extra data if your createClient supports it, or use standard fields
-        });
+        await createClient(payload);
         alert(`${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'} criado com sucesso!`);
       }
       const urlParams = new URLSearchParams(window.location.search);

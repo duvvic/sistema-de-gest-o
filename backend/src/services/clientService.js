@@ -96,6 +96,11 @@ export const clientService = {
         const INVALID_COLUMNS = ["E-mail", "email", "logoUrl", "Responsavel", "Telefone", "nome", "id"];
         INVALID_COLUMNS.forEach(col => delete payload[col]);
 
+        // Se o cliente ficar desativado, ele deve sair do parceiro (unlinking automático)
+        if (payload.ativo === false) {
+            payload.partner_id = null;
+        }
+
         // Garantir que campos vazios sejam nulos para o banco
         Object.keys(payload).forEach(key => {
             if (payload[key] === '' || payload[key] === undefined) {
@@ -103,11 +108,12 @@ export const clientService = {
             }
         });
 
-        if (payload.tipo_cliente === 'cliente_final' && !payload.partner_id) {
+        const isCurrentlyActive = payload.ativo ?? client.ativo;
+        if (isCurrentlyActive && (payload.tipo_cliente === 'cliente_final' || client.tipo_cliente === 'cliente_final') && !payload.partner_id) {
             // Só bloqueia se partner_id não estiver presente nem no payload nem no registro existente
             const effectivePartnerId = payload.partner_id ?? client.partner_id;
             if (!effectivePartnerId) {
-                throw new Error('Todo cliente deve estar obrigatoriamente vinculado a um parceiro responsável.');
+                throw new Error('Todo cliente ATIVO deve estar obrigatoriamente vinculado a um parceiro responsável.');
             }
         }
 
@@ -131,7 +137,15 @@ export const clientService = {
 
     async deleteClient(id) {
         const client = await clientRepository.findById(id);
-        if (!client) throw new Error('Cliente não encontrado');
+        if (!client) {
+            // Se não encontrar, pode ser que já esteja deletado (soft-delete filtra por padrão)
+            // Retornamos true para ser idempotente e não quebrar o frontend stale
+            return true;
+        }
+
+        // Antes de deletar (soft-delete), garantimos que ele 'saiu do parceiro' e ficou inativo
+        // Isso atende à regra de que clientes que não existem/estão inativos não devem estar vinculados.
+        await clientRepository.update(id, { partner_id: null, ativo: false });
 
         await clientRepository.delete(id);
 

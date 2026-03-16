@@ -564,7 +564,7 @@ const AdminDashboard: React.FC = () => {
     const managers = safeClients.filter(c => c.tipo_cliente === 'parceiro');
 
     return managers.map(partner => {
-      const partnerClients = safeClients.filter(c => c.partner_id?.split(',').includes(partner.id));
+      const partnerClients = safeClients.filter(c => c.partner_id?.split(',').includes(partner.id) && c.active !== false);
       const partnerProjects = safeProjects.filter(p => p.partnerId === partner.id);
 
       const totalRevenue = partnerProjects.reduce((acc, p) => acc + (p.valor_total_rs || 0), 0);

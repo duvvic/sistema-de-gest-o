@@ -40,7 +40,8 @@ const ClientDetailsView: React.FC = () => {
     telefone: '',
     tipo_cliente: 'cliente_final' as 'parceiro' | 'cliente_final',
     partner_id: '',
-    pais: ''
+    pais: '',
+    active: true
   });
 
   // Searchable Partner Select States
@@ -97,7 +98,8 @@ const ClientDetailsView: React.FC = () => {
         telefone: client.telefone || '',
         tipo_cliente: client.tipo_cliente || 'cliente_final',
         partner_id: client.partner_id || '',
-        pais: client.pais || ''
+        pais: client.pais || '',
+        active: client.active ?? true
       });
     }
   }, [client]);
@@ -218,7 +220,8 @@ const ClientDetailsView: React.FC = () => {
         partner_id: formData.partner_id || undefined,
         cnpj: formData.cnpj,
         telefone: formData.telefone,
-        pais: formData.pais
+        pais: formData.pais,
+        active: formData.active
       } as Partial<Client>);
 
       alert('Cliente atualizado com sucesso!');
@@ -300,6 +303,9 @@ const ClientDetailsView: React.FC = () => {
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[9px] font-black uppercase bg-white/10 border border-white/20 px-2 py-0.5 rounded-full tracking-widest text-white/90">
                   {client.tipo_cliente === 'parceiro' ? 'PARCEIRO' : 'CLIENTE FINAL'}
+                </span>
+                <span className={`text-[9px] font-black uppercase border px-2 py-0.5 rounded-full tracking-widest ${client.active !== false ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                  {client.active !== false ? 'ATIVO' : 'INATIVO'}
                 </span>
                 {client.pais && (
                   <span className="text-[10px] font-medium text-white/50">• {client.pais}</span>
@@ -468,6 +474,22 @@ const ClientDetailsView: React.FC = () => {
                             </button>
                           )}
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--text-muted)' }}>Status da Conta</label>
+                        <button
+                          type="button"
+                          onClick={() => isEditing && setFormData({ ...formData, active: !formData.active })}
+                          className={`flex items-center gap-3 px-6 py-4 rounded-2xl border-2 transition-all ${formData.active ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-600' : 'border-red-500/30 bg-red-500/5 text-red-600'}`}
+                          disabled={!isEditing}
+                        >
+                          <div className={`w-4 h-4 rounded-full ${formData.active ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'}`} />
+                          <span className="font-black uppercase tracking-widest text-xs">{formData.active ? 'Ativo' : 'Inativo'}</span>
+                        </button>
+                        {isEditing && !formData.active && (
+                          <p className="mt-2 text-[10px] font-bold text-red-400">Nota: Ao desativar, o cliente será desvinculado dos parceiros.</p>
+                        )}
                       </div>
                     </div>
 

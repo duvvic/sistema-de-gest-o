@@ -83,13 +83,11 @@ export async function updateClient(clientId: string, data: Partial<Client>): Pro
 }
 
 // ===========================
-// DELETE (Soft Delete - marca como inativo)
+// DELETE (Soft Delete - marca como removido do sistema)
 // ===========================
 export async function deleteClient(clientId: string): Promise<void> {
-  // Soft delete: via API chamando o update
   await apiRequest(`/clients/${clientId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ ativo: false })
+    method: 'DELETE'
   });
 }
 
