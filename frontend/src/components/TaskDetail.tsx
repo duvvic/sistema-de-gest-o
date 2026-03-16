@@ -463,7 +463,7 @@ const TaskDetail: React.FC = () => {
       if (finalTaskId) {
         // Link members to project if not already linked
         const teamIds = Array.from(new Set([payload.developerId, ...(payload.collaboratorIds || [])])).filter(Boolean);
-        for (const uid of teamIds) {
+        const autoLinkPromises = teamIds.map(async (uid) => {
           const isLinked = projectMembers.some(pm => String(pm.id_projeto) === String(formData.projectId) && String(pm.id_colaborador) === String(uid));
           if (!isLinked) {
             console.log(`Auto-linking member ${uid} to project ${formData.projectId}`);
@@ -473,7 +473,8 @@ const TaskDetail: React.FC = () => {
               console.error(`Failed to auto-link member ${uid}:`, err);
             }
           }
-        }
+        });
+        await Promise.all(autoLinkPromises);
 
         // Se houver membros alocados mas nenhuma alocação explícita (tudo zero), salva o fallback distribuído.
         const hasAnyAllocation = Object.values(finalAllocations).some(val => val > 0);

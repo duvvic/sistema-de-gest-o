@@ -13,23 +13,6 @@ export const allocationController = {
             const query = { filters: {}, in: {} };
             if (taskId) query.filters.task_id = taskId;
 
-            if (!isAdmUser(req.user)) {
-                // Se não for admin, só pode ver alocações de projetos vinculados
-                const projectIds = await projectService._getUserLinkedProjectIds(req.user);
-
-                // Precisamos descobrir quais tasks pertencem a esses projetos
-                const tasks = await taskRepository.findAll({ projectIds });
-                const allowedTaskIds = tasks.map(t => t.id);
-
-                if (taskId) {
-                    if (!allowedTaskIds.includes(Number(taskId))) {
-                        return sendSuccess(res, []);
-                    }
-                } else {
-                    query.in.task_id = allowedTaskIds;
-                }
-            }
-
             const data = await dbFindAll('task_member_allocations', query);
             return sendSuccess(res, data);
         } catch (e) {
@@ -58,6 +41,34 @@ export const allocationController = {
             return sendSuccess(res, { message: 'Allocation removed' });
         } catch (e) {
             return handleRouteError(res, e, 'AllocationController.upsert');
+        }
+    },
+
+    async bulkUpdate(req, res) {
+        try {
+            const { taskId, allocations } = req.body;
+            if (!taskId) throw new Error('taskId is required');
+
+            // 1. Delete all existing allocations for this task
+            await dbDelete('task_member_allocations', { task_id: taskId });
+
+            // 2. Insert new ones
+            const validAllocations = (allocations || []).filter(a => Number(a.reservedHours) > 0);
+
+            for (const a of validAllocations) {
+                await dbInsert('task_member_allocations', {
+                    task_id: taskId,
+                    user_id: a.userId,
+                    reserved_hours: a.reservedHours
+                });
+            }
+
+            // 3. Notify once
+            await notifyUpdates('allocations', { id: taskId, type: 'allocations_bulk_updated' });
+
+            return sendSuccess(res, { message: 'Allocations updated successfully' });
+        } catch (e) {
+            return handleRouteError(res, e, 'AllocationController.bulkUpdate');
         }
     },
 

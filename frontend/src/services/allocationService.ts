@@ -48,12 +48,14 @@ export async function saveTaskAllocations(
     taskId: string,
     allocations: { userId: string; reservedHours: number }[]
 ): Promise<void> {
-    // 1. Limpa as alocações atuais da tarefa
-    await deleteAllocationsForTask(taskId);
-
-    // 2. Insere as novas alocações uma a uma
-    const validAllocations = allocations.filter(a => a.reservedHours > 0);
-    const promises = validAllocations.map(a => upsertAllocation(taskId, a.userId, a.reservedHours));
-
-    await Promise.all(promises);
+    await apiRequest('/allocations/bulk', {
+        method: 'POST',
+        body: JSON.stringify({
+            taskId: Number(taskId),
+            allocations: allocations.map(a => ({
+                userId: Number(a.userId),
+                reservedHours: a.reservedHours
+            }))
+        })
+    });
 }
