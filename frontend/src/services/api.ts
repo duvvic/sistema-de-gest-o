@@ -33,6 +33,7 @@ export interface DbClientRow {
   contato_principal?: string | null;
   tipo_cliente?: 'parceiro' | 'cliente_final' | null;
   partner_id?: number | null;
+  doc_nic_ativo?: boolean | null;
 }
 
 export interface DbProjectRow {
@@ -105,6 +106,7 @@ export async function fetchClients(): Promise<Client[]> {
       contato_principal: row.contato_principal ?? null,
       tipo_cliente: row.tipo_cliente || 'cliente_final',
       partner_id: row.partner_id ? String(row.partner_id) : undefined,
+      doc_nic_ativo: row.doc_nic_ativo ?? false,
     } as Client;
   });
 }
