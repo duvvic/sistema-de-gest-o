@@ -198,6 +198,7 @@ const AdminDashboard: React.FC = () => {
 
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [partnerSearchTerm, setPartnerSearchTerm] = useState('');
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -610,6 +611,21 @@ const AdminDashboard: React.FC = () => {
       };
     }).sort((a, b) => b.totalRevenue - a.totalRevenue);
   }, [safeClients, safeProjects, portfolioTimesheets]);
+
+  const filteredPartnerMetrics = useMemo(() => {
+    if (!partnerSearchTerm.trim()) return partnerMetrics;
+    const term = partnerSearchTerm.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+
+    return partnerMetrics.filter(p => {
+      const partnerName = (p.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+      if (partnerName.includes(term)) return true;
+
+      return p.clients.some(c => {
+        const clientName = (c.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+        return clientName.includes(term);
+      });
+    });
+  }, [partnerMetrics, partnerSearchTerm]);
 
   // --- CONTROLE DE MÊS DA CAPACIDADE ---
   const [capacityMonth, setCapacityMonth] = useState(() => {
@@ -1235,6 +1251,28 @@ const AdminDashboard: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-3">
                 {!selectedPartnerId && (
+                  <div className="relative group/search">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within/search:text-emerald-500 transition-colors" />
+                    <input
+                      type="text"
+                      value={partnerSearchTerm}
+                      onChange={(e) => setPartnerSearchTerm(e.target.value)}
+                      placeholder="Buscar parceiro ou cliente..."
+                      className="pl-9 pr-4 py-2 w-64 border rounded-xl text-xs transition-all focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm hover:shadow-md"
+                      style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    />
+                    {partnerSearchTerm && (
+                      <button
+                        onClick={() => setPartnerSearchTerm('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                      >
+                        <X size={12} className="text-slate-400" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {!selectedPartnerId && (
                   <div className="flex p-1 rounded-xl border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
                     <button
                       onClick={() => { setPartnerViewMode('grid'); localStorage.setItem('admin_partners_view_mode', 'grid'); }}
@@ -1484,7 +1522,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                   {partnerViewMode === 'grid' ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-                      {partnerMetrics.map(partner => (
+                      {filteredPartnerMetrics.map(partner => (
                         <div
                           key={partner.id}
                           onClick={() => setSelectedPartnerId(partner.id)}
@@ -1503,7 +1541,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {partnerMetrics.map(partner => (
+                      {filteredPartnerMetrics.map(partner => (
                         <div
                           key={partner.id}
                           onClick={() => setSelectedPartnerId(partner.id)}
