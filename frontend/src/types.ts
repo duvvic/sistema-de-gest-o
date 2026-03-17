@@ -60,6 +60,12 @@ export interface Client {
   contato_celular?: string;
   contato_whatsapp?: string;
   contato_cargo?: string;
+  contato_nome_1?: string;
+  contato_email_1?: string;
+  contato_nome_2?: string;
+  contato_email_2?: string;
+  contato_celular_2?: string;
+  contato_cargo_2?: string;
 }
 
 export interface Project {

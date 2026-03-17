@@ -234,9 +234,15 @@ const ClientForm: React.FC = () => {
   // Client Specific Fields
   const [partner_id, setPartnerId] = useState('');
   const [segmento, setSegmento] = useState('');
-  const [responsavelProduto, setResponsavelProduto] = useState(''); // Product Owner at Client
-  const [emailProduto, setEmailProduto] = useState('');
-  const [responsavelTecnico, setResponsavelTecnico] = useState(''); // Tech Contact at Client (optional)
+  const [contatoNome1, setContatoNome1] = useState('');
+  const [contatoEmail1, setContatoEmail1] = useState('');
+  const [contatoCelular1, setContatoCelular1] = useState('');
+  const [contatoCargo1, setContatoCargo1] = useState('');
+  const [contatoNome2, setContatoNome2] = useState('');
+  const [contatoEmail2, setContatoEmail2] = useState('');
+  const [contatoCelular2, setContatoCelular2] = useState('');
+  const [contatoCargo2, setContatoCargo2] = useState('');
+  const [responsavelTecnico, setResponsavelTecnico] = useState(''); 
 
   // Internal Management (Both)
   const [responsavel_interno_id, setResponsavelInternoId] = useState(''); // Our Account Manager/PM
@@ -251,9 +257,6 @@ const ClientForm: React.FC = () => {
   const [enderecoCidade, setEnderecoCidade] = useState('');
   const [enderecoEstado, setEnderecoEstado] = useState('');
   const [enderecoCep, setEnderecoCep] = useState('');
-  const [contatoCelular, setContatoCelular] = useState('');
-  const [contatoWhatsapp, setContatoWhatsapp] = useState('');
-  const [contatoCargo, setContatoCargo] = useState('');
   const [pais, setPais] = useState('Brasil');
   const [telefone, setTelefone] = useState('');
   const [showAddressDetails, setShowAddressDetails] = useState(true);
@@ -412,7 +415,7 @@ const ClientForm: React.FC = () => {
 
   useEffect(() => {
     if (client) {
-      setName(client.name);
+      setName(client.name || '');
       setLogoUrl(client.logoUrl || '');
       setCnpj(client.cnpj || '');
       setTipoCliente(client.tipo_cliente || 'cliente_final');
@@ -423,7 +426,6 @@ const ClientForm: React.FC = () => {
       setPais(client.pais || 'Brasil');
       setTelefone(client.telefone || '');
 
-      // Novos Campos
       setEnderecoRua(client.endereco_rua || '');
       setEnderecoNumero(client.endereco_numero || '');
       setEnderecoComplemento(client.endereco_complemento || '');
@@ -431,9 +433,7 @@ const ClientForm: React.FC = () => {
       setEnderecoCidade(client.endereco_cidade || '');
       setEnderecoEstado(client.endereco_estado || '');
       setEnderecoCep(client.endereco_cep || '');
-      setContatoCelular(client.contato_celular || '');
-      setContatoWhatsapp(client.contato_whatsapp || '');
-      setContatoCargo(client.contato_cargo || '');
+
       setRazaoSocial(client.razao_social || '');
       setSegmento(client.segmento || '');
       setEmailFinanceiro(client.email_financeiro || '');
@@ -441,18 +441,18 @@ const ClientForm: React.FC = () => {
       setContractStart(client.data_inicio_contrato || '');
       setContractEnd(client.data_fim_contrato || '');
 
-      // Map other fields from generic JSON or specific columns if they existed
-      // For now we map to existing fields or state
-      // Assuming 'email_contato' serves as primary contact
-      if (client.tipo_cliente === 'parceiro') {
-        setEmailComercial(client.email_contato || '');
-        setResponsavelComercial(client.responsavel_externo || '');
-        // If you have extended columns in DB, map them here. 
-        // For this demo, we use the standard fields adaptable.
-      } else {
-        setEmailProduto(client.email_contato || '');
-        setResponsavelProduto(client.responsavel_externo || '');
-      }
+      setContatoNome1(client.contato_nome_1 || client.responsavel_externo || '');
+      setContatoEmail1(client.contato_email_1 || client.email_contato || '');
+      setContatoCelular1(client.contato_celular_1 || client.contato_celular || '');
+      setContatoCargo1(client.contato_cargo_1 || client.contato_cargo || '');
+      
+      setContatoNome2(client.contato_nome_2 || '');
+      setContatoEmail2(client.contato_email_2 || '');
+      setContatoCelular2(client.contato_celular_2 || '');
+      setContatoCargo2(client.contato_cargo_2 || '');
+
+      setResponsavelComercial(client.responsavel_externo || '');
+      setEmailComercial(client.email_contato || '');
     }
   }, [client]);
 
@@ -491,15 +491,18 @@ const ClientForm: React.FC = () => {
         endereco_cidade: enderecoCidade,
         endereco_estado: enderecoEstado,
         endereco_cep: enderecoCep,
-        contato_celular: contatoCelular,
-        contato_whatsapp: contatoWhatsapp,
-        contato_cargo: contatoCargo,
-        pais: pais,
-        telefone: telefone,
+        contato_nome_1: contatoNome1,
+        contato_email_1: contatoEmail1,
+        contato_celular_1: contatoCelular1,
+        contato_cargo_1: contatoCargo1,
+        contato_nome_2: contatoNome2,
+        contato_email_2: contatoEmail2,
+        contato_celular_2: contatoCelular2,
+        contato_cargo_2: contatoCargo2,
 
-        // Mapping specific roles to the unified DB columns
-        email_contato: tipo_cliente === 'parceiro' ? emailComercial : emailProduto,
-        responsavel_externo: tipo_cliente === 'parceiro' ? responsavelComercial : responsavelProduto,
+        // Mapping specific roles to the unified DB columns for compatibility
+        email_contato: tipo_cliente === 'parceiro' ? emailComercial : contatoEmail1,
+        responsavel_externo: tipo_cliente === 'parceiro' ? responsavelComercial : contatoNome1,
 
         // We could store extra metadata in a JSON column if needed, or simply extended columns
         // For now, ensuring core connectivity
@@ -573,7 +576,7 @@ const ClientForm: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-[var(--text-title)] flex items-center gap-2">
               {tipo_cliente === 'parceiro' ? <Handshake className="text-purple-500" /> : <Building2 className="text-blue-500" />}
-              {isEdit ? `Editar ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'} ` : `Novo ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'} `}
+              {isEdit ? `Editar ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'}` : `Novo ${tipo_cliente === 'parceiro' ? 'Parceiro' : 'Cliente'}`}
             </h2>
             <p className="text-[var(--text-muted)] text-sm">
               {tipo_cliente === 'parceiro'
@@ -750,11 +753,11 @@ const ClientForm: React.FC = () => {
                   </div>
                   <div className="col-span-12 md:col-span-4 lg:col-span-2">
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Celular / WhatsApp</label>
-                    <input type="text" value={contatoCelular} onChange={e => setContatoCelular(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500" placeholder="(11) 90000-0000" />
+                    <input type="text" value={contatoCelular1} onChange={e => setContatoCelular1(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500" placeholder="(11) 90000-0000" />
                   </div>
                   <div className="col-span-12 md:col-span-4 lg:col-span-2">
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Cargo / Função</label>
-                    <input type="text" value={contatoCargo} onChange={e => setContatoCargo(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500" placeholder="Ex: Diretor de Tecnologia" />
+                    <input type="text" value={contatoCargo1} onChange={e => setContatoCargo1(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500" placeholder="Ex: Diretor de Tecnologia" />
                   </div>
                   <div className="col-span-12 md:col-span-4 lg:col-span-2">
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Telefone Fixo (Opcional)</label>
@@ -990,86 +993,45 @@ const ClientForm: React.FC = () => {
                   <h3 className="text-xs font-black uppercase tracking-widest text-[var(--muted)]">Contatos e Responsáveis no Cliente</h3>
                 </div>
                 <div className="grid grid-cols-12 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
-                  <div className="col-span-12 md:col-span-7">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Ponto de Contato Principal</label>
-                    <input type="text" value={responsavelProduto} onChange={e => setResponsavelProduto(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500" placeholder="Nome do representante do cliente" />
+                  {/* Linha Contato 1 */}
+                  <div className="col-span-12 md:col-span-3">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Nome Contato 1</label>
+                    <input type="text" value={contatoNome1} onChange={e => setContatoNome1(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="Contato Principal" />
                   </div>
-                  <div className="col-span-12 md:col-span-5">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Email do Contato</label>
-                    <input type="email" value={emailProduto} onChange={e => setEmailProduto(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500" placeholder="exemplo@cliente.com" />
+                  <div className="col-span-12 md:col-span-3">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Email Contato 1</label>
+                    <input type="email" value={contatoEmail1} onChange={e => setContatoEmail1(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="email@exemplo.com" />
                   </div>
-                  <div className="col-span-12 md:col-span-4">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">WhatsApp / Celular</label>
-                    <input type="text" value={contatoCelular} onChange={e => setContatoCelular(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500" placeholder="(11) 90000-0000" />
+                  <div className="col-span-12 md:col-span-3">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Celular 1</label>
+                    <input type="text" value={contatoCelular1} onChange={e => setContatoCelular1(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="(11) 90000-0000" />
                   </div>
-                  <div className="col-span-12 md:col-span-4">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Cargo / Função do Contato</label>
-                    <input type="text" value={contatoCargo} onChange={e => setContatoCargo(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500" placeholder="Ex: Gerente de Projetos" />
+                  <div className="col-span-12 md:col-span-3">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Cargo 1</label>
+                    <input type="text" value={contatoCargo1} onChange={e => setContatoCargo1(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="Gerente, Diretor..." />
                   </div>
-                  <div className="col-span-12 md:col-span-4">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Responsável Técnico / Apoio</label>
-                    <input type="text" value={responsavelTecnico} onChange={e => setResponsavelTecnico(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500" placeholder="Nome do técnico" />
+
+                  {/* Linha Contato 2 */}
+                  <div className="col-span-12 md:col-span-3 mt-2">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Nome Contato 2</label>
+                    <input type="text" value={contatoNome2} onChange={e => setContatoNome2(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="Contato Secundário" />
+                  </div>
+                  <div className="col-span-12 md:col-span-3 mt-2">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Email Contato 2</label>
+                    <input type="email" value={contatoEmail2} onChange={e => setContatoEmail2(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="email2@exemplo.com" />
+                  </div>
+                  <div className="col-span-12 md:col-span-3 mt-2">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Celular 2</label>
+                    <input type="text" value={contatoCelular2} onChange={e => setContatoCelular2(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="(11) 90000-0000" />
+                  </div>
+                  <div className="col-span-12 md:col-span-3 mt-2">
+                    <label className="block text-[10px] font-black uppercase mb-1" style={{ color: 'var(--text-muted)' }}>Cargo 2</label>
+                    <input type="text" value={contatoCargo2} onChange={e => setContatoCargo2(toSentenceCase(cleanText(e.target.value)))} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-blue-500 font-bold" placeholder="Analista, Coordenador..." />
                   </div>
                 </div>
               </section>
 
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[var(--muted)]">Dados Contratuais (Opcional)</h3>
-                </div>
-                <div className="grid grid-cols-12 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
-                  <div className="col-span-12 md:col-span-6 lg:col-span-2 relative">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Início Vigência (Projeto Único)</label>
-                    <div className="flex items-center justify-between p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl">
-                      <input
-                        id="client-final-contract-start"
-                        name="contractStartFinal"
-                        type="date"
-                        value={contractStart}
-                        onChange={e => setContractStart(e.target.value)}
-                        className="bg-transparent outline-none text-[var(--text)] w-full cursor-pointer"
-                        onClick={(e) => { e.preventDefault(); setShowStartCalendar(!showStartCalendar); setShowEndCalendar(false); }}
-                        autoComplete="off"
-                      />
-                      <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowStartCalendar(!showStartCalendar); setShowEndCalendar(false); }} />
-                    </div>
-                    {showStartCalendar && (
-                      <CalendarPicker
-                        selectedDate={contractStart}
-                        onSelectDate={(date) => {
-                          setContractStart(date);
-                        }}
-                        onClose={() => setShowStartCalendar(false)}
-                      />
-                    )}
-                  </div>
-                  <div className="col-span-12 md:col-span-6 lg:col-span-2 relative">
-                    <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Fim Vigência (Previsão)</label>
-                    <div className="flex items-center justify-between p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl">
-                      <input
-                        id="client-final-contract-end"
-                        name="contractEndFinal"
-                        type="date"
-                        value={contractEnd}
-                        onChange={e => setContractEnd(e.target.value)}
-                        className="bg-transparent outline-none text-[var(--text)] w-full cursor-pointer"
-                        onClick={(e) => { e.preventDefault(); setShowEndCalendar(!showEndCalendar); setShowStartCalendar(false); }}
-                        autoComplete="off"
-                      />
-                      <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowEndCalendar(!showEndCalendar); setShowStartCalendar(false); }} />
-                    </div>
-                    {showEndCalendar && (
-                      <CalendarPicker
-                        selectedDate={contractEnd}
-                        onSelectDate={(date) => {
-                          setContractEnd(date);
-                        }}
-                        onClose={() => setShowEndCalendar(false)}
-                      />
-                    )}
-                  </div>
-                </div>
-              </section>
+
 
             </>
           )}
