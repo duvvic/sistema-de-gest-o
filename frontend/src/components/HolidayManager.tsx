@@ -22,6 +22,7 @@ const HolidayManager: React.FC = () => {
     const [observations, setObservations] = useState('');
     const [period, setPeriod] = useState<Holiday['period']>('integral');
     const [endTime, setEndTime] = useState('');
+    const [hours, setHours] = useState<number | string>(''); // NOVO
     const [actionLoading, setActionLoading] = useState(false);
 
     const filteredHolidays = useMemo(() => {
@@ -37,9 +38,9 @@ const HolidayManager: React.FC = () => {
         try {
             setActionLoading(true);
             if (editingId) {
-                await updateHoliday(editingId, { name, date, endDate, type, observations, period, endTime });
+                await updateHoliday(editingId, { name, date, endDate, type, observations, period, endTime, hours: hours ? Number(hours) : undefined });
             } else {
-                await createHoliday({ name, date, endDate, type, observations, period, endTime });
+                await createHoliday({ name, date, endDate, type, observations, period, endTime, hours: hours ? Number(hours) : undefined });
             }
             resetForm();
             setIsAdding(false);
@@ -61,6 +62,7 @@ const HolidayManager: React.FC = () => {
         setObservations(h.observations || '');
         setPeriod(h.period || 'integral');
         setEndTime(h.endTime || '');
+        setHours(h.hours || '');
         setIsAdding(true);
     };
 
@@ -85,12 +87,13 @@ const HolidayManager: React.FC = () => {
         setObservations('');
         setPeriod('integral');
         setEndTime('');
+        setHours('');
     };
 
     // Exportar feriados para CSV
     const handleExportHolidays = () => {
         const csvRows = [];
-        const headers = ['Nome', 'Data Início', 'Data Fim', 'Tipo', 'Período', 'Hora Fim', 'Observações'];
+        const headers = ['Nome', 'Data Início', 'Data Fim', 'Tipo', 'Período', 'Hora Fim', 'Horas', 'Observações'];
         csvRows.push(headers.join(','));
 
         (holidays || []).forEach(h => {
@@ -101,6 +104,7 @@ const HolidayManager: React.FC = () => {
                 h.type,
                 h.period || 'integral',
                 h.endTime || '',
+                h.hours || '',
                 h.observations || ''
             ];
             csvRows.push(row.join(','));
@@ -131,7 +135,7 @@ const HolidayManager: React.FC = () => {
 
                 for (const row of rows) {
                     if (!row.trim()) continue;
-                    const [name, date, endDate, type, period, endTime, observations] = row.split(',');
+                    const [name, date, endDate, type, period, endTime, hours, observations] = row.split(',');
                     await createHoliday({
                         name: name.trim(),
                         date: date.trim(),
@@ -139,6 +143,7 @@ const HolidayManager: React.FC = () => {
                         type: type.trim() as Holiday['type'],
                         period: period.trim() as Holiday['period'],
                         endTime: endTime.trim(),
+                        hours: hours ? Number(hours.trim()) : undefined,
                         observations: observations.trim()
                     });
                 }
@@ -316,12 +321,22 @@ const HolidayManager: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Hora Fim (Neste dia)</label>
-                                    <input
-                                        type="time"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--primary)] outline-none"
-                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input
+                                            type="time"
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                                        />
+                                        <input
+                                            type="number"
+                                            step="0.5"
+                                            value={hours}
+                                            onChange={(e) => setHours(e.target.value)}
+                                            placeholder="Horas"
+                                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Observações</label>
@@ -392,9 +407,10 @@ const HolidayManager: React.FC = () => {
                                 )}
                                 , {new Date(h.date + 'T12:00:00').getFullYear()}
                             </p>
-                            {h.period && h.period !== 'integral' && (
+                            {(h.period && h.period !== 'integral' || h.hours) && (
                                 <p className="text-[10px] font-black text-rose-500 uppercase mt-1">
-                                    {h.period === 'manha' ? 'Período: Manhã' : 'Período: Tarde'}
+                                    {h.period !== 'integral' && (h.period === 'manha' ? 'Período: Manã' : 'Período: Tarde')}
+                                    {h.hours && ` | ${h.hours}h`}
                                     {h.endTime && ` (Até ${h.endTime})`}
                                 </p>
                             )}

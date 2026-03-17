@@ -16,6 +16,7 @@ import {
   Activity,
   AlertTriangle
 } from 'lucide-react';
+import { Project, Task, Client, User, TimesheetEntry, ProjectMember } from '@/types';
 import * as CapacityUtils from '@/utils/capacity';
 
 const AdminDashboardBento: React.FC = () => {
@@ -23,7 +24,7 @@ const AdminDashboardBento: React.FC = () => {
   const { projects, tasks, clients, users, timesheetEntries, projectMembers } = useDataController();
   const { currentUser } = useAuth();
 
-  const isProjectIncomplete = (p: any) => {
+  const isProjectIncomplete = (p: Project) => {
     return (
       !p.name?.trim() ||
       !p.clientId ||
@@ -34,26 +35,26 @@ const AdminDashboardBento: React.FC = () => {
       !p.estimatedDelivery ||
       !p.responsibleNicLabsId ||
       !p.managerClient ||
-      projectMembers.filter(pm => String(pm.id_projeto) === p.id).length === 0
+      projectMembers.filter((pm: ProjectMember) => String(pm.id_projeto) === p.id).length === 0
     );
   };
 
   // Cálculos de métricas
   const metrics = useMemo(() => {
-    const activeProjects = projects.filter(p => p.active !== false);
+    const activeProjects = projects.filter((p: Project) => p.active !== false);
 
-    const totalHoursSold = activeProjects.reduce((acc, p) => acc + (p.horas_vendidas || 0), 0);
-    const totalHoursConsumed = timesheetEntries.reduce((acc, e) => acc + (Number(e.totalHours) || 0), 0);
+    const totalHoursSold = activeProjects.reduce((acc: number, p: Project) => acc + (p.horas_vendidas || 0), 0);
+    const totalHoursConsumed = timesheetEntries.reduce((acc: number, e: TimesheetEntry) => acc + (Number(e.totalHours) || 0), 0);
 
-    const totalRevenue = activeProjects.reduce((acc, p) => acc + (p.valor_total_rs || 0), 0);
-    const totalCost = timesheetEntries.reduce((acc, e) => {
-      const user = users.find(u => u.id === e.userId);
+    const totalRevenue = activeProjects.reduce((acc: number, p: Project) => acc + (p.valor_total_rs || 0), 0);
+    const totalCost = timesheetEntries.reduce((acc: number, e: TimesheetEntry) => {
+      const user = users.find((u: User) => u.id === e.userId);
       return acc + (e.totalHours * (user?.hourlyCost || 0));
     }, 0);
 
     const avgMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0;
 
-    const overdueTasks = tasks.filter(t => {
+    const overdueTasks = tasks.filter((t: Task) => {
       if (t.status === 'Done' || !t.estimatedDelivery) return false;
       return new Date(t.estimatedDelivery) < new Date();
     });
@@ -71,11 +72,11 @@ const AdminDashboardBento: React.FC = () => {
   // Top projetos por margem
   const topProjectsByMargin = useMemo(() => {
     return projects
-      .filter(p => p.active !== false && p.valor_total_rs && p.valor_total_rs > 0)
-      .map(p => {
-        const pTimesheets = timesheetEntries.filter(e => e.projectId === p.id);
-        const cost = pTimesheets.reduce((acc, e) => {
-          const user = users.find(u => u.id === e.userId);
+      .filter((p: Project) => p.active !== false && p.valor_total_rs && p.valor_total_rs > 0)
+      .map((p: Project) => {
+        const pTimesheets = timesheetEntries.filter((e: TimesheetEntry) => e.projectId === p.id);
+        const cost = pTimesheets.reduce((acc: number, e: TimesheetEntry) => {
+          const user = users.find((u: User) => u.id === e.userId);
           return acc + (e.totalHours * (user?.hourlyCost || 0));
         }, 0);
         const revenue = p.valor_total_rs || 0;
@@ -83,7 +84,7 @@ const AdminDashboardBento: React.FC = () => {
 
         return { ...p, margin, cost, revenue };
       })
-      .sort((a, b) => b.margin - a.margin)
+      .sort((a: any, b: any) => b.margin - a.margin)
       .slice(0, 5);
   }, [projects, timesheetEntries, users]);
 
@@ -92,7 +93,7 @@ const AdminDashboardBento: React.FC = () => {
     const weeks: Record<string, number> = {};
     const now = new Date();
 
-    timesheetEntries.forEach(entry => {
+    timesheetEntries.forEach((entry: TimesheetEntry) => {
       const entryDate = new Date(entry.date);
       const weekAgo = Math.floor((now.getTime() - entryDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
 
@@ -110,16 +111,16 @@ const AdminDashboardBento: React.FC = () => {
   // Projetos atrasados ou com problemas
   const criticalProjects = useMemo(() => {
     return projects
-      .filter(p => p.active !== false)
-      .map(p => {
-        const pTasks = tasks.filter(t => t.projectId === p.id);
-        const pTimesheets = timesheetEntries.filter(e => e.projectId === p.id);
+      .filter((p: Project) => p.active !== false)
+      .map((p: Project) => {
+        const pTasks = tasks.filter((t: Task) => t.projectId === p.id);
+        const pTimesheets = timesheetEntries.filter((e: TimesheetEntry) => e.projectId === p.id);
 
-        const hoursConsumed = pTimesheets.reduce((acc, e) => acc + (Number(e.totalHours) || 0), 0);
+        const hoursConsumed = pTimesheets.reduce((acc: number, e: TimesheetEntry) => acc + (Number(e.totalHours) || 0), 0);
         const hoursSold = p.horas_vendidas || 0;
         const overBudget = hoursConsumed > hoursSold;
 
-        const overdueTasks = pTasks.filter(t => {
+        const overdueTasks = pTasks.filter((t: Task) => {
           if (t.status === 'Done' || !t.estimatedDelivery) return false;
           return new Date(t.estimatedDelivery) < new Date();
         });
@@ -131,8 +132,8 @@ const AdminDashboardBento: React.FC = () => {
           criticalLevel: overBudget || overdueTasks.length > 0
         };
       })
-      .filter(p => p.criticalLevel)
-      .sort((a, b) => b.overdueTasks - a.overdueTasks)
+      .filter((p: any) => p.criticalLevel)
+      .sort((a: any, b: any) => b.overdueTasks - a.overdueTasks)
       .slice(0, 5);
   }, [projects, tasks, timesheetEntries]);
 
@@ -225,8 +226,8 @@ const AdminDashboardBento: React.FC = () => {
         {/* Top Projetos por Margem */}
         <BentoCard title="Top Projetos por Margem" icon={Target} size="medium">
           <BentoList
-            items={topProjectsByMargin.map(p => {
-              const client = clients.find(c => c.id === p.clientId);
+            items={topProjectsByMargin.map((p: any) => {
+              const client = clients.find((c: Client) => c.id === p.clientId);
               return {
                 id: p.id,
                 title: p.name,
@@ -278,7 +279,7 @@ const AdminDashboardBento: React.FC = () => {
                   Projetos Críticos:
                 </div>
                 <BentoList
-                  items={criticalProjects.slice(0, 3).map(p => ({
+                  items={criticalProjects.slice(0, 3).map((p: any) => ({
                     id: p.id,
                     title: p.name,
                     subtitle: p.overBudget ? '💰 Acima do budget' : `⚠️ ${p.overdueTasks} tarefas atrasadas`,
@@ -295,7 +296,7 @@ const AdminDashboardBento: React.FC = () => {
           <div className="space-y-3">
             <div>
               <div className="text-2xl font-bold mb-1" style={{ color: 'var(--text)' }}>
-                {users.filter(u => u.active !== false).length}
+                {users.filter((u: User) => u.active !== false).length}
               </div>
               <div className="text-sm" style={{ color: 'var(--text-2)' }}>
                 Colaboradores ativos
@@ -306,7 +307,7 @@ const AdminDashboardBento: React.FC = () => {
                 Média de horas/pessoa
               </div>
               <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>
-                {Math.round(metrics.totalHoursConsumed / users.filter(u => u.active !== false).length)}h
+                {Math.round(metrics.totalHoursConsumed / users.filter((u: User) => u.active !== false).length)}h
               </div>
             </div>
           </div>
@@ -333,14 +334,14 @@ const AdminDashboardBento: React.FC = () => {
 
         {/* Grid de Cards de Projetos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {projects.filter(p => p.active !== false).slice(0, 8).map(project => {
-            const client = clients.find(c => c.id === project.clientId);
-            const pTasks = tasks.filter(t => t.projectId === project.id);
+          {projects.filter((p: Project) => p.active !== false).slice(0, 8).map((project: Project) => {
+            const client = clients.find((c: Client) => c.id === project.clientId);
+            const pTasks = tasks.filter((t: Task) => t.projectId === project.id);
             const progress = CapacityUtils.calculateProjectWeightedProgress(project.id, tasks as any);
 
-            const pTimesheets = timesheetEntries.filter(e => e.projectId === project.id);
-            const cost = pTimesheets.reduce((acc, e) => {
-              const user = users.find(u => u.id === e.userId);
+            const pTimesheets = timesheetEntries.filter((e: TimesheetEntry) => e.projectId === project.id);
+            const cost = pTimesheets.reduce((acc: number, e: TimesheetEntry) => {
+              const user = users.find((u: User) => u.id === e.userId);
               return acc + (e.totalHours * (user?.hourlyCost || 0));
             }, 0);
             const revenue = project.valor_total_rs || 0;

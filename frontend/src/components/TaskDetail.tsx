@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataController } from '@/controllers/useDataController';
-import { Task, Status, Priority, Impact, TaskMemberAllocation } from '@/types';
+import { Task, Status, Priority, Impact, TaskMemberAllocation, User, Project, ProjectMember, Client, TimesheetEntry } from '@/types';
 import {
   ArrowLeft, Save, Calendar, Clock, Users, StickyNote, CheckSquare, Plus, Trash2, X, CheckCircle, Activity, Zap, AlertTriangle, Briefcase, Info, Target, LayoutGrid, Shield, FileSpreadsheet, Crown, ExternalLink, Flag, Lock, Pencil, Search, ChevronDown, Check, CalendarDays
 } from 'lucide-react';
@@ -15,6 +15,7 @@ import { getUserStatus } from '@/utils/userStatus';
 import * as CapacityUtils from '@/utils/capacity';
 import CalendarPicker from './CalendarPicker';
 import * as allocationService from '@/services/allocationService';
+import WorkingDaysModal from './WorkingDaysModal';
 import { ALL_ADMIN_ROLES } from '@/constants/roles';
 
 const TaskDetail: React.FC = () => {
@@ -32,6 +33,15 @@ const TaskDetail: React.FC = () => {
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [workingDaysModal, setWorkingDaysModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    details: CapacityUtils.WorkingDayDetail[];
+  }>({
+    isOpen: false,
+    title: '',
+    details: []
+  });
 
   const CARGO_RANK: Record<string, number> = {
     'ESTAGIARIO': 1, 'ESTAGIÁRIO': 1, 'ESTAGIARIA': 1, 'ESTAGIÁRIA': 1,
@@ -167,7 +177,7 @@ const TaskDetail: React.FC = () => {
     markDirty();
   };
 
-  const currentProject = projects.find(p => p.id === formData.projectId);
+  const currentProject = projects.find((p: Project) => p.id === formData.projectId);
 
   // Validação Reativa
   const isFieldMissing = (field: string) => {
@@ -464,8 +474,8 @@ const TaskDetail: React.FC = () => {
         // Link members to project if not already linked
         const teamIds = Array.from(new Set([payload.developerId, ...(payload.collaboratorIds || [])])).filter(Boolean);
         const autoLinkPromises = teamIds.map(async (uid) => {
-          const isLinked = projectMembers.some(pm => String(pm.id_projeto) === String(formData.projectId) && String(pm.id_colaborador) === String(uid));
-          if (!isLinked) {
+          const pm = projectMembers.find((member: ProjectMember) => String(member.id_projeto) === String(formData.projectId) && String(member.id_colaborador) === String(formData.developerId));
+          if (!pm) { // Changed from `!isLinked` to `!pm` to ensure syntactic correctness
             console.log(`Auto-linking member ${uid} to project ${formData.projectId}`);
             try {
               await addProjectMember(String(formData.projectId), String(uid), 100);
@@ -575,6 +585,26 @@ const TaskDetail: React.FC = () => {
     return users.filter((u: any) => u.active !== false);
   }, [users]);
 
+  const openWorkingDaysBreakdown = () => {
+    if (!formData.scheduledStart || !formData.estimatedDelivery) {
+      alert('Selecione as datas de início e entrega para ver o detalhamento.');
+      return;
+    }
+
+    const breakdown = CapacityUtils.getWorkingDaysBreakdown(
+      formData.scheduledStart,
+      formData.estimatedDelivery,
+      holidays,
+      [] // No longer considering absences for task working days calculation
+    );
+
+    setWorkingDaysModal({
+      isOpen: true,
+      title: `Dias Úteis: ${formData.title || 'Tarefa'}`,
+      details: breakdown
+    });
+  };
+
   const handleEditTimesheet = (id: string) => {
     navigate(`/timesheet/${id}`);
   };
@@ -592,7 +622,7 @@ const TaskDetail: React.FC = () => {
 
   if (!isNew && !task) return <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>Tarefa não encontrada.</div>;
 
-  const taskProject = projects.find((p: any) => p.id === (task?.projectId || formData.projectId));
+  const taskProject = projects.find((p: Project) => p.id === (task?.projectId || formData.projectId));
   const taskClient = clients.find((c: any) => c.id === (task?.clientId || formData.clientId || taskProject?.clientId));
 
   return (
@@ -753,14 +783,25 @@ const TaskDetail: React.FC = () => {
                 </div>
                 <div className="space-y-3 flex-1">
                   <div>
-                    <label className={`text-[9px] font-black uppercase mb-1 flex items-center gap-2 opacity-60 ${hasError('developerId') ? 'text-yellow-500' : ''}`}>
-                      <Crown size={10} className={formData.developerId ? "text-yellow-500" : ""} /> Responsável *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={`text-[9px] font-black uppercase flex items-center gap-2 opacity-60 ${hasError('developerId') ? 'text-yellow-500' : ''}`}>
+                        <Crown size={10} className={formData.developerId ? "text-yellow-500" : ""} /> Responsável *
+                      </label>
+                      {!isNew && (formData.collaboratorIds || []).filter((id: string) => id !== formData.developerId).length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setTransferModalOpen(true)}
+                          className="text-[7px] font-black uppercase text-indigo-500 hover:text-indigo-600 bg-indigo-500/5 px-1.5 py-0.5 rounded transition-colors"
+                        >
+                          Transferir
+                        </button>
+                      )}
+                    </div>
                     <select
                       value={formData.developerId || ''}
                       onChange={e => {
                         const selectedId = e.target.value;
-                        const u = users.find(usr => usr.id === selectedId);
+                        const u = users.find((usr: User) => usr.id === selectedId);
                         const oldResponsibleId = formData.developerId;
 
                         let updatedCollabs = [...(formData.collaboratorIds || [])];
@@ -788,7 +829,7 @@ const TaskDetail: React.FC = () => {
                       disabled={!formData.projectId}
                     >
                       <option value="">Selecione...</option>
-                      {responsibleUsers.map(u => <option key={u.id} value={u.id}>{u.name.split(' (')[0]}</option>)}
+                      {responsibleUsers.map((u: User) => <option key={u.id} value={u.id}>{u.name.split(' (')[0]}</option>)}
                     </select>
                   </div>
                   <div>
@@ -806,33 +847,31 @@ const TaskDetail: React.FC = () => {
               {/* CARD 3: ESFORÇO */}
               <div className="p-4 rounded-[24px] border shadow-sm flex flex-col justify-between h-[290px] group hover:shadow-md transition-all duration-300" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">
-                      <Clock size={12} /> Esforço
-                    </div>
-                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform"><Activity size={12} /></div>
+                  <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">
+                    <Clock size={12} /> Esforço
                   </div>
+                  <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform"><Activity size={12} /></div>
+                </div>
 
-                  <div className="space-y-3">
-                    {/* Big Display for Hours Spent */}
-                    <div className="flex items-center justify-between p-4 rounded-2xl border border-emerald-500/20 shadow-inner group/effort relative overflow-hidden" style={{ backgroundColor: 'rgba(16,185,129,0.08)' }}>
-                      <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/effort:scale-125 transition-transform duration-700" />
-                      <div className="flex items-center gap-2.5 relative z-10">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                          <Clock size={18} />
-                        </div>
-                        <div className="flex flex-col">
-                          <p className="text-[8px] font-black uppercase text-emerald-500/60 tracking-[0.2em] mb-0.5">Horas Apontadas (Total)</p>
-                          <p className="text-2xl font-black tabular-nums text-emerald-500 leading-none">{formatDecimalToTime(actualHoursSpent)}</p>
-                        </div>
+                <div className="space-y-3">
+                  {/* Big Display for Hours Spent */}
+                  <div className="flex items-center justify-between p-4 rounded-2xl border border-emerald-500/20 shadow-inner group/effort relative overflow-hidden" style={{ backgroundColor: 'rgba(16,185,129,0.08)' }}>
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/effort:scale-125 transition-transform duration-700" />
+                    <div className="flex items-center gap-2.5 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                        <Clock size={18} />
+                      </div>
+                      <div className="flex flex-col">
+                        <p className="text-[8px] font-black uppercase text-emerald-500/60 tracking-[0.2em] mb-0.5">Horas Apontadas (Total)</p>
+                        <p className="text-2xl font-black tabular-nums text-emerald-500 leading-none">{formatDecimalToTime(actualHoursSpent)}</p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Weight and Forecast Boxes */}
-                    <div className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--border)] shadow-sm">
-                      <p className="text-[8px] font-black uppercase opacity-40 tracking-[0.2em] mb-1.5">Peso Projeto</p>
-                      <p className="text-base font-black text-indigo-500 tabular-nums leading-none">{taskWeight.weight.toFixed(1)}%</p>
-                    </div>
+                  {/* Weight and Forecast Boxes */}
+                  <div className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--border)] shadow-sm">
+                    <p className="text-[8px] font-black uppercase opacity-40 tracking-[0.2em] mb-1.5">Peso Projeto</p>
+                    <p className="text-base font-black text-indigo-500 tabular-nums leading-none">{taskWeight.weight.toFixed(1)}%</p>
                   </div>
                 </div>
 
@@ -859,7 +898,7 @@ const TaskDetail: React.FC = () => {
                         markDirty();
                       }}
                       className="w-full h-1 rounded-full appearance-none cursor-pointer accent-indigo-600 shadow-inner border border-transparent"
-                      style={{ backgroundColor: 'var(--surface-3)' }}
+                      style={{ backgroundColor: 'var(--surface-2)' }}
                     />
                   </div>
                 </div>
@@ -972,12 +1011,16 @@ const TaskDetail: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="col-span-1 p-3 rounded-2xl border transition-colors bg-[var(--surface-hover)] border-[var(--border)] flex flex-col justify-between">
-                          <label className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 block opacity-40">Dias Úteis</label>
+                        <div
+                          className="col-span-1 p-3 rounded-2xl border transition-all bg-[var(--surface-hover)] border-[var(--border)] flex flex-col justify-between cursor-pointer hover:bg-blue-500/5 hover:border-blue-500/30 group/wd"
+                          onClick={openWorkingDaysBreakdown}
+                          title="Clique para ver o detalhamento do calendário"
+                        >
+                          <label className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 block opacity-40 group-hover/wd:text-blue-500 transition-colors">Dias Úteis</label>
                           <div className="flex items-center gap-2 mt-auto">
-                            <CalendarDays size={14} className="text-blue-500/40" />
+                            <CalendarDays size={14} className="text-blue-500/40 group-hover/wd:text-blue-500 transition-colors" />
                             <span className="text-lg font-black tabular-nums text-blue-500 leading-none">
-                              {CapacityUtils.getWorkingDaysInRange(formData.scheduledStart || '', formData.estimatedDelivery || '', holidays, absences.filter((a: any) => String(a.userId) === String(formData.developerId)))}
+                              {CapacityUtils.getWorkingDaysInRange(formData.scheduledStart || '', formData.estimatedDelivery || '', holidays, [])}
                             </span>
                           </div>
                         </div>
@@ -1130,8 +1173,8 @@ const TaskDetail: React.FC = () => {
                 <div className="flex-1 overflow-y-auto space-y-1.5 pr-2 custom-scrollbar">
                   {Array.from(new Set([formData.developerId, ...(formData.collaboratorIds || [])]))
                     .filter(Boolean)
-                    .map(id => {
-                      const u = users.find(usr => usr.id === id);
+                    .map((id: string) => {
+                      const u = users.find((usr: User) => usr.id === id);
                       if (!u) return null;
 
 
@@ -1197,7 +1240,7 @@ const TaskDetail: React.FC = () => {
                               </div>
                             </div>
                             {id !== formData.developerId && (
-                              <button type="button" onClick={() => setFormData({ ...formData, collaboratorIds: formData.collaboratorIds?.filter(cid => cid !== id) })} className="p-1.5 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover/member:opacity-100"><X size={14} /></button>
+                              <button type="button" onClick={() => setFormData({ ...formData, collaboratorIds: formData.collaboratorIds?.filter((cid: string) => cid !== id) })} className="p-1.5 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover/member:opacity-100"><X size={14} /></button>
                             )}
                           </div>
 
@@ -1333,8 +1376,8 @@ const TaskDetail: React.FC = () => {
                               <td className="py-5 px-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-9 h-9 rounded-xl bg-[var(--bg)] border border-[var(--border)] overflow-hidden flex items-center justify-center text-[11px] font-black shadow-sm">
-                                    {users.find((u: any) => u.id === entry.userId)?.avatarUrl ? (
-                                      <img src={users.find((u: any) => u.id === entry.userId)?.avatarUrl} className="w-full h-full object-cover" />
+                                    {users.find((u: User) => u.id === entry.userId)?.avatarUrl ? (
+                                      <img src={users.find((u: User) => u.id === entry.userId)?.avatarUrl} className="w-full h-full object-cover" />
                                     ) : (
                                       <span style={{ color: 'var(--muted)' }}>{entry.userName?.substring(0, 2).toUpperCase()}</span>
                                     )}
@@ -1394,9 +1437,44 @@ const TaskDetail: React.FC = () => {
                 )
               }
             </div>
+
           </fieldset>
         </form>
-      </div >
+      </div>
+
+      <WorkingDaysModal
+        isOpen={workingDaysModal.isOpen}
+        title={workingDaysModal.title}
+        details={workingDaysModal.details}
+        onClose={() => setWorkingDaysModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <TransferResponsibilityModal
+        isOpen={transferModalOpen}
+        currentOwner={{
+          id: formData.developerId || '',
+          name: users.find((u: any) => String(u.id) === String(formData.developerId))?.name || 'Responsável'
+        }}
+        collaborators={(formData.collaboratorIds || [])
+          .filter((id: string) => String(id) !== String(formData.developerId))
+          .map((id: string) => ({
+            id,
+            name: users.find((u: any) => String(u.id) === String(id))?.name || 'Membro'
+          }))}
+        onConfirm={(newOwnerId: string) => {
+          const oldOwnerId = formData.developerId;
+          const u = users.find((usr: User) => usr.id === newOwnerId);
+          setFormData((prev: Task) => ({
+            ...prev,
+            developerId: newOwnerId,
+            developer: u?.name || '',
+            collaboratorIds: Array.from(new Set([...(prev.collaboratorIds || []), oldOwnerId])).filter(Boolean)
+          }));
+          setTransferModalOpen(false);
+          markDirty();
+        }}
+        onCancel={() => setTransferModalOpen(false)}
+      />
 
       <ConfirmationModal
         isOpen={!!deleteConfirmation}
@@ -1522,7 +1600,7 @@ const TaskDetail: React.FC = () => {
                         (!isForaDoFluxo || isAlreadySelected) &&
                         (u.name.toLowerCase().includes(memberSearch.toLowerCase()) || (u.cargo || '').toLowerCase().includes(memberSearch.toLowerCase()));
                     })
-                    .sort((a, b) => {
+                    .sort((a: User, b: User) => {
                       const aSelected = formData.collaboratorIds?.includes(a.id) || a.id === formData.developerId;
                       const bSelected = formData.collaboratorIds?.includes(b.id) || b.id === formData.developerId;
 

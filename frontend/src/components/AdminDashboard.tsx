@@ -1,16 +1,18 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useDataController } from '@/controllers/useDataController';
-import { Client, Project, Task, User, TimesheetEntry, ProjectMember } from "@/types";
+import { useDataController } from '../controllers/useDataController';
+import { Project, Task, Role, TimesheetEntry, ProjectMember, Client, User, TaskMemberAllocation, Absence } from '../types';
 import { Plus, Building2, Search as SearchIcon, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronDown, Filter, Clock, AlertCircle, AlertTriangle, ArrowUp, Trash2, DollarSign, Target, TrendingUp, BarChart, Users, User as UserIcon, Calendar, PieChart, ArrowRight, Layers, FileSpreadsheet, X, HelpCircle, Info, Handshake, ArrowLeft, Mail, Phone, ExternalLink, Activity, Zap, FolderKanban, UserCheck, FileText, FileCheck } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from "framer-motion";
-import * as CapacityUtils from '@/utils/capacity';
-import { formatDecimalToTime, formatDateBR } from '@/utils/normalizers';
-import { getProjectStatusByTimeline, getProjectStatusColor } from '@/utils/projectStatus';
+import * as CapacityUtils from '../utils/capacity';
+import { formatDecimalToTime, formatDateBR } from '../utils/normalizers';
+import { getProjectStatusByTimeline, getProjectStatusColor } from '../utils/projectStatus';
 import CapacityDocumentation from "./CapacityDocumentation";
+import WorkingDaysModal from "./WorkingDaysModal";
+import { WorkingDayDetail } from '../utils/capacity';
 
 type SortOption = 'recent' | 'alphabetical' | 'creation';
 
@@ -48,8 +50,8 @@ const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navi
   const isContinuous = p.project_type === 'continuous';
 
   const costToday = pTimesheets.reduce((acc: number, e: TimesheetEntry) => {
-    const u = users.find(user => user.id === e.userId);
-    return acc + (e.totalHours * (u?.hourlyCost || 0));
+    const u = users.find((user: User) => user.id === e.userId);
+    return acc + (Number(e.totalHours) * (u?.hourlyCost || 0));
   }, 0);
 
   const progress = CapacityUtils.calculateProjectWeightedProgress(p.id, projectTasks);
@@ -177,7 +179,7 @@ const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navi
       <td className={`p-3 text-[11px] font-black font-mono bg-amber-500/5 ${margin < 15 && !isContinuous ? 'text-red-500' : isContinuous ? 'text-slate-400' : margin < 30 ? 'text-amber-500' : 'text-emerald-500'}`}>
         {isContinuous ? '--' : Math.round(margin) + '%'}
       </td>
-    </tr >
+    </tr>
   );
 });
 
@@ -248,6 +250,41 @@ const AdminDashboard: React.FC = () => {
     return !p.name?.trim();
   };
 
+  const [workingDaysModal, setWorkingDaysModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    details: WorkingDayDetail[];
+  }>({
+    isOpen: false,
+    title: '',
+    details: []
+  });
+
+  const openWorkingDaysBreakdown = (user: User) => {
+    // Pegar o range do mês atual da capacidade
+    const [year, month] = capacityMonth.split('-');
+    const firstDay = `${year}-${month}-01`;
+    const lastDayDate = new Date(Number(year), Number(month), 0);
+    const lastDay = `${year}-${month}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+    // Ausências do colaborador
+    const userAbsences = (absences || []).filter(a => String(a.userId) === String(user.id));
+
+    const breakdown = CapacityUtils.getWorkingDaysBreakdown(
+      firstDay,
+      lastDay,
+      holidays || [],
+      userAbsences,
+      user.dailyAvailableHours || 8
+    );
+
+    setWorkingDaysModal({
+      isOpen: true,
+      title: `CAPACIDADE - ${user.name.toUpperCase()} `,
+      details: breakdown
+    });
+  };
+
   const toggleViewMode = (mode: 'grid' | 'list' | 'tasks') => {
     setViewMode(mode);
     localStorage.setItem('admin_clients_view_mode', mode);
@@ -282,7 +319,7 @@ const AdminDashboard: React.FC = () => {
       // Incluir se for cliente final OU se tiver projetos ativos vinculados
       // ID comparison with String() for safety
       const hasProjects = safeProjects.some((p: Project) => String(p.clientId) === String(c.id));
-      const isNicLabs = c.name?.toLowerCase().includes('nic-labs');
+      const isNicLabs = (c.name || '').toLowerCase().includes('nic-labs');
       return c.active !== false && (c.tipo_cliente !== 'parceiro' || hasProjects || isNicLabs);
     }),
     [safeClients, safeProjects]
@@ -295,7 +332,7 @@ const AdminDashboard: React.FC = () => {
     const pbc: Record<string, Project[]> = {};
     const rtd: Record<string, number> = {};
 
-    safeTasks.forEach(t => {
+    safeTasks.forEach((t: Task) => {
       if (!tbc[t.clientId]) tbc[t.clientId] = [];
       tbc[t.clientId].push(t);
 
@@ -303,7 +340,7 @@ const AdminDashboard: React.FC = () => {
       if (d > (rtd[t.clientId] || 0)) rtd[t.clientId] = d;
     });
 
-    safeProjects.forEach(p => {
+    safeProjects.forEach((p: Project) => {
       if (!pbc[p.clientId]) pbc[p.clientId] = [];
       pbc[p.clientId].push(p);
     });
@@ -382,7 +419,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     // Aplicar Ordenação
-    return result.sort((a, b) => {
+    return result.sort((a: Client, b: Client) => {
       switch (sortBy) {
         case 'alphabetical':
           return a.name.localeCompare(b.name);
@@ -409,9 +446,9 @@ const AdminDashboard: React.FC = () => {
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
 
   const filteredExecutiveProjects = useMemo(() => {
-    return safeProjects.filter(p => {
-      const partnerName = safeClients.find(c => c.id === p.partnerId)?.name || 'N/A';
-      const clientName = safeClients.find(c => c.id === p.clientId)?.name || '-';
+    return safeProjects.filter((p: Project) => {
+      const partnerName = safeClients.find((c: Client) => c.id === p.partnerId)?.name || 'N/A';
+      const clientName = safeClients.find((c: Client) => c.id === p.clientId)?.name || '-';
 
       if (executiveFilters.partner.length > 0 && !executiveFilters.partner.includes(partnerName)) return false;
       if (executiveFilters.client.length > 0 && !executiveFilters.client.includes(clientName)) return false;
@@ -432,9 +469,9 @@ const AdminDashboard: React.FC = () => {
   // Valores únicos para os dropdowns de filtro, considerando filtros já aplicados nas OUTRAS colunas
   const uniqueValues = useMemo(() => {
     const getValuesForFilter = (activeFilter: 'partner' | 'client' | 'project') => {
-      const filteredByOthers = safeProjects.filter(p => {
-        const partnerName = safeClients.find(c => c.id === p.partnerId)?.name || 'N/A';
-        const clientName = safeClients.find(c => c.id === p.clientId)?.name || '-';
+      const filteredByOthers = safeProjects.filter((p: Project) => {
+        const partnerName = safeClients.find((c: Client) => c.id === p.partnerId)?.name || 'N/A';
+        const clientName = safeClients.find((c: Client) => c.id === p.clientId)?.name || '-';
 
         if (activeFilter !== 'partner' && executiveFilters.partner.length > 0 && !executiveFilters.partner.includes(partnerName)) return false;
         if (activeFilter !== 'client' && executiveFilters.client.length > 0 && !executiveFilters.client.includes(clientName)) return false;
@@ -443,9 +480,9 @@ const AdminDashboard: React.FC = () => {
         return true;
       });
 
-      if (activeFilter === 'partner') return Array.from(new Set(filteredByOthers.map(p => safeClients.find(c => c.id === p.partnerId)?.name || 'N/A'))).sort();
-      if (activeFilter === 'client') return Array.from(new Set(filteredByOthers.map(p => safeClients.find(c => c.id === p.clientId)?.name || '-'))).sort();
-      return Array.from(new Set(filteredByOthers.map(p => p.name))).sort();
+      if (activeFilter === 'partner') return Array.from(new Set(filteredByOthers.map((p: Project) => safeClients.find((c: Client) => c.id === p.partnerId)?.name || 'N/A'))).sort();
+      if (activeFilter === 'client') return Array.from(new Set(filteredByOthers.map((p: Project) => safeClients.find((c: Client) => c.id === p.clientId)?.name || '-'))).sort();
+      return Array.from(new Set(filteredByOthers.map((p: Project) => p.name))).sort();
     };
 
     return {
@@ -475,21 +512,21 @@ const AdminDashboard: React.FC = () => {
     const clientToProjects: Record<string, Project[]> = {};
     const userCostMap: Record<string, number> = {};
 
-    users.forEach(u => {
+    users.forEach((u: User) => {
       userCostMap[u.id] = u.hourlyCost || 0;
     });
 
-    safeProjects.forEach(p => {
+    safeProjects.forEach((p: Project) => {
       if (!clientToProjects[p.clientId]) clientToProjects[p.clientId] = [];
       clientToProjects[p.clientId].push(p);
     });
 
-    safeTasks.forEach(t => {
+    safeTasks.forEach((t: Task) => {
       if (!tasksByProj[t.projectId]) tasksByProj[t.projectId] = [];
       tasksByProj[t.projectId].push(t);
     });
 
-    (portfolioTimesheets || []).forEach(e => {
+    (portfolioTimesheets || []).forEach((e: TimesheetEntry) => {
       if (!timesByProj[e.projectId]) timesByProj[e.projectId] = [];
       timesByProj[e.projectId].push(e);
     });
@@ -511,14 +548,14 @@ const AdminDashboard: React.FC = () => {
     let totalPortfolioEstimatedHours = 0;
     let totalPortfolioWeightedProgress = 0;
 
-    projectsToUse.forEach(project => {
+    projectsToUse.forEach((project: Project) => {
       totalBudgeted += project.valor_total_rs || 0;
 
       const projectTasks = groupedData.tasksByProj[project.id] || [];
       const pTimesheets = groupedData.timesByProj[project.id] || [];
 
       // Custo do Projeto - O(n) now
-      const projectCost = pTimesheets.reduce((acc, entry) => {
+      const projectCost = pTimesheets.reduce((acc: number, entry: TimesheetEntry) => {
         const hourlyCost = groupedData.userCostMap[entry.userId] || 0;
         return acc + (entry.totalHours * hourlyCost);
       }, 0);
@@ -530,7 +567,7 @@ const AdminDashboard: React.FC = () => {
       totalPortfolioWeightedProgress += projectProgress;
 
       // Previsão para terminar
-      const remainingHours = projectTasks.reduce((acc, t) => acc + ((t.estimatedHours || 0) * (1 - (t.progress || 0) / 100)), 0);
+      const remainingHours = projectTasks.reduce((acc: number, t: Task) => acc + ((t.estimatedHours || 0) * (1 - (t.progress || 0) / 100)), 0);
       totalForecastedFinish += (remainingHours * 150);
     });
 
@@ -549,8 +586,8 @@ const AdminDashboard: React.FC = () => {
       globalProgress,
       activeProjectsCount: projectsToUse.filter(p => p.status !== 'Concluído').length,
       delayedTasksCount: (() => {
-        const activeProjIds = new Set(projectsToUse.map(p => p.id));
-        return safeTasks.filter(t =>
+        const activeProjIds = new Set(projectsToUse.map((p: Project) => p.id));
+        return safeTasks.filter((t: Task) =>
           activeProjIds.has(t.projectId) &&
           (t.daysOverdue ?? 0) > 0 &&
           t.status !== 'Done'
@@ -584,16 +621,16 @@ const AdminDashboard: React.FC = () => {
         else {
           const years = Math.floor(diffMonths / 12);
           const months = diffMonths % 12;
-          tenureStr = months === 0 ? `${years} ano(s)` : `${years}a ${months}m`;
+          tenureStr = months === 0 ? `${years} ano(s)` : `${years}a ${months} m`;
         }
       }
 
-      const partnerTasksCount = safeTasks.filter(t =>
-        partnerProjects.some(p => p.id === t.projectId)
+      const partnerTasksCount = safeTasks.filter((t: Task) =>
+        partnerProjects.some((p: Project) => p.id === t.projectId)
       ).length;
 
       const totalProgress = partnerProjects.length > 0
-        ? partnerProjects.reduce((acc, p) => {
+        ? partnerProjects.reduce((acc: number, p: Project) => {
           const pProg = CapacityUtils.calculateProjectWeightedProgress(p.id, safeTasks);
           return acc + pProg;
         }, 0) / partnerProjects.length
@@ -772,7 +809,7 @@ const AdminDashboard: React.FC = () => {
     <div className="h-full flex flex-col p-0 overflow-y-auto custom-scrollbar" style={{ backgroundColor: 'var(--bg)' }}>
       {/* NAVEGAÇÃO DE SUB-MENUS (VERSÃO COMPACTA & FUNCIONAL) */}
       <div className="px-6 py-2 bg-[var(--bg)] sticky top-0 z-50 border-b border-[var(--border)]">
-        <div className="flex bg-[var(--surface-2)] p-1 rounded-lg border border-[var(--border)] w-fit">
+        <div className="flex gap-1 bg-[var(--surface-2)] p-1 rounded-lg border border-[var(--border)] w-fit">
           <button
             onClick={() => setActiveTab('operacional')}
             className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${activeTab === 'operacional'
@@ -877,7 +914,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <p className="text-xl font-black text-blue-500 font-mono">{Math.round(executiveMetrics.globalProgress)}%</p>
                       <div className="w-12 h-1.5 rounded-full overflow-hidden hidden xl:block" style={{ backgroundColor: 'var(--surface-hover)' }}>
-                        <div className="h-full bg-blue-500" style={{ width: `${executiveMetrics.globalProgress}%` }} />
+                        <div className="h-full bg-blue-500" style={{ width: `${executiveMetrics.globalProgress}% ` }} />
                       </div>
                     </div>
                   </div>
@@ -1055,7 +1092,7 @@ const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                  {filteredExecutiveProjects.map((p, idx) => (
+                  {filteredExecutiveProjects.map((p: Project, idx: number) => (
                     <ExecutiveRow
                       key={p.id}
                       p={p}
@@ -1148,7 +1185,7 @@ const AdminDashboard: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {subset.map(res => (
+                        {subset.map((res: any) => (
                           <tr
                             key={res.id}
                             onClick={() => {
@@ -1173,12 +1210,19 @@ const AdminDashboard: React.FC = () => {
                             <td className="py-3 px-2 text-center text-[10px] font-bold text-blue-500 border-b border-r border-[var(--border)]">
                               {formatDecimalToTime(res.assigned)}
                             </td>
-                            <td className="py-3 px-2 text-center border-b border-r border-[var(--border)]">
+                            <td
+                              className="py-3 px-2 text-center border-b border-r border-[var(--border)] cursor-pointer hover:bg-blue-500/5 transition-all active:scale-95"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                const userObj = users.find((u: User) => String(u.id) === String(res.id));
+                                if (userObj) openWorkingDaysBreakdown(userObj);
+                              }}
+                            >
                               <div className="flex flex-col items-center">
                                 <span className="text-[10px] font-black text-[var(--text)]">
                                   {formatDecimalToTime(res.capacity)}
                                 </span>
-                                {false && res.releaseDate && (
+                                {res.releaseDate && (
                                   <div className="flex flex-col gap-0 items-center">
                                     <span className={`text-[7px] font-black uppercase tracking-tighter leading-none ${res.releaseDate.isSaturated ? 'text-red-500' : 'text-amber-500'}`}>
                                       {res.releaseDate.isSaturated ? 'SATURADO' : 'Previsão Realista'}
@@ -1190,7 +1234,14 @@ const AdminDashboard: React.FC = () => {
                                 )}
                               </div>
                             </td>
-                            <td className="py-3 px-3 text-right font-black border-b border-[var(--border)]">
+                            <td
+                              className="py-3 px-3 text-right font-black border-b border-[var(--border)] cursor-pointer hover:bg-[var(--surface-hover)] transition-all active:scale-95"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                const userObj = users.find((u: User) => String(u.id) === String(res.id));
+                                if (userObj) openWorkingDaysBreakdown(userObj);
+                              }}
+                            >
                               <span className={`text-[11px] ${res.available < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                                 {formatDecimalToTime(res.available)}
                               </span>
@@ -1242,7 +1293,7 @@ const AdminDashboard: React.FC = () => {
                   </h1>
                   <p className="text-xs font-bold uppercase tracking-widest mt-0.5" style={{ color: 'var(--muted)' }}>
                     {!selectedPartnerId
-                      ? `${partnerMetrics.length} Parceiros • ${partnerMetrics.reduce((acc, p) => acc + p.clients.length, 0)} Clientes Vinculados`
+                      ? `${partnerMetrics.length} Parceiros • ${partnerMetrics.reduce((acc: number, p: any) => acc + p.clients.length, 0)} Clientes Vinculados`
                       : 'Visão Detalhada do Parceiro'
                     }
                   </p>
@@ -1364,14 +1415,14 @@ const AdminDashboard: React.FC = () => {
                                   >
                                     <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center border-b border-[var(--border)]" style={{ backgroundColor: 'var(--bg-elevated)' }}>
                                       <img src={client.logoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={client.name} onError={(e) => { e.currentTarget.src = `https://placehold.co/100x100?text=${client.name.charAt(0)}`; }} />
-                                    </div>
+                                    </div >
                                     <div className="shrink-0 px-4 py-3 flex flex-col justify-center text-center shadow-inner" style={{ backgroundColor: 'var(--surface-2)' }}>
                                       <h4 className="text-[11px] font-black uppercase tracking-tight truncate mb-0.5" style={{ color: 'var(--text)' }}>{client.name}</h4>
                                       <div className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest">
                                         {clientProjects.length} {clientProjects.length === 1 ? 'PROJETO' : 'PROJETOS'}
                                       </div>
                                     </div>
-                                  </div>
+                                  </div >
                                 );
                               })}
                               <button
@@ -1381,142 +1432,146 @@ const AdminDashboard: React.FC = () => {
                                 <Plus className="w-8 h-8 mb-2 opacity-30 group-hover:scale-110 transition-transform" />
                                 <span className="text-[9px] font-black uppercase tracking-widest">Adicionar Cliente</span>
                               </button>
-                            </div>
+                            </div >
                           )}
 
-                          {partnerSubTab === 'resumo' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-in fade-in duration-300">
-                              {/* Coluna de Métricas */}
-                              <div className="md:col-span-2 space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="p-6 rounded-[2rem] border bg-emerald-500/10 border-emerald-500/30">
-                                    <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Faturamento Total</p>
-                                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
-                                      {partner.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-                                    </p>
-                                  </div>
-                                  <div className="p-6 rounded-[2rem] border bg-blue-500/10 border-blue-500/30">
-                                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">Carga Horária</p>
-                                    <p className="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono">
-                                      {Math.round(partner.totalHours)}<span className="text-xs ml-0.5 opacity-50 uppercase">h</span>
-                                    </p>
-                                  </div>
-                                  <div className="p-6 rounded-[2rem] border bg-purple-500/10 border-purple-500/30">
-                                    <p className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">SLA / Entregabilidade</p>
-                                    <p className="text-2xl font-black text-purple-700 dark:text-purple-300 font-mono">{Math.round(partner.averageProgress)}%</p>
-                                  </div>
-                                  <div className="p-6 rounded-[2rem] border bg-amber-500/10 border-amber-500/30">
-                                    <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">Volume de Tarefas</p>
-                                    <p className="text-2xl font-black text-amber-700 dark:text-amber-300 font-mono">{partner.taskCount}</p>
-                                  </div>
-                                </div>
-
-                                <div className="p-8 rounded-[2.5rem] border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-                                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--muted)] mb-6 flex items-center gap-2">
-                                    <TrendingUp size={14} className="text-purple-500" /> Histórico de Performance
-                                  </h4>
-                                  <div className="h-40 flex items-center justify-center border-2 border-dashed rounded-2xl text-[10px] font-bold uppercase tracking-widest" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                                    Gráfico de Crescimento (Em breve)
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Coluna de Contato Rápido */}
-                              <div className="space-y-6">
-                                <div className="p-6 rounded-[2.5rem] border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                  <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 pb-2 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border-muted)' }}>Gestão do Relacionamento</h4>
-                                  <div className="space-y-8">
-                                    <div className="flex items-center gap-4">
-                                      <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-500/20">
-                                        {internalResp?.name?.charAt(0) || 'N'}
-                                      </div>
-                                      <div>
-                                        <p className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-0.5">Gestor Interno</p>
-                                        <p className="text-sm font-black text-[var(--textTitle)]">{internalResp?.name || 'Não atribuído'}</p>
-                                      </div>
+                          {
+                            partnerSubTab === 'resumo' && (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-in fade-in duration-300">
+                                {/* Coluna de Métricas */}
+                                <div className="md:col-span-2 space-y-6">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-6 rounded-[2rem] border bg-emerald-500/10 border-emerald-500/30">
+                                      <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Faturamento Total</p>
+                                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
+                                        {partner.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                                      </p>
                                     </div>
+                                    <div className="p-6 rounded-[2rem] border bg-blue-500/10 border-blue-500/30">
+                                      <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">Carga Horária</p>
+                                      <p className="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono">
+                                        {Math.round(partner.totalHours)}<span className="text-xs ml-0.5 opacity-50 uppercase">h</span>
+                                      </p>
+                                    </div>
+                                    <div className="p-6 rounded-[2rem] border bg-purple-500/10 border-purple-500/30">
+                                      <p className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">SLA / Entregabilidade</p>
+                                      <p className="text-2xl font-black text-purple-700 dark:text-purple-300 font-mono">{Math.round(partner.averageProgress)}%</p>
+                                    </div>
+                                    <div className="p-6 rounded-[2rem] border bg-amber-500/10 border-amber-500/30">
+                                      <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">Volume de Tarefas</p>
+                                      <p className="text-2xl font-black text-amber-700 dark:text-amber-300 font-mono">{partner.taskCount}</p>
+                                    </div>
+                                  </div>
 
-                                    <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--border-muted)' }}>
-                                      <div>
-                                        <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest mb-3">Ponto Focal Parceiro</p>
-                                        <div className="flex items-center gap-3 mb-3">
-                                          <div className="p-2 rounded-lg icon-box" style={{ color: 'var(--text-muted)' }}><UserIcon size={16} /></div>
-                                          <p className="text-[13px] font-black text-[var(--textTitle)]">{partner.responsavel_externo || 'Não informado'}</p>
-                                        </div>
-                                        <div className="flex flex-col gap-2 pl-11">
-                                          {partner.email_contato && (
-                                            <span className="flex items-center gap-2 text-[11px] font-bold text-blue-600"><Mail size={12} /> {partner.email_contato}</span>
-                                          )}
-                                          {partner.telefone && (
-                                            <span className="flex items-center gap-2 text-[11px] font-bold text-[var(--text-2)]"><Phone size={12} /> {partner.telefone}</span>
-                                          )}
-                                        </div>
-                                      </div>
+                                  <div className="p-8 rounded-[2.5rem] border" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--muted)] mb-6 flex items-center gap-2">
+                                      <TrendingUp size={14} className="text-purple-500" /> Histórico de Performance
+                                    </h4>
+                                    <div className="h-40 flex items-center justify-center border-2 border-dashed rounded-2xl text-[10px] font-bold uppercase tracking-widest" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                                      Gráfico de Crescimento (Em breve)
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            </div>
-                          )}
 
-                          {partnerSubTab === 'info' && (
-                            <div className="max-w-4xl animate-in fade-in duration-300">
-                              <div className="p-10 rounded-[2.5rem] border shadow-sm space-y-10" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                                <div className="flex justify-between items-start">
-                                  <div className="space-y-1">
-                                    <h4 className="text-xl font-black text-[var(--textTitle)]">Detalhes do Registro</h4>
-                                    <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">Informações cadastrais completas do parceiro</p>
-                                  </div>
-                                  <button
-                                    onClick={() => navigate(`/admin/clients/${partner.id}/edit?returnTo=${partner.id}&sub=info`)}
-                                    className="px-6 py-2.5 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg"
-                                    style={{ backgroundColor: 'var(--primary)', boxShadow: '0 4px 14px 0 var(--shadow)' }}
-                                  >
-                                    <Edit2 size={12} /> Editar
-                                  </button>
-                                </div>
+                                {/* Coluna de Contato Rápido */}
+                                <div className="space-y-6">
+                                  <div className="p-6 rounded-[2.5rem] border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 pb-2 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border-muted)' }}>Gestão do Relacionamento</h4>
+                                    <div className="space-y-8">
+                                      <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-500/20">
+                                          {internalResp?.name?.charAt(0) || 'N'}
+                                        </div>
+                                        <div>
+                                          <p className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-0.5">Gestor Interno</p>
+                                          <p className="text-sm font-black text-[var(--textTitle)]">{internalResp?.name || 'Não atribuído'}</p>
+                                        </div>
+                                      </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                                  <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome do Parceiro</p>
-                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.name}</p>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">CNPJ</p>
-                                    <p className="text-sm font-mono font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.cnpj || '---'}</p>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Email Principal</p>
-                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.email_contato || '---'}</p>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Telefone</p>
-                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.telefone || '---'}</p>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Responsável Externo</p>
-                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.responsavel_externo || '---'}</p>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Gestor da Conta (Interno)</p>
-                                    <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{internalResp?.name || '---'}</p>
-                                  </div>
-                                </div>
-
-                                <div className="pt-6">
-                                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4">Identidade Visual</p>
-                                  <div className="w-32 h-32 rounded-2xl border-2 border-dashed p-4 flex items-center justify-center" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
-                                    <img src={partner.logoUrl} className="max-w-full max-h-full object-contain mix-blend-multiply" alt="Logo" />
+                                      <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--border-muted)' }}>
+                                        <div>
+                                          <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-widest mb-3">Ponto Focal Parceiro</p>
+                                          <div className="flex items-center gap-3 mb-3">
+                                            <div className="p-2 rounded-lg icon-box" style={{ color: 'var(--text-muted)' }}><UserIcon size={16} /></div>
+                                            <p className="text-[13px] font-black text-[var(--textTitle)]">{partner.responsavel_externo || 'Não informado'}</p>
+                                          </div>
+                                          <div className="flex flex-col gap-2 pl-11">
+                                            {partner.email_contato && (
+                                              <span className="flex items-center gap-2 text-[11px] font-bold text-blue-600"><Mail size={12} /> {partner.email_contato}</span>
+                                            )}
+                                            {partner.telefone && (
+                                              <span className="flex items-center gap-2 text-[11px] font-bold text-[var(--text-2)]"><Phone size={12} /> {partner.telefone}</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                            )
+                          }
+
+                          {
+                            partnerSubTab === 'info' && (
+                              <div className="max-w-4xl animate-in fade-in duration-300">
+                                <div className="p-10 rounded-[2.5rem] border shadow-sm space-y-10" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                                  <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                      <h4 className="text-xl font-black text-[var(--textTitle)]">Detalhes do Registro</h4>
+                                      <p className="text-xs font-bold text-[var(--muted)] uppercase tracking-widest">Informações cadastrais completas do parceiro</p>
+                                    </div>
+                                    <button
+                                      onClick={() => navigate(`/admin/clients/${partner.id}/edit?returnTo=${partner.id}&sub=info`)}
+                                      className="px-6 py-2.5 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg"
+                                      style={{ backgroundColor: 'var(--primary)', boxShadow: '0 4px 14px 0 var(--shadow)' }}
+                                    >
+                                      <Edit2 size={12} /> Editar
+                                    </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                                    <div className="space-y-1.5">
+                                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome do Parceiro</p>
+                                      <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.name}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">CNPJ</p>
+                                      <p className="text-sm font-mono font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.cnpj || '---'}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Email Principal</p>
+                                      <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.email_contato || '---'}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Telefone</p>
+                                      <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.telefone || '---'}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Responsável Externo</p>
+                                      <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{partner.responsavel_externo || '---'}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Gestor da Conta (Interno)</p>
+                                      <p className="text-sm font-bold text-[var(--textTitle)] border-b pb-2" style={{ borderColor: 'var(--border-muted)' }}>{internalResp?.name || '---'}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-6">
+                                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4">Identidade Visual</p>
+                                    <div className="w-32 h-32 rounded-2xl border-2 border-dashed p-4 flex items-center justify-center" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+                                      <img src={partner.logoUrl} className="max-w-full max-h-full object-contain mix-blend-multiply" alt="Logo" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
+                        </div >
+                      </div >
                     );
                   })()}
-                </div>
+                </div >
               ) : (
                 /* VIEW LISTAGEM GERAL DE PARCEIROS */
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1576,8 +1631,8 @@ const AdminDashboard: React.FC = () => {
                   )}
                 </div>
               )}
-            </div>
-          </motion.div>
+            </div >
+          </motion.div >
         )
       }
 
@@ -2754,6 +2809,13 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <WorkingDaysModal
+        isOpen={workingDaysModal.isOpen}
+        onClose={() => setWorkingDaysModal(prev => ({ ...prev, isOpen: false }))}
+        title={workingDaysModal.title}
+        details={workingDaysModal.details}
+      />
     </div >
   );
 };

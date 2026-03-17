@@ -32,6 +32,7 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
     const [observations, setObservations] = useState('');
     const [period, setPeriod] = useState<Absence['period']>('integral');
     const [endTime, setEndTime] = useState('');
+    const [hours, setHours] = useState<number | string>(''); // NOVO
     const [loading, setLoading] = useState(false);
 
     // Filter absences for the effective user
@@ -79,7 +80,8 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                 status: isAdmin ? 'aprovada_gestao' : 'sugestao',
                 observations,
                 period,
-                endTime: endTime ? endTime : undefined
+                endTime: endTime ? endTime : undefined,
+                hours: hours ? Number(hours) : undefined
             };
 
             if (editingAbsenceId) {
@@ -108,6 +110,7 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
         setObservations(absence.observations || '');
         setPeriod(absence.period || 'integral');
         setEndTime(absence.endTime || '');
+        setHours(absence.hours || '');
         setIsAdding(true);
     };
 
@@ -118,6 +121,7 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
         setObservations('');
         setPeriod('integral');
         setEndTime('');
+        setHours('');
         setEditingAbsenceId(null);
     };
 
@@ -257,13 +261,25 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase text-[var(--muted)] mb-2">Hora Fim (No último dia)</label>
-                                    <input
-                                        type="time"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[var(--primary)] outline-none"
-                                    />
+                                    <label className="block text-[10px] font-black uppercase text-[var(--muted)] mb-2">Esforço Reduzido (Horas)</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input
+                                            type="time"
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                                            title="Hora Fim (Se aplicável)"
+                                        />
+                                        <input
+                                            type="number"
+                                            step="0.5"
+                                            value={hours}
+                                            onChange={(e) => setHours(e.target.value)}
+                                            placeholder="Horas"
+                                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                                        />
+                                    </div>
+                                    <p className="text-[9px] font-bold text-[var(--muted)] mt-1 uppercase italic">* Se preenchido, prioriza as horas sobre o período.</p>
                                 </div>
                             </div>
 
@@ -437,9 +453,12 @@ const AbsenceManager: React.FC<AbsenceManagerProps> = ({ targetUserId, targetUse
                                             </div>
                                         </div>
 
-                                        {(absence.period && absence.period !== 'integral') && (
-                                            <div className="flex justify-between text-[10px] font-black uppercase text-[var(--primary)] mt-1">
-                                                <span>Período: {absence.period}</span>
+                                        {(absence.period && absence.period !== 'integral' || absence.hours) && (
+                                            <div className="flex flex-col gap-1 text-[10px] font-black uppercase text-[var(--primary)] mt-1">
+                                                <div className="flex justify-between">
+                                                    <span>Período: {absence.period}</span>
+                                                    {absence.hours && <span>Dedução: {absence.hours}h</span>}
+                                                </div>
                                                 {absence.endTime && <span>Até: {absence.endTime} (no último dia)</span>}
                                             </div>
                                         )}

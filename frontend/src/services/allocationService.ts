@@ -28,8 +28,8 @@ export async function upsertAllocation(
     const result = await apiRequest<any>('/allocations', {
         method: 'POST',
         body: JSON.stringify({
-            task_id: Number(taskId),
-            user_id: Number(userId),
+            task_id: taskId,
+            user_id: userId,
             reserved_hours: reservedHours,
         })
     });
@@ -51,9 +51,9 @@ export async function saveTaskAllocations(
     await apiRequest('/allocations/bulk', {
         method: 'POST',
         body: JSON.stringify({
-            taskId: Number(taskId),
+            taskId: taskId,
             allocations: allocations.map(a => ({
-                userId: Number(a.userId),
+                userId: a.userId,
                 reservedHours: a.reservedHours
             }))
         })

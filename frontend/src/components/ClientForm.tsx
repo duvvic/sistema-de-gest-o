@@ -253,16 +253,44 @@ const ClientForm: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
                   <div className="col-span-2">
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Nome Fantasia (Parceiro) *</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl font-bold text-[var(--text)] focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ex: Tech Solutions Consultoria" required />
+                    <input
+                      id="client-name"
+                      name="name"
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl font-bold text-[var(--text)] focus:ring-2 focus:ring-purple-500 outline-none"
+                      placeholder="Ex: Tech Solutions Consultoria"
+                      autoComplete="organization"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">CNPJ</label>
-                    <input type="text" value={cnpj} onChange={e => setCnpj(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:ring-2 focus:ring-purple-500 outline-none" placeholder="00.000.000/0001-00" />
+                    <input
+                      id="client-cnpj"
+                      name="cnpj"
+                      type="text"
+                      value={cnpj}
+                      onChange={e => setCnpj(e.target.value)}
+                      className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:ring-2 focus:ring-purple-500 outline-none"
+                      placeholder="00.000.000/0001-00"
+                      autoComplete="off"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">URL do Logo</label>
                     <div className="flex gap-2">
-                      <input type="text" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} className="flex-1 p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:ring-2 focus:ring-purple-500 outline-none" placeholder="https://..." />
+                      <input
+                        id="client-logo-url"
+                        name="logoUrl"
+                        type="text"
+                        value={logoUrl}
+                        onChange={e => setLogoUrl(e.target.value)}
+                        className="flex-1 p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:ring-2 focus:ring-purple-500 outline-none"
+                        placeholder="https://..."
+                        autoComplete="off"
+                      />
                       {logoUrl && <img src={logoUrl} alt="Preview" className="w-12 h-12 object-contain bg-white rounded-lg border p-1" />}
                     </div>
                   </div>
@@ -277,11 +305,29 @@ const ClientForm: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
                   <div>
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Responsável Comercial</label>
-                    <input type="text" value={responsavelComercial} onChange={e => setResponsavelComercial(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500" placeholder="Nome do contato principal" />
+                    <input
+                      id="client-external-manager"
+                      name="responsavelComercial"
+                      type="text"
+                      value={responsavelComercial}
+                      onChange={e => setResponsavelComercial(e.target.value)}
+                      className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500"
+                      placeholder="Nome do contato principal"
+                      autoComplete="name"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Email Comercial</label>
-                    <input type="email" value={emailComercial} onChange={e => setEmailComercial(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500" placeholder="contato@consultoria.com" />
+                    <input
+                      id="client-external-email"
+                      name="emailComercial"
+                      type="email"
+                      value={emailComercial}
+                      onChange={e => setEmailComercial(e.target.value)}
+                      className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] outline-none focus:border-purple-500"
+                      placeholder="contato@consultoria.com"
+                      autoComplete="email"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Email Financeiro (Faturamento)</label>
@@ -317,11 +363,14 @@ const ClientForm: React.FC = () => {
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Início Vigência</label>
                     <div className="flex items-center justify-between p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl">
                       <input
+                        id="client-contract-start"
+                        name="contractStart"
                         type="date"
                         value={contractStart}
                         onChange={e => setContractStart(e.target.value)}
                         className="bg-transparent outline-none text-[var(--text)] w-full cursor-pointer"
                         onClick={(e) => { e.preventDefault(); setShowStartCalendar(!showStartCalendar); setShowEndCalendar(false); }}
+                        autoComplete="off"
                       />
                       <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowStartCalendar(!showStartCalendar); setShowEndCalendar(false); }} />
                     </div>
@@ -339,11 +388,14 @@ const ClientForm: React.FC = () => {
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Fim Vigência (Opcional)</label>
                     <div className="flex items-center justify-between p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl">
                       <input
+                        id="client-contract-end"
+                        name="contractEnd"
                         type="date"
                         value={contractEnd}
                         onChange={e => setContractEnd(e.target.value)}
                         className="bg-transparent outline-none text-[var(--text)] w-full cursor-pointer"
                         onClick={(e) => { e.preventDefault(); setShowEndCalendar(!showEndCalendar); setShowStartCalendar(false); }}
+                        autoComplete="off"
                       />
                       <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowEndCalendar(!showEndCalendar); setShowStartCalendar(false); }} />
                     </div>
@@ -373,7 +425,17 @@ const ClientForm: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
                   <div className="col-span-2">
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Nome da Empresa *</label>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl font-bold text-[var(--text)] focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: Indústria XYZ S.A." required />
+                    <input
+                      id="client-name-final"
+                      name="name"
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl font-bold text-[var(--text)] focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="Ex: Indústria XYZ S.A."
+                      autoComplete="organization"
+                      required
+                    />
                   </div>
                   <div className="col-span-2">
                     {/* VINCULO COM PARCEIRO - CRUCIAL */}
@@ -407,12 +469,15 @@ const ClientForm: React.FC = () => {
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
                               <input
+                                id="partner-search"
+                                name="partnerSearch"
                                 autoFocus
                                 type="text"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 placeholder="Procurar parceiro por nome..."
                                 className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm font-medium outline-none focus:border-blue-500"
+                                autoComplete="off"
                               />
                             </div>
                           </div>
@@ -517,11 +582,14 @@ const ClientForm: React.FC = () => {
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Início Vigência (Projeto Único)</label>
                     <div className="flex items-center justify-between p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl">
                       <input
+                        id="client-final-contract-start"
+                        name="contractStartFinal"
                         type="date"
                         value={contractStart}
                         onChange={e => setContractStart(e.target.value)}
                         className="bg-transparent outline-none text-[var(--text)] w-full cursor-pointer"
                         onClick={(e) => { e.preventDefault(); setShowStartCalendar(!showStartCalendar); setShowEndCalendar(false); }}
+                        autoComplete="off"
                       />
                       <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowStartCalendar(!showStartCalendar); setShowEndCalendar(false); }} />
                     </div>
@@ -539,11 +607,14 @@ const ClientForm: React.FC = () => {
                     <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Fim Vigência (Previsão)</label>
                     <div className="flex items-center justify-between p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl">
                       <input
+                        id="client-final-contract-end"
+                        name="contractEndFinal"
                         type="date"
                         value={contractEnd}
                         onChange={e => setContractEnd(e.target.value)}
                         className="bg-transparent outline-none text-[var(--text)] w-full cursor-pointer"
                         onClick={(e) => { e.preventDefault(); setShowEndCalendar(!showEndCalendar); setShowStartCalendar(false); }}
+                        autoComplete="off"
                       />
                       <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowEndCalendar(!showEndCalendar); setShowStartCalendar(false); }} />
                     </div>
@@ -571,6 +642,8 @@ const ClientForm: React.FC = () => {
             <div className="p-6 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm">
               <label className="block text-xs font-bold text-[var(--text-muted)] mb-1 uppercase">Gestor da Conta / PMO Responsável</label>
               <select
+                id="client-internal-manager"
+                name="responsavel_interno_id"
                 value={responsavel_interno_id}
                 onChange={e => setResponsavelInternoId(e.target.value)}
                 className="w-full p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:ring-2 focus:ring-[var(--brand)] outline-none"

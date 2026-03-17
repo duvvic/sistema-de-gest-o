@@ -454,18 +454,21 @@ const AdminMonitoringView: React.FC = () => {
                 a.userId === user.id &&
                 (a.status === 'finalizada_dp' || a.status === 'aprovada_rh')
             );
-            const absentToday = userAbsences.find((a: Absence) => {
-                const start = new Date(a.startDate + 'T00:00:00');
-                start.setHours(0, 0, 0, 0);
-                const end = new Date(a.endDate + 'T23:59:59');
-                end.setHours(23, 59, 59, 999);
-                return now >= start && now <= end;
-            });
+            // Calcular dedução total hoje
+            const todayDeduction = userAbsences.reduce((acc, a) => {
+                if (todayStr >= a.startDate && todayStr <= a.endDate) {
+                    return acc + (a.hours ?? (user.dailyAvailableHours || 8));
+                }
+                return acc;
+            }, 0);
+
+            const isFullyAbsent = todayDeduction >= (user.dailyAvailableHours || 8);
+            const isPartiallyAbsent = todayDeduction > 0 && todayDeduction < (user.dailyAvailableHours || 8);
 
             // Hierarquia: Ausente > Atrasado > Apontado (após 16h) > Iniciado > Estudando > Livre
-            if (absentToday) {
+            if (isFullyAbsent) {
                 status = 'AUSENTE';
-                absenceData = absentToday;
+                absenceData = userAbsences.find(a => todayStr >= a.startDate && todayStr <= a.endDate);
             } else if (delayedTasksForStatus.length > 0) {
                 status = 'ATRASADO';
             } else if (isAfter16h && hasTimesheetToday) {
@@ -476,7 +479,7 @@ const AdminMonitoringView: React.FC = () => {
                 status = 'ESTUDANDO';
             }
 
-            return { ...user, boardStatus: status, absenceData };
+            return { ...user, boardStatus: status, absenceData, isPartiallyAbsent, todayDeduction };
         });
 
         return members;
@@ -963,7 +966,14 @@ const AdminMonitoringView: React.FC = () => {
                                                         })()
                                                     ) : member.boardStatus}
                                                 </span>
-                                                <div className={`w-1.5 h-1.5 2xl:w-2.5 2xl:h-2.5 rounded-full ${dotColors[member.boardStatus]} shadow-md shrink-0`} />
+                                                <div className="flex items-center gap-1.5">
+                                                    {(member as any).isPartiallyAbsent && (
+                                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-600 text-[6px] 2xl:text-[8px] font-black uppercase">
+                                                            <AlertCircle size={8} /> -{(member as any).todayDeduction}h
+                                                        </div>
+                                                    )}
+                                                    <div className={`w-1.5 h-1.5 2xl:w-2.5 2xl:h-2.5 rounded-full ${dotColors[member.boardStatus]} shadow-md shrink-0`} />
+                                                </div>
                                             </div>
                                         </div>
                                     );

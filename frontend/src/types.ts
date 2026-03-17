@@ -165,6 +165,7 @@ export interface Absence {
   observations?: string;
   period?: 'integral' | 'manha' | 'tarde' | 'noite';
   endTime?: string;
+  hours?: number; // NOVO: Horas de ausência (especialmente p/ atestado)
   createdAt?: string;
 }
 
@@ -212,4 +213,5 @@ export interface Holiday {
   observations?: string;
   period?: 'integral' | 'manha' | 'tarde' | 'noite';
   endTime?: string;
+  hours?: number; // NOVO: Horas de folga (ex: ponto facultativo meio período)
 }

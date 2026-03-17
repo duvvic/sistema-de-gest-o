@@ -148,6 +148,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       color: typeConfig.color,
       bg: typeConfig.bg,
       period: h.period,
+      hours: h.hours,
       endTime: h.endTime,
       isLastDay: dateStr === (h.endDate || h.date)
     };
@@ -248,33 +249,59 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
       return (m - 1) === month && y === year;
     });
 
-    // 2. Calcular Saldo de Horas (Diferença de 8h/dia) - APENAS DIAS APONTADOS
+    // 2. Calcular Saldo de Horas (Diferença de meta/dia) - Percorrer todos os dias do mês
     let balanceHours = 0;
-    const entriesByDate = monthEntries.reduce((acc: { [key: string]: number }, curr: TimesheetEntry) => {
+    const userEntriesByDate = currentEntries.reduce((acc: { [key: string]: number }, curr: TimesheetEntry) => {
       const d = curr.date;
       acc[d] = (acc[d] || 0) + (curr.totalHours || 0);
       return acc;
     }, {} as { [key: string]: number });
 
-    (Object.entries(entriesByDate) as [string, number][]).forEach(([dStr, dayTotal]) => {
-      const parts = dStr.split('-');
-      const checkDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const dayOfWeek = checkDate.getDay();
-      const isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 5;
-      const holiday = getHoliday(checkDate.getDate(), checkDate.getMonth(), checkDate.getFullYear());
+    const userDailyMeta = targetUser?.dailyAvailableHours || 8;
 
-      const userDailyMeta = targetUser?.dailyAvailableHours || 8;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeek = new Date(year, month, d).getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const holiday = getHoliday(d, month, year);
+      const dayTotal = userEntriesByDate[dStr] || 0;
 
-      if (isWorkDay && !holiday) {
-        // Se trabalhou em dia útil, o saldo é a diferença para a meta do usuário
-        balanceHours += (dayTotal - userDailyMeta);
+      // Calcular Dedução do Dia
+      let deduction = 0;
+      if (holiday) {
+        if (holiday.hours && holiday.hours > 0) deduction = holiday.hours;
+        else if (holiday.period === 'integral' || !holiday.period) deduction = userDailyMeta;
+        else deduction = 4;
+      }
+
+      const dayAbsence = (absences || []).find((a: Absence) =>
+        a.userId === targetUserId &&
+        dStr >= a.startDate && dStr <= a.endDate &&
+        (a.status === 'aprovada_gestao' || a.status === 'aprovada_rh' || a.status === 'finalizada_dp')
+      );
+
+      if (dayAbsence) {
+        let absDeduction = 0;
+        if (dayAbsence.hours && dayAbsence.hours > 0) absDeduction = dayAbsence.hours;
+        else if (dayAbsence.period === 'integral' || !dayAbsence.period) absDeduction = userDailyMeta;
+        else absDeduction = 4;
+
+        // Deduzir o maior (caso feriado + ausência no mesmo dia)
+        deduction = Math.max(deduction, absDeduction);
+      }
+
+      if (!isWeekend) {
+        // Em dias úteis: Saldo = (Trabalhado + Abonado) - Meta
+        // Se deduction == Meta (dia todo off), saldo do dia sem apontamento é 0.
+        // Se deduction < Meta (parcial), precisa trabalhar o restante para saldo 0.
+        balanceHours += (dayTotal + deduction - userDailyMeta);
       } else {
-        // Se trabalhou em feriado ou fim de semana, TUDO é extra
+        // Fim de semana: Tudo trabalhado é extra
         balanceHours += dayTotal;
       }
-    });
+    }
 
-    // 3. Pendências (Dias sem nenhum apontamento)
+    // 3. Pendências
     let missing = 0;
     if (canViewOthers) {
       const u = processedUsers.find((u: any) => u.id === targetUserId);
@@ -286,7 +313,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
     const totalHours = monthEntries.reduce((acc: number, curr: TimesheetEntry) => acc + (curr.totalHours || 0), 0);
 
     return { totalHours, balanceHours, missing };
-  }, [currentEntries, year, month, targetUserId, processedUsers, isAdmin, currentUser, today, absences]);
+  }, [currentEntries, year, month, targetUserId, processedUsers, isAdmin, currentUser, today, absences, holidays, daysInMonth, targetUser]);
 
   const handleDelete = async () => {
     if (entryToDelete) {
@@ -635,8 +662,14 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                           </span>
                           {(holiday.period && holiday.period !== 'integral') && (
                             <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
-                              {holiday.period}
+                              {holiday.period !== 'integral' ? holiday.period : ''}
+                              {holiday.hours ? ` (${holiday.hours}h)` : ''}
                               {(holiday.isLastDay && holiday.endTime) ? ` até ${holiday.endTime}` : ''}
+                            </span>
+                          )}
+                          {holiday.hours && !holiday.period && (
+                            <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
+                              {holiday.hours}h de folga
                             </span>
                           )}
                           {(holiday.isLastDay && holiday.endTime && (!holiday.period || holiday.period === 'integral')) && (
@@ -656,8 +689,14 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = ({ userId, embedded 
                           </span>
                           {(dayAbsence.period && dayAbsence.period !== 'integral') && (
                             <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
-                              {dayAbsence.period}
+                              {dayAbsence.period !== 'integral' ? dayAbsence.period : ''}
+                              {dayAbsence.hours ? ` (${dayAbsence.hours}h)` : ''}
                               {(dateStr === dayAbsence.endDate && dayAbsence.endTime) ? ` até ${dayAbsence.endTime}` : ''}
+                            </span>
+                          )}
+                          {dayAbsence.hours && !dayAbsence.period && (
+                            <span className="text-[6px] font-black uppercase text-[var(--primary)] mt-0.5">
+                              {dayAbsence.hours}h de abono
                             </span>
                           )}
                           {(dateStr === dayAbsence.endDate && dayAbsence.endTime && (!dayAbsence.period || dayAbsence.period === 'integral')) && (

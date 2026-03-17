@@ -383,6 +383,8 @@ const ClientDetailsView: React.FC = () => {
                             <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-placeholder)' }} size={18} />
                           )}
                           <input
+                            id="client-name"
+                            name="name"
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -392,6 +394,7 @@ const ClientDetailsView: React.FC = () => {
                               color: 'var(--text)',
                               borderBottomColor: isEditing ? 'transparent' : 'var(--border)'
                             }}
+                            autoComplete="organization"
                             required
                           />
                         </div>
@@ -404,6 +407,8 @@ const ClientDetailsView: React.FC = () => {
                             <FileText className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-placeholder)' }} size={18} />
                           )}
                           <input
+                            id="client-cnpj"
+                            name="cnpj"
                             type="text"
                             value={formData.cnpj}
                             onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
@@ -413,6 +418,7 @@ const ClientDetailsView: React.FC = () => {
                               color: 'var(--text)',
                               borderBottomColor: isEditing ? 'transparent' : 'var(--border)'
                             }}
+                            autoComplete="off"
                           />
                         </div>
                       </div>
@@ -424,6 +430,8 @@ const ClientDetailsView: React.FC = () => {
                             <Globe className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-placeholder)' }} size={18} />
                           )}
                           <input
+                            id="client-country"
+                            name="country"
                             type="text"
                             value={formData.pais}
                             onChange={(e) => setFormData({ ...formData, pais: e.target.value })}
@@ -433,6 +441,7 @@ const ClientDetailsView: React.FC = () => {
                               color: 'var(--text)',
                               borderBottomColor: isEditing ? 'transparent' : 'var(--border)'
                             }}
+                            autoComplete="country-name"
                           />
                         </div>
                       </div>
@@ -444,6 +453,8 @@ const ClientDetailsView: React.FC = () => {
                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--text-placeholder)' }} size={18} />
                           )}
                           <input
+                            id="client-phone"
+                            name="phone"
                             type="text"
                             value={formData.telefone}
                             onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
@@ -453,6 +464,7 @@ const ClientDetailsView: React.FC = () => {
                               color: 'var(--text)',
                               borderBottomColor: isEditing ? 'transparent' : 'var(--border)'
                             }}
+                            autoComplete="tel"
                           />
                         </div>
                       </div>
@@ -461,6 +473,8 @@ const ClientDetailsView: React.FC = () => {
                         <label className="block text-xs font-black uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--text-muted)' }}>URL da Logomarca</label>
                         <div className="flex gap-4">
                           <input
+                            id="client-logo-url"
+                            name="logoUrl"
                             type="text"
                             value={formData.logoUrl}
                             onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
@@ -470,6 +484,7 @@ const ClientDetailsView: React.FC = () => {
                               color: 'var(--text)',
                               borderBottomColor: isEditing ? 'transparent' : 'var(--border)'
                             }}
+                            autoComplete="off"
                           />
                           {isEditing && (
                             <button type="button" className="px-6 py-4 border-2 rounded-2xl transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
@@ -519,6 +534,8 @@ const ClientDetailsView: React.FC = () => {
                         <div>
                           <label className="block text-[10px] font-black uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Classificação</label>
                           <select
+                            id="client-classification"
+                            name="tipo_cliente"
                             value={formData.tipo_cliente}
                             onChange={(e) => setFormData({ ...formData, tipo_cliente: e.target.value as any })}
                             className="w-full px-4 py-3 border-2 focus:border-purple-500 rounded-xl font-bold outline-none disabled:bg-transparent disabled:border-none disabled:px-0 disabled:appearance-none"
@@ -599,12 +616,15 @@ const ClientDetailsView: React.FC = () => {
                                     <div className="relative">
                                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-500/50" />
                                       <input
+                                        id="partner-modal-search"
+                                        name="partnerSearch"
                                         autoFocus
                                         type="text"
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
                                         placeholder="Procurar parceiro por nome ou CNPJ..."
                                         className="w-full pl-12 pr-4 py-4 bg-[var(--bg)] border-2 border-[var(--border)] focus:border-purple-500 rounded-2xl text-base font-bold outline-none transition-all shadow-sm"
+                                        autoComplete="off"
                                       />
                                     </div>
                                   </div>
@@ -612,7 +632,7 @@ const ClientDetailsView: React.FC = () => {
                                   <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-2">
                                     {filteredPartners.length > 0 ? (
                                       filteredPartners.map((p: Client) => {
-                                        const isSelected = formData.partner_id?.split(',').includes(p.id);
+                                        const isSelected = (formData.partner_id || '').split(',').includes(p.id);
                                         return (
                                           <button
                                             key={p.id}
@@ -683,21 +703,25 @@ const ClientDetailsView: React.FC = () => {
                       </h4>
                       <div className="flex flex-wrap gap-3">
                         {Array.from(new Set([
-                          ...clientProjects.flatMap((p: Project) => projectMembers.filter((pm: ProjectMember) => String(pm.id_projeto) === String(p.id)).map((pm: ProjectMember) => String(pm.id_colaborador))),
-                          ...clientTasks.map((t: Task) => t.developerId).filter((id?: string): id is string => !!id)
+                          ...clientProjects.flatMap((p: Project) =>
+                            projectMembers
+                              .filter((pm: ProjectMember) => String(pm.id_projeto) === String(p.id))
+                              .map((pm: ProjectMember) => String(pm.id_colaborador))
+                          ),
+                          ...clientTasks.map((t: Task) => t.developerId).filter((id: string | undefined): id is string => typeof id === 'string')
                         ])).map((uId: string) => {
-                          const user = users.find((u: User) => u.id === uId);
+                          const user = users.find((u: User) => String(u.id) === String(uId));
                           if (!user) return null;
                           return (
                             <div key={user.id} className="flex items-center gap-3 px-4 py-2 border rounded-2xl shadow-sm hover:border-purple-300 transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                               {user.avatarUrl ? (
-                                <img src={user.avatarUrl} className="w-8 h-8 rounded-xl object-cover" />
+                                <img src={user.avatarUrl as string} alt={user.name} className="w-8 h-8 rounded-xl object-cover" />
                               ) : (
-                                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-[10px] uppercase border" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)', borderColor: 'var(--border)' }}>{(user?.name || '??').substring(0, 2)}</div>
+                                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-[10px] uppercase border" style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)', borderColor: 'var(--border)' }}>{user.name.substring(0, 2)}</div>
                               )}
                               <div className="flex flex-col">
-                                <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{user!.name}</span>
-                                <span className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: 'var(--text-muted)' }}>{user!.cargo || 'Membro'}</span>
+                                <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{user.name}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: 'var(--text-muted)' }}>{user.cargo || 'Membro'}</span>
                               </div>
                             </div>
                           );

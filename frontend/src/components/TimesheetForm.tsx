@@ -542,6 +542,8 @@ const TimesheetForm: React.FC = () => {
                       <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>Colaborador</label>
                       {isAdmin ? (
                         <select
+                          id="timesheet-user"
+                          name="userId"
                           value={formData.userId || ''}
                           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                             const u = users.find((user: User) => user.id === e.target.value);
@@ -570,6 +572,8 @@ const TimesheetForm: React.FC = () => {
                       <div>
                         <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>Cliente *</label>
                         <select
+                          id="timesheet-client"
+                          name="clientId"
                           value={formData.clientId}
                           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { markDirty(); setFormData((prev: Partial<TimesheetEntry>) => ({ ...prev, clientId: e.target.value, projectId: '', taskId: '' })); }}
                           disabled={isEditing}
@@ -583,6 +587,8 @@ const TimesheetForm: React.FC = () => {
                       <div>
                         <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>Projeto *</label>
                         <select
+                          id="timesheet-project"
+                          name="projectId"
                           value={formData.projectId}
                           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { markDirty(); setFormData((prev: Partial<TimesheetEntry>) => ({ ...prev, projectId: e.target.value, taskId: '' })); }}
                           disabled={!formData.clientId || isEditing}
@@ -599,6 +605,8 @@ const TimesheetForm: React.FC = () => {
                     <div>
                       <label className="block text-[10px] font-bold mb-1 uppercase tracking-wider opacity-70" style={{ color: 'var(--muted)' }}>Tarefa *</label>
                       <select
+                        id="timesheet-task"
+                        name="taskId"
                         value={formData.taskId}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { markDirty(); setFormData((prev: Partial<TimesheetEntry>) => ({ ...prev, taskId: e.target.value })); }}
                         disabled={!formData.projectId || isEditing}
@@ -621,6 +629,8 @@ const TimesheetForm: React.FC = () => {
                         </span>
                       </div>
                       <textarea
+                        id="timesheet-description"
+                        name="description"
                         value={formData.description || ''}
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                           const val = e.target.value;
@@ -630,6 +640,7 @@ const TimesheetForm: React.FC = () => {
                         className="w-full p-3 border rounded-xl outline-none resize-none font-medium text-sm transition-all flex-1 focus:ring-1 focus:ring-[var(--primary)] border-[var(--border)]"
                         style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
                         placeholder="Descreva o que foi realizado nesta atividade..."
+                        autoComplete="off"
                       />
                     </div>
 
@@ -684,12 +695,15 @@ const TimesheetForm: React.FC = () => {
                     <div className="relative group">
                       <div className="flex items-center justify-between p-2.5 border rounded-lg shadow-sm focus-within:ring-1 focus-within:ring-[var(--ring)]" style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}>
                         <input
+                          id="timesheet-date"
+                          name="date"
                           type="date"
                           value={formData.date}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => { markDirty(); setFormData((prev: Partial<TimesheetEntry>) => ({ ...prev, date: e.target.value })); }}
                           className="bg-transparent outline-none font-bold text-sm w-full cursor-pointer"
                           style={{ color: 'var(--text)' }}
                           onClick={(e: React.MouseEvent<HTMLInputElement>) => { e.preventDefault(); setShowDatePicker(!showDatePicker); setShowCalendar(false); }}
+                          autoComplete="off"
                         />
                         <CalendarDays className="w-4 h-4 opacity-40 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => { setShowDatePicker(!showDatePicker); setShowCalendar(false); }} />
                       </div>

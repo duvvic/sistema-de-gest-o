@@ -147,22 +147,28 @@ const UserForm: React.FC = () => {
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome Completo</label>
                   <input
+                    id="user-name"
+                    name="name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-bold text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all"
                     placeholder="Ex: Ricardo Duraes"
+                    autoComplete="name"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">E-mail Corporativo</label>
                   <input
+                    id="user-email"
+                    name="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-bold text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all"
                     placeholder="email@nic-labs.com.br"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -191,6 +197,8 @@ const UserForm: React.FC = () => {
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nível de Permissão</label>
                 <select
+                  id="user-role"
+                  name="role"
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
                   className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all"
@@ -263,22 +271,28 @@ const UserForm: React.FC = () => {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xs font-black">R$</span>
                     <input
+                      id="user-hourly-cost"
+                      name="hourlyCost"
                       type="number"
                       step="0.01"
                       value={formData.hourlyCost || ''}
                       onChange={(e) => setFormData({ ...formData, hourlyCost: e.target.value === '' ? 0 : Number(e.target.value) })}
                       className="w-full pl-10 pr-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                      autoComplete="off"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Avatar Personalizado (URL)</label>
                   <input
+                    id="user-avatar-url"
+                    name="avatarUrl"
                     type="text"
                     value={formData.avatarUrl}
                     onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
                     className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[10px] font-mono text-[var(--muted)]"
                     placeholder="https://..."
+                    autoComplete="off"
                   />
                 </div>
               </div>
@@ -286,19 +300,25 @@ const UserForm: React.FC = () => {
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Carga Horária (Dia)</label>
                   <input
+                    id="user-daily-hours"
+                    name="dailyAvailableHours"
                     type="number"
                     value={formData.dailyAvailableHours || ''}
                     onChange={(e) => setFormData({ ...formData, dailyAvailableHours: e.target.value === '' ? 0 : Number(e.target.value) })}
                     className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)]"
+                    autoComplete="off"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-black text-[var(--muted)] uppercase tracking-widest">Hrs Meta Mês</label>
                   <input
+                    id="user-monthly-hours"
+                    name="monthlyAvailableHours"
                     type="number"
                     value={formData.monthlyAvailableHours || ''}
                     onChange={(e) => setFormData({ ...formData, monthlyAvailableHours: e.target.value === '' ? 0 : Number(e.target.value) })}
                     className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-black text-[var(--text)] focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                    autoComplete="off"
                   />
                   <p className="text-[7px] font-bold opacity-40 mt-1 uppercase">
                     Ref: {new Date().toLocaleString('pt-BR', { month: 'short' }).replace('.', '')} | Sugerido: {formatDecimalToTime(CapacityUtils.getWorkingDaysInMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`, holidays || []) * (formData.dailyAvailableHours || 8))}
