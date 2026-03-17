@@ -1420,6 +1420,37 @@ const ProjectDetailView: React.FC = () => {
                 {/* MAIN GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                   <div className="lg:col-span-8 space-y-5">
+                    {(isEditing || project?.description) && (
+                      <div className="p-6 rounded-[32px] border shadow-sm space-y-6" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-emerald-500/10">
+                              <Target size={14} className="text-emerald-500" />
+                            </div>
+                            <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text)' }}>Visão de Escopo</p>
+                          </div>
+                          {!isEditing && <span className="text-[8px] font-bold opacity-30 uppercase tracking-widest">Planejamento e Objetivos</span>}
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Descrição Detalhada</p>
+                          {isEditing ? (
+                            <textarea 
+                              value={formData.description} 
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
+                              className="w-full min-h-[160px] p-5 rounded-[24px] border outline-none text-sm resize-y transition-all focus:border-emerald-500 shadow-inner" 
+                              style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} 
+                              placeholder="Descreva o escopo detalhado, entregáveis e limites do projeto..."
+                            />
+                          ) : (
+                            <div className="p-6 rounded-[24px] border bg-gradient-to-br from-white/[0.03] to-transparent h-fit" style={{ borderColor: 'var(--border)' }}>
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium" style={{ color: 'var(--text-2)' }}>{project?.description || '(Sem descrição de escopo)'}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="p-5 rounded-[32px] border shadow-sm" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                       <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2" style={{ color: 'var(--primary)' }}><Info size={14} /> Detalhes Estruturais</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1553,74 +1584,7 @@ const ProjectDetailView: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      {(isEditing || project?.description || project?.importantConsiderations || project?.successFactor) && (
-                        <div className="mt-8 pt-8 border-t space-y-6" style={{ borderColor: 'var(--bg)' }}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="p-2 rounded-lg bg-purple-500/10">
-                                <Target size={14} className="text-purple-500" />
-                              </div>
-                              <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text)' }}>Visão de Escopo</p>
-                            </div>
-                            {!isEditing && <span className="text-[8px] font-bold opacity-30 uppercase">Planejamento e Objetivos</span>}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-3">
-                              <p className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Descrição do Escopo</p>
-                              {isEditing ? (
-                                <textarea 
-                                  value={formData.description} 
-                                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })} 
-                                  className="w-full min-h-[120px] p-4 rounded-2xl border outline-none text-sm resize-y transition-all focus:border-purple-500 shadow-inner" 
-                                  style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} 
-                                  placeholder="Descreva o escopo detalhado, entregáveis e limites do projeto..."
-                                />
-                              ) : (
-                                <div className="p-5 rounded-[24px] border bg-gradient-to-br from-white/[0.03] to-transparent h-fit" style={{ borderColor: 'var(--border)' }}>
-                                  <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium" style={{ color: 'var(--text-2)' }}>{project?.description || '(Sem descrição de escopo)'}</p>
-                                </div>
-                              )}
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Considerações Importantes</p>
-                                {isEditing ? (
-                                  <textarea 
-                                    value={formData.importantConsiderations} 
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, importantConsiderations: e.target.value })} 
-                                    className="w-full h-24 p-3 rounded-xl border outline-none text-xs resize-none transition-all focus:border-purple-500" 
-                                    style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} 
-                                    placeholder="Regras de negócio, restrições ou observações críticas..."
-                                  />
-                                ) : (
-                                  <div className="p-4 rounded-2xl border bg-amber-500/[0.02]" style={{ borderColor: 'var(--border)' }}>
-                                    <p className="text-xs leading-relaxed italic whitespace-pre-wrap" style={{ color: 'var(--text-2)' }}>{project?.importantConsiderations || '--'}</p>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Fatores de Sucesso</p>
-                                {isEditing ? (
-                                  <textarea 
-                                    value={formData.successFactor} 
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, successFactor: e.target.value })} 
-                                    className="w-full h-24 p-3 rounded-xl border outline-none text-xs resize-none transition-all focus:border-purple-500" 
-                                    style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} 
-                                    placeholder="Quais critérios definem que este projeto foi bem-sucedido?"
-                                  />
-                                ) : (
-                                  <div className="p-4 rounded-2xl border bg-emerald-500/[0.02]" style={{ borderColor: 'var(--border)' }}>
-                                    <p className="text-xs leading-relaxed font-bold whitespace-pre-wrap" style={{ color: 'var(--text-2)' }}>{project?.successFactor || '--'}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                       {isEditing && (
                         <div className="mt-8 pt-8 border-t flex items-center justify-between gap-3" style={{ borderColor: 'var(--bg)' }}>
                           <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-black/5 transition-colors">
@@ -1646,10 +1610,10 @@ const ProjectDetailView: React.FC = () => {
 
                   <div className="lg:col-span-4 space-y-6">
                     {/* SAÚDE QUALITATIVA */}
-                    {(isEditing || project?.weeklyStatusReport || project?.gapsIssues) && (
-                      <div className="p-6 rounded-[32px] border shadow-sm space-y-4" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                    {(isEditing || project?.weeklyStatusReport || project?.gapsIssues || project?.importantConsiderations || project?.successFactor) && (
+                      <div className="p-6 rounded-[32px] border shadow-sm space-y-6" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
                         <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text)' }}><StickyNote size={16} className="text-amber-500" /> Status e Andamento</h3>
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                           {(isEditing || project?.weeklyStatusReport) && (
                             <div>
                               <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Resumo da Semana</p>
@@ -1666,7 +1630,34 @@ const ProjectDetailView: React.FC = () => {
                               ) : <p className="text-xs font-medium" style={{ color: 'var(--danger)' }}>{project?.gapsIssues}</p>}
                             </div>
                           )}
-                          {/* Considerações e Sucesso movidos para Visão de Escopo */}
+                          
+                          {(isEditing || project?.importantConsiderations) && (
+                            <div className="pt-4 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                              <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Considerações Importantes</p>
+                              {isEditing ? (
+                                <textarea 
+                                  value={formData.importantConsiderations} 
+                                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, importantConsiderations: e.target.value })} 
+                                  className="w-full h-24 p-2 rounded text-xs border" 
+                                  style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} 
+                                />
+                              ) : <p className="text-xs leading-relaxed italic whitespace-pre-wrap" style={{ color: 'var(--text-2)' }}>{project?.importantConsiderations}</p>}
+                            </div>
+                          )}
+
+                          {(isEditing || project?.successFactor) && (
+                            <div className="pt-4 border-t border-dashed" style={{ borderColor: 'var(--border)' }}>
+                              <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--muted)' }}>Fatores de Sucesso</p>
+                              {isEditing ? (
+                                <textarea 
+                                  value={formData.successFactor} 
+                                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, successFactor: e.target.value })} 
+                                  className="w-full h-24 p-2 rounded text-xs border" 
+                                  style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }} 
+                                />
+                              ) : <p className="text-xs leading-relaxed font-bold whitespace-pre-wrap" style={{ color: 'var(--text-2)' }}>{project?.successFactor}</p>}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
