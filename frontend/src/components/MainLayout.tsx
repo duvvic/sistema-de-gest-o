@@ -222,21 +222,7 @@ const MainLayout: React.FC = () => {
                         <div className="w-20 flex-shrink-0 flex items-center justify-center">
                             <img src={organization?.logo_url || logoImg} alt="Logo" className="w-8 h-8 object-contain shrink-0" />
                         </div>
-                        <div className="flex-1 flex items-center min-w-0 pr-12">
-                            <AnimatePresence>
-                                {isExpanded && (
-                                    <motion.h1
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -10 }}
-                                        className="text-xl font-bold tracking-widest uppercase whitespace-nowrap overflow-hidden"
-                                        style={{ color: 'var(--sidebar-text)' }}
-                                    >
-                                        {organization?.name || 'NIC-LABS'}
-                                    </motion.h1>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                        <div className="flex-1" />
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className={`absolute right-4 p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all ${!isExpanded ? 'opacity-0 scale-50 pointer-events-none' : 'opacity-100 scale-100'}`}
@@ -406,33 +392,6 @@ const MainLayout: React.FC = () => {
                             </div>
                         </button>
 
-                        {/* Theme Customizer - ADMIN ONLY */}
-                        {adminRoles.includes(normalizedRole as Role) && (
-                            <button
-                                onClick={() => setIsThemeEditorOpen(true)}
-                                className="w-full h-12 flex items-center rounded-xl transition-all hover:bg-black/5 dark:hover:bg-white/5 group/theme-editor overflow-hidden px-0 outline-none mt-2"
-                                style={{ color: 'var(--sidebar-text)' }}
-                            >
-                                <div className="w-16 h-full flex items-center justify-center flex-shrink-0 transition-transform group-hover/theme-editor:scale-110 opacity-60 group-hover/theme-editor:opacity-100">
-                                    <Palette className="w-5 h-5" />
-                                </div>
-                                <div className="flex-1 pr-4 overflow-hidden relative text-left ml-2">
-                                    <AnimatePresence initial={false}>
-                                        {isExpanded && (
-                                            <motion.span
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: -10 }}
-                                                transition={{ duration: 0.2 }}
-                                                className="font-bold text-sm whitespace-nowrap block opacity-60 group-hover/theme-editor:opacity-100"
-                                            >
-                                                Personalizar UI
-                                            </motion.span>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </button>
-                        )}
                     </nav>
 
                 </div>

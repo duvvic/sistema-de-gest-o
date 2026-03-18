@@ -36,16 +36,16 @@
   /* Indigo 300 - subtle brand focus */
   --input-disabled: #F1F5F9;
 
-  /* Sidebar & Brand - Light Vibrant Purple Theme */
-  --sidebar-bg: #EADDFF;
-  /* Radiant Lavender */
-  --sidebar-bg-2: #D0BCFF;
-  /* Soft Violet */
-  --sidebar-hover: rgba(103, 80, 164, 0.12);
-  --sidebar-text: #21005D;
-  /* Deepest Purple for max contrast */
-  --sidebar-text-muted: #49454F;
-  --sidebar-border: rgba(103, 80, 164, 0.15);
+  /* Sidebar & Brand - Light Professional Purple Theme */
+  --sidebar-bg: #F3E8FF;
+  /* Light Lavender */
+  --sidebar-bg-2: #E9D5FF;
+  /* Soft Purple */
+  --sidebar-hover: rgba(107, 33, 168, 0.08);
+  --sidebar-text: #4C1D95;
+  /* Deep Purple for high contrast */
+  --sidebar-text-muted: #6B21A8;
+  --sidebar-border: rgba(107, 33, 168, 0.1);
   --primary: #6750A4;
   /* M3 style vibrant purple */
   /* Indigo 500 */

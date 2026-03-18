@@ -1,4 +1,4 @@
-import Vibrant from 'node-vibrant';
+import { Vibrant } from 'node-vibrant/node';
 
 /**
  * Serviço responsável pela extração de cores e lógica de tematização.

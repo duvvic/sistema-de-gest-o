@@ -15,7 +15,7 @@ export const organizationController = {
             if (!user) return res.status(401).json({ error: 'Não autorizado' });
 
             // Busca colaborador pelo email ou id para pegar organization_id
-            const { data: colab } = await organizationRepository.findByCollaboratorId(user.id);
+            const colab = await organizationRepository.findByCollaboratorId(user.id);
             if (!colab) return res.status(404).json({ error: 'Usuário não vinculado a uma organização' });
 
             return sendSuccess(res, colab);

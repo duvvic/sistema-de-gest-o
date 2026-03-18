@@ -21,11 +21,13 @@ export const useOrganizationTheme = () => {
             root.style.setProperty('--primary-muted', `${organization.theme_primary}33`); // 20% opacidade
         }
 
+        /* 
         if (organization.theme_secondary) {
             // No nosso sistema, a cor secundária costuma ser usada no Sidebar
             root.style.setProperty('--sidebar-bg', organization.theme_secondary);
             root.style.setProperty('--sidebar-bg-2', organization.theme_secondary);
         }
+        */
 
         if (organization.theme_accent) {
             root.style.setProperty('--info', organization.theme_accent);

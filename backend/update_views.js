@@ -16,6 +16,7 @@ async function updateViews() {
             SELECT 
                 id_colaborador AS id, 
                 id_colaborador AS "ID_Colaborador",
+                organization_id,
                 nome_colaborador AS nome, 
                 nome_colaborador AS "NomeColaborador",
                 cargo, 
