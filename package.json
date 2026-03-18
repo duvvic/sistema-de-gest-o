@@ -1,5 +1,12 @@
 {
   "dependencies": {
     "node-vibrant": "^4.0.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.75.0"
+  },
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   }
 }
