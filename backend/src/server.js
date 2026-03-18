@@ -30,6 +30,7 @@ import auditLogsRoutes from "./routes/auditLogs.js";
 import collaboratorRoutes from "./routes/collaborators.js";
 import supportRoutes from "./routes/support.js";
 import organizationRoutes from "./routes/organizationRoutes.js";
+import capacitySnapshotsRoutes from "./routes/capacitySnapshots.js";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -104,7 +105,7 @@ app.get("/health", async (req, res) => {
             uptime: `${Math.floor((Date.now() - startTime) / 1000)}s`
         });
     } catch (err) {
-        return sendError(res, "Healthcheck failed", 500);
+        return sendError(res, `Healthcheck failed: ${err.message || err}`, 500);
     }
 });
 
@@ -122,6 +123,7 @@ apiV1.use("/sync", syncRoutes);
 apiV1.use("/notes", notesRoutes);
 apiV1.use("/audit-logs", auditLogsRoutes);
 apiV1.use("/organizations", organizationRoutes);
+apiV1.use("/capacity-snapshots", authMiddleware, capacitySnapshotsRoutes);
 
 // Allocations v1
 apiV1.get("/allocations", authMiddleware, allocationController.list);

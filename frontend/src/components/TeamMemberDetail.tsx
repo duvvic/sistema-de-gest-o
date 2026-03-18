@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '../controllers/useDataController';
 import { Project, Task, Role, TimesheetEntry, ProjectMember, Client, User, TaskMemberAllocation, Absence } from '../types';
-import { User as UserIcon, Mail, Briefcase, Shield, Edit, Save, Trash2, ArrowLeft, CheckCircle, Clock, AlertCircle, Calendar, Zap, Info, LayoutGrid, ChevronRight } from 'lucide-react';
+import { User as UserIcon, Mail, Briefcase, Shield, Edit, Save, Trash2, ArrowLeft, CheckCircle, Clock, AlertCircle, Calendar, Zap, Info, LayoutGrid, ChevronRight, ChevronLeft, Target, MapPin } from 'lucide-react';
 import OrganizationalStructureSelector from './OrganizationalStructureSelector';
 import ConfirmationModal from './ConfirmationModal';
 import { getRoleDisplayName, formatDecimalToTime, getStatusDisplayName, formatDateBR, parseTimeToDecimal } from '../utils/normalizers';
@@ -36,6 +36,8 @@ const TeamMemberDetail: React.FC = () => {
 
    // --- CAPACITY MONTH CONTROL ---
    const [capacityMonth, setCapacityMonth] = useState(() => {
+      const monthParam = searchParams.get('month');
+      if (monthParam) return monthParam;
       const now = new Date();
       return now.toISOString().slice(0, 7); // YYYY-MM
    });
@@ -45,13 +47,24 @@ const TeamMemberDetail: React.FC = () => {
       const newDate = new Date(year, month - 1 + delta, 1);
       const newMonthStr = newDate.toISOString().slice(0, 7);
       setCapacityMonth(newMonthStr);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('month', newMonthStr);
+      navigate(`?${newParams.toString()}`, { replace: true });
+   };
+
+   const setToday = () => {
+      const now = new Date().toISOString().slice(0, 7);
+      setCapacityMonth(now);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('month', now);
+      navigate(`?${newParams.toString()}`, { replace: true });
    };
 
    // Get initial tab from URL query parameter, default to 'details'
    const initialTab = (searchParams.get('tab') as ViewTab) || 'details';
    const [activeTab, setActiveTab] = useState<ViewTab>(initialTab);
    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-   const [showBreakdown, setShowBreakdown] = useState<'planned' | 'continuous' | null>(null);
+   const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
 
    const user = users.find((u: User) => u.id === userId);
    const currentUserEmail = localStorage.getItem('userEmail');
@@ -190,14 +203,13 @@ const TeamMemberDetail: React.FC = () => {
 
    const capData = useMemo(() => {
       if (!user) return null;
-      // Usar valores do formulário para feedback em tempo real no dashboard superior
       const simulatedUser = {
          ...user,
          dailyAvailableHours: Number(String(formData.dailyAvailableHours).replace(',', '.')) || 0,
          monthlyAvailableHours: monthlyHoursMode === 'auto' ? 0 : Number(String(formData.monthlyAvailableHours).replace(',', '.'))
       };
-      return CapacityUtils.getUserMonthlyAvailability(simulatedUser, capacityMonth, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences);
-   }, [user, capacityMonth, projects, projectMembers, timesheetEntries, tasks, holidays, formData.dailyAvailableHours, formData.monthlyAvailableHours, monthlyHoursMode]);
+      return CapacityUtils.getUserMonthlyAvailability(simulatedUser, capacityMonth, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences, users);
+   }, [user, users, capacityMonth, projects, projectMembers, timesheetEntries, tasks, holidays, formData.dailyAvailableHours, formData.monthlyAvailableHours, monthlyHoursMode, absences, taskMemberAllocations]);
 
    const releaseDate = useMemo(() => {
       if (!user) return null;
@@ -205,8 +217,8 @@ const TeamMemberDetail: React.FC = () => {
          ...user,
          dailyAvailableHours: Number(String(formData.dailyAvailableHours).replace(',', '.')) || 0
       };
-      return CapacityUtils.calculateIndividualReleaseDate(simulatedUser, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences);
-   }, [user, projects, projectMembers, timesheetEntries, tasks, holidays, formData.dailyAvailableHours]);
+      return CapacityUtils.calculateIndividualReleaseDate(simulatedUser, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences, users);
+   }, [user, users, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, absences, formData.dailyAvailableHours]);
 
    const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -261,7 +273,21 @@ const TeamMemberDetail: React.FC = () => {
    if (!user) return <div className="p-4 text-xs font-bold text-slate-500">Colaborador não encontrado.</div>;
 
    const linkedProjectIds = projectMembers.filter((pm: ProjectMember) => String(pm.id_colaborador) === user.id).map((pm: ProjectMember) => String(pm.id_projeto));
-   const userProjects = projects.filter((p: Project) => linkedProjectIds.includes(p.id) && p.active !== false);
+   
+   // Filtrar projetos ativos no mês selecionado
+   const userProjects = projects.filter((p: Project) => {
+      if (!linkedProjectIds.includes(p.id) || p.active === false) return false;
+      
+      const monStart = `${capacityMonth}-01`;
+      const [y, m] = capacityMonth.split('-').map(Number);
+      const monEnd = new Date(y, m, 0).toISOString().split('T')[0];
+
+      const pStart = p.startDate || '1900-01-01';
+      const pEnd = p.estimatedDelivery || '2999-12-31';
+
+      // Projeto ativo se houver interseção com o mês ou se não estiver concluído
+      return (pStart <= monEnd && (pEnd >= monStart || p.status !== 'Done'));
+   });
 
    const userTasks = tasks
       .filter((t: Task) => {
@@ -374,20 +400,54 @@ const TeamMemberDetail: React.FC = () => {
                >
                   <ArrowLeft className="w-5 h-5" />
                </button>
-               <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] border border-[var(--border)] shadow-sm overflow-hidden flex items-center justify-center text-sm font-black text-[var(--primary)]">
-                  {user.avatarUrl ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" /> : user.name.substring(0, 2).toUpperCase()}
-               </div>
-               <div>
-                  <h1 className="text-base font-black text-[var(--text)] tracking-tight leading-tight">{user.name}</h1>
-                  <div className="flex items-center gap-2 mt-0.5">
-                     <span className="text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded-lg bg-[var(--primary)] text-white shadow-sm">{user.role.toUpperCase().replace(/_/g, ' ')}</span>
-                     <span className="text-[11px] font-bold text-[var(--text-2)]">{getRoleDisplayName(user.role)}</span>
+               {user && (
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] overflow-hidden shadow-sm ring-2 ring-white/10 shrink-0">
+                        {user.avatarUrl ? (
+                           <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--primary)] to-[var(--primary-hover)] text-white font-black text-lg">
+                              {user.name?.charAt(0)}
+                           </div>
+                        )}
+                     </div>
+                     <div className="max-w-[300px]">
+                        <div className="flex items-center gap-2">
+                           <h1 className="text-lg font-black text-[var(--text)] truncate">{user.name}</h1>
+                           {user.active ? (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                           ) : (
+                              <span className="text-[8px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-sm uppercase">Off</span>
+                           )}
+                        </div>
+                        <p className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest truncate">
+                           {user.cargo || 'Cargo não definido'}
+                        </p>
+                        <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest truncate opacity-50">
+                           {getRoleDisplayName(user.role)}
+                        </p>
+                     </div>
                   </div>
-               </div>
+               )}
             </div>
 
             <div className="flex items-center gap-3">
-               {activeTab === 'details' && (
+               <div className="hidden lg:flex flex-col items-end mr-6 pr-6 border-r border-[var(--border)]">
+                  <p className="text-[8px] font-black text-[var(--muted)] uppercase tracking-widest mb-1 opacity-40">Capacidade Operacional</p>
+                  <div className="flex items-center gap-2">
+                     <div className="h-1.5 w-24 bg-[var(--surface-3)] rounded-full overflow-hidden">
+                        <div
+                           className={`h-full transition-all duration-1000 ${capData ? (capData.occupancyRate > 100 ? 'bg-red-500' : 'bg-emerald-500') : 'bg-slate-300'}`}
+                           style={{ width: `${Math.min(100, capData?.occupancyRate || 0)}%` }}
+                        />
+                     </div>
+                     <span className={`text-xs font-black ${capData ? (capData.occupancyRate > 100 ? 'text-red-500' : 'text-emerald-500') : 'text-slate-400'}`}>
+                        {capData?.occupancyRate || 0}%
+                     </span>
+                  </div>
+               </div>
+               
+               {user && (
                   <button
                      type="button"
                      onClick={() => setIsEditing(!isEditing)}
@@ -404,427 +464,339 @@ const TeamMemberDetail: React.FC = () => {
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto custom-scrollbar"
          >
-            {/* SUB-NAVEGAÇÃO - ESTILO TABS */}
-            <div className="flex gap-2 border-b border-[var(--border)] sticky top-0 z-10 bg-[var(--bg)]/60 backdrop-blur-xl px-8 pt-2">
-               {(() => {
-                  const navItems = [
-                     { id: 'details', label: 'Dashboard', icon: LayoutGrid },
-                     { id: 'projects', label: 'Projetos', count: userProjects.length },
-                     { id: 'tasks', label: 'Tarefas', count: userTasks.length },
-                     { id: 'completed', label: 'Concluídos', count: completedTasks.length },
-                     { id: 'delayed', label: 'Atrasos', count: tasks.filter((t: Task) => (String(t.developerId) === String(user?.id) || (t.collaboratorIds || []).includes(String(user?.id))) && t.status !== 'Done' && (t.daysOverdue ?? 0) > 0).length },
-                     { id: 'ponto', label: 'Presença', icon: Clock },
-                     { id: 'absences', label: 'Ausências', icon: AlertCircle }
-                  ];
-                  return navItems.map(tab => (
-                     <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id as ViewTab)}
-                        className={`px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative group ${activeTab === tab.id ? 'text-[var(--primary)]' : 'text-[var(--muted)] hover:text-[var(--text)]'
-                           }`}
-                     >
-                        <div className="relative z-10 flex items-center gap-2">
-                           {tab.label}
-                           {(tab.count !== null && tab.count !== undefined) && (
-                              <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black transition-all ${tab.id === 'completed' && tab.count > 0
-                                 ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)]'
-                                 : tab.id === 'delayed' && tab.count > 0
-                                    ? 'bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.4)]'
-                                    : activeTab === tab.id ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : 'bg-[var(--surface-2)]'
-                                 }`}>
+            {/* SUB-NAVEGAÇÃO - ESTILO BARRA DE FERRAMENTAS INTEGRADA (OTIMIZADA) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between border-b border-[var(--border)] sticky top-0 z-10 bg-[var(--bg)]/80 backdrop-blur-xl px-8 py-2 gap-4">
+               {/* LADO ESQUERDO: ABAS DE NAVEGAÇÃO */}
+               <div className="flex gap-0.5 overflow-x-auto no-scrollbar flex-1 w-full sm:w-auto">
+                  {(() => {
+                     const navItems = [
+                        { id: 'details', label: 'Dashboard', icon: LayoutGrid },
+                        { id: 'projects', label: 'Projetos', icon: Zap, count: userProjects.length },
+                        { id: 'tasks', label: 'Tarefas', icon: Briefcase, count: userTasks.length },
+                        { id: 'completed', label: 'Concluídos', icon: CheckCircle, count: completedTasks.length },
+                        { id: 'delayed', label: 'Atrasos', icon: AlertCircle, count: delayedTasks.length },
+                        { id: 'ponto', label: 'Presença', icon: Clock },
+                        { id: 'absences', label: 'Ausências', icon: Mail }
+                     ];
+                     return navItems.map(tab => (
+                        <button
+                           key={tab.id}
+                           type="button"
+                           onClick={() => setActiveTab(tab.id as ViewTab)}
+                           className={`group relative flex items-center gap-2.5 px-5 py-3 rounded-xl transition-all ${activeTab === tab.id
+                              ? 'text-[var(--primary)]'
+                              : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-soft)]'
+                              }`}
+                        >
+                           <tab.icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'text-[var(--primary)]' : 'opacity-40'}`} />
+                           <span className="text-[11px] font-bold uppercase tracking-widest whitespace-nowrap">{tab.label}</span>
+                           {tab.count !== undefined && tab.count > 0 && (
+                              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md min-w-[18px] text-center ${activeTab === tab.id ? 'bg-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/20 shadow-inner ring-1 ring-white/10' : 'bg-[var(--surface-3)] text-[var(--muted)] opacity-50'}`}>
                                  {tab.count}
                               </span>
                            )}
-                        </div>
-
-                        {activeTab === tab.id && (
-                           <motion.div
-                              layoutId="activeTabPill"
-                              className="absolute inset-0 bg-[var(--surface)] rounded-t-2xl border-x border-t border-[var(--border)] z-0"
-                              transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                           />
-                        )}
-
-                        {activeTab === tab.id && (
-                           <motion.div
-                              layoutId="activeTabUnderline"
-                              className="absolute bottom-[-2px] left-0 right-0 h-[2px] bg-[var(--primary)] z-20"
-                           />
-                        )}
-                     </button>
-                  ));
-               })()}
+                           {activeTab === tab.id && (
+                              <motion.div layoutId="tab-underline" className="absolute bottom-[-8px] left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-[var(--primary)] to-transparent rounded-full shadow-[0_0_8px_var(--primary)]" />
+                           )}
+                        </button>
+                     ));
+                  })()}
+               </div>
             </div>
 
-            <div className="p-6">
-               {activeTab === 'details' && (
-                  <div className="max-w-4xl mx-auto space-y-6">
-                     {/* RESUMO DE CAPACIDADE */}
-                     {user && (
-                        <div className="ui-card p-8 border border-[var(--border)] relative overflow-hidden bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)]">
-                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-[var(--border)] pb-6">
-                              <div>
-                                 <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-1" style={{ color: 'var(--muted)' }}>
-                                    <Zap className="w-4 h-4 text-[var(--primary)]" /> Ocupação e Fluxo
-                                 </h3>
-                                 <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Métricas de Alocação do Colaborador</p>
+            {activeTab === 'details' && (
+               <div className="p-4 lg:p-6 space-y-4">
+                  {/* METRICS - OTIMIZADO PARA SER EXTREMAMENTE COMPACTO */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                     {[
+                        { 
+                           label: 'Capacidade Total', 
+                           value: formatDecimalToTime(capacityStats.calculatedTotal), 
+                           sub: `${capacityStats.totalWorkingDays} dias úteis`, 
+                           icon: Target, 
+                           color: 'var(--primary)',
+                           desc: 'Meta calculada no mês',
+                           suffix: 'h'
+                        },
+                        { 
+                           label: 'Total Alocado', 
+                           value: formatDecimalToTime(capData?.allocated || 0), 
+                           sub: `${Math.round(((capData?.allocated || 0) / (capacityStats.calculatedTotal || 1)) * 100)}% de ocupação`, 
+                           icon: Zap, 
+                           color: (capacityStats.calculatedTotal || 0) - (capData?.allocated || 0) < 0 ? 'var(--danger)' : 'var(--success)',
+                           desc: 'Soma total da carteira',
+                           alert: (capData?.allocated || 0) > capacityStats.calculatedTotal,
+                           suffix: 'h'
+                        },
+                        { 
+                           label: 'Distribuição de Carga', 
+                           value: (capData?.breakdown.planned.length || 0) + (capData?.breakdown.continuous.length || 0), 
+                           sub: 'Clique para detalhar origem', 
+                           icon: Shield, 
+                           color: '#8b5cf6',
+                           onClick: () => setShowBreakdown(true),
+                           desc: 'Ver projetos em carteira',
+                           suffix: ' proj.'
+                        },
+                        { 
+                           label: 'Saldo Real Mês', 
+                           value: formatDecimalToTime((capacityStats.calculatedTotal || 0) - (capData?.allocated || 0)), 
+                           sub: (capacityStats.calculatedTotal || 0) - (capData?.allocated || 0) < 0 ? 'Falta de capacidade' : 'Horas disponíveis livre', 
+                           icon: Clock, 
+                           color: (capacityStats.calculatedTotal || 0) - (capData?.allocated || 0) < 0 ? 'var(--danger)' : 'var(--success)',
+                           desc: 'Balanço alocado vs meta',
+                           suffix: 'h'
+                        }
+                     ].map((card, i) => (
+                        <motion.div
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           transition={{ delay: i * 0.05 }}
+                           key={card.label}
+                           onClick={card.onClick}
+                           className={`group relative p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all ${card.onClick ? 'cursor-pointer hover:border-[var(--primary)]' : ''} ${card.alert ? 'ring-2 ring-red-500/20 border-red-500/30' : ''}`}
+                        >
+                           <div className="flex items-start justify-between mb-1.5">
+                              <div className="p-1.5 rounded-lg transition-colors" style={{ backgroundColor: `${card.color}10`, color: card.color }}>
+                                 <card.icon className="w-4 h-4" />
                               </div>
+                              {card.onClick && (
+                                 <div className="bg-[var(--surface-2)] p-0.5 rounded-md opacity-30 group-hover:opacity-100 transition-opacity">
+                                    <ChevronRight className="w-2.5 h-2.5 text-[var(--muted)]" />
+                                 </div>
+                              )}
+                           </div>
+                           <h4 className="text-[8px] font-black uppercase text-[var(--muted)] tracking-widest mb-0.5">{card.label}</h4>
+                           <div className="flex items-baseline gap-1">
+                              <span className={`text-lg font-black font-mono tracking-tight ${card.alert ? 'text-red-500' : ''}`} style={{ color: card.alert ? undefined : 'var(--text)' }}>
+                                 {card.value}{card.suffix}
+                              </span>
+                           </div>
+                           <p className="text-[8px] font-bold" style={{ color: card.color }}>{card.sub}</p>
+                           {card.desc && <p className="text-[7px] text-[var(--muted)] uppercase font-black tracking-widest mt-1 opacity-50">{card.desc}</p>}
+                        </motion.div>
+                     ))}
+                  </div>
 
-                              {/* Navegação de Mês */}
-                              <div className="flex items-center gap-4 p-2 rounded-2xl border border-[var(--border)]" style={{ backgroundColor: 'var(--surface-2)' }}>
-                                 <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[var(--surface-hover)] rounded-xl transition-all text-[var(--text)]">
-                                    <ChevronRight className="w-5 h-5 rotate-180" />
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                     {/* CALENDÁRIO DE OCUPAÇÃO - OTIMIZADO 7 COLUNAS */}
+                     <div className="lg:col-span-12 xl:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-[24px] p-4 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
+                        <div className="flex flex-col gap-4 mb-4">
+                           <div className="flex items-center justify-between">
+                              <h3 className="text-[11px] font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
+                                 <Calendar className="w-3.5 h-3.5 text-[var(--primary)]" /> Mapa de Alocação
+                              </h3>
+                              <div className="flex items-center bg-[var(--surface-2)] rounded-lg p-0.5 border border-[var(--border)]">
+                                 <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-[var(--surface-3)] rounded-md text-[var(--muted)] hover:text-[var(--text)] transition-all">
+                                    <ChevronLeft className="w-3 h-3" />
                                  </button>
-                                 <span className="text-xs font-black font-mono uppercase min-w-[140px] text-center" style={{ color: 'var(--text)' }}>
-                                    {new Date(capacityMonth + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                                 </span>
-                                 <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[var(--surface-hover)] rounded-xl transition-all text-[var(--text)]">
-                                    <ChevronRight className="w-5 h-5" />
+                                 <button onClick={() => setToday()} className="px-2 py-0.5 text-[9px] font-black uppercase text-[var(--muted)] hover:text-[var(--primary)] transition-all">
+                                    {new Date(capacityMonth + '-01').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '')}
+                                 </button>
+                                 <button onClick={() => changeMonth(1)} className="p-1 hover:bg-[var(--surface-3)] rounded-md text-[var(--muted)] hover:text-[var(--text)] transition-all">
+                                    <ChevronRight className="w-3 h-3" />
                                  </button>
                               </div>
                            </div>
-
-                           {capData && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                                 {/* Status Card */}
-                                 <div
-                                    className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all active:scale-[0.98]"
-                                    onClick={() => openWorkingDaysBreakdown('total')}
-                                 >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Status de Carga</p>
-                                       <InfoTooltip title="Ocupação Total" content="Soma das horas de projetos Planejados + Contínuos em relação à sua meta mensal." />
-                                    </div>
-                                    <div className="flex items-end gap-2">
-                                       <span className={`text-2xl font-black tabular-nums transition-colors ${capData.status === 'Sobrecarregado' ? 'text-red-500' : capData.status === 'Alto' ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                          {Math.round(capData.occupancyRate)}%
-                                       </span>
-                                       <div className={`mb-1.5 px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${capData.status === 'Sobrecarregado' ? 'bg-red-500/10 text-red-500' : capData.status === 'Alto' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                          {capData.status}
-                                       </div>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-[var(--surface-3)] rounded-full mt-3 overflow-hidden">
-                                       <div
-                                          className={`h-full transition-all duration-1000 ${capData.status === 'Sobrecarregado' ? 'bg-red-500' : capData.status === 'Alto' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                          style={{ width: `${Math.min(100, capData.occupancyRate)}%` }}
-                                       />
-                                    </div>
-                                 </div>
-
-                                 {/* Planejado Card */}
-                                 <div
-                                    onClick={() => openWorkingDaysBreakdown('total')}
-                                    className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-[var(--primary)] hover:scale-[1.02] transition-all group/card"
-                                 >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Planejado (Prioritário)</p>
-                                       <div className="flex items-center gap-2">
-                                          <span className="text-[8px] font-bold text-[var(--primary)] bg-[var(--primary-light)] px-1.5 py-0.5 rounded-full opacity-0 group-hover/card:opacity-100 transition-opacity">Ver Detalhes</span>
-                                          <InfoTooltip title="Prioridade 1" content="Total de horas destinadas a tarefas de projetos do tipo Planejado (Forecast restante distribuído pelos dias úteis)." />
-                                       </div>
-                                    </div>
-                                    <p className="text-2xl font-black text-blue-600 font-mono">
-                                       {formatDecimalToTime(capData.plannedHours)}<span className="text-xs ml-0.5 opacity-40">h</span>
-                                    </p>
-                                    <p className="text-[9px] font-bold text-[var(--muted)] uppercase mt-2">
-                                       Soma diária no mês
-                                    </p>
-                                 </div>
-
-                                 {/* Continuo Card */}
-                                 <div
-                                    onClick={() => openWorkingDaysBreakdown('total')}
-                                    className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-amber-400 hover:scale-[1.02] transition-all group/card"
-                                 >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Reserva Técnica</p>
-                                       <div className="flex items-center gap-2">
-                                          <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full opacity-0 group-hover/card:opacity-100 transition-opacity">Ver Detalhes</span>
-                                          <InfoTooltip title="Prioridade 2" content="Horas alocadas para Projetos de Sustentação ou Reserva Estratégica (50% da capacidade se não houver planejado)." />
-                                       </div>
-                                    </div>
-                                    <p className="text-2xl font-black text-amber-500 font-mono">
-                                       {formatDecimalToTime(capData.continuousHours)}<span className="text-xs ml-0.5 opacity-40">h</span>
-                                    </p>
-                                    <p className="text-[9px] font-bold text-[var(--muted)] uppercase mt-2">
-                                       Média disponível p/ ciclo
-                                    </p>
-                                 </div>
-
-                                 {/* Saldo/Buffer Card */}
-                                 <div
-                                    className="p-5 rounded-3xl bg-[var(--surface)] border border-[var(--border)] shadow-sm cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all active:scale-[0.98]"
-                                    onClick={() => openWorkingDaysBreakdown('residual')}
-                                 >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                       <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-60">Disponível p/ Planejado</p>
-                                       <InfoTooltip title="Buffer" content="Capacidade livre que pode ser utilizada para novas tarefas planejadas sem comprometer a reserva contínua." />
-                                    </div>
-                                    <p className="text-2xl font-black text-emerald-500 font-mono">
-                                       {formatDecimalToTime(capData.balance)}<span className="text-xs ml-0.5 opacity-40">h</span>
-                                    </p>
-                                    <p className="text-[9px] font-bold text-[var(--muted)] uppercase mt-2">
-                                       Saldo de Dias {capacityStats.isCurrentMonth ? '(Restantes)' : ''}
-                                    </p>
-                                 </div>
-
-                                 {/* Release Date Card */}
-                                 <div
-                                    onClick={() => setActiveTab('tasks')}
-                                    className="p-5 rounded-3xl bg-[var(--surface-elevated)] border border-[var(--border)] shadow-xl cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden"
-                                 >
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all">
-                                       <Zap className="w-12 h-12 text-purple-500" />
-                                    </div>
-                                    <div className="flex items-center justify-between mb-1.5 relative z-10">
-                                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponível Em</p>
-                                       <InfoTooltip
-                                          title="Previsão de Liberação"
-                                          content="Ideal: Foco total (100% cap). Realista: Considera alocação operacional padrão (50% cap)."
-                                       />
-                                    </div>
-
-                                    <div className="relative z-10">
-                                       <div className="flex items-center gap-2">
-                                          <p className={`text-xl font-black font-mono transition-all`} style={{ color: releaseDate?.isSaturated ? 'var(--danger)' : releaseDate?.realistic ? 'var(--primary)' : 'var(--text-3)' }}>
-                                             {releaseDate?.realistic || 'N/A'}
-                                          </p>
-                                          {releaseDate?.isSaturated && (
-                                             <span className="text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse" style={{ backgroundColor: 'var(--danger)', color: 'white' }}>SOBRECARGA</span>
-                                          )}
-                                       </div>
-                                       <div className="flex items-center gap-2 mt-1">
-                                          <span className={`text-[8px] font-black px-1 py-0.5 rounded uppercase tracking-tighter`} style={{ backgroundColor: releaseDate?.isSaturated ? 'var(--danger-bg)' : 'var(--primary-soft)', color: releaseDate?.isSaturated ? 'var(--danger)' : 'var(--primary)' }}>Realista</span>
-                                          {releaseDate && releaseDate.ideal !== releaseDate.realistic && (
-                                             <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-tighter">
-                                                Ideal: <span className="text-[var(--text-3)]">{releaseDate.ideal}</span>
-                                             </span>
-                                          )}
-                                       </div>
-                                    </div>
-
-                                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
-                                 </div>
+                           
+                           <div className="flex gap-3 justify-center">
+                              <div className="flex items-center gap-1">
+                                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                 <span className="text-[8px] font-black uppercase text-[var(--muted)]">Livre</span>
                               </div>
-                           )}
-
-                           <div className="mt-10 pt-8 border-t border-[var(--border)]">
-                              <div className="flex items-center justify-between mb-6">
-                                 <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Mapa de Alocação Diária</h4>
-                                    <p className="text-[9px] font-bold text-[var(--muted)] opacity-50 uppercase mt-0.5">Frequência e Ocupação Mensal</p>
-                                 </div>
-                                 <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-1.5" title="Horas dedicadas a projetos com prazos definidos">
-                                       <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: 'var(--status-occupied)' }}></div>
-                                       <span className="text-[9px] font-black uppercase text-[var(--muted)]">Ocupado</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5" title="Horas disponíveis livre de alocações">
-                                       <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: 'var(--status-free)' }}></div>
-                                       <span className="text-[9px] font-black uppercase text-[var(--muted)]">Livre</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5" title="Dias de ausência">
-                                       <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: 'var(--status-absent)' }}></div>
-                                       <span className="text-[9px] font-black uppercase text-[var(--muted)]">Ausência</span>
-                                    </div>
-                                 </div>
+                              <div className="flex items-center gap-1">
+                                 <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                 <span className="text-[8px] font-black uppercase text-[var(--muted)]">Ocupado</span>
                               </div>
-
-                              <div className="flex flex-wrap gap-2 pb-2">
-                                 {(() => {
-                                    const startDate = `${capacityMonth}-01`;
-                                    const [year, month] = capacityMonth.split('-').map(Number);
-                                    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-
-                                    const daily = CapacityUtils.simulateUserDailyAllocation(
-                                       user.id, startDate, endDate, projects, tasks, projectMembers, timesheetEntries, holidays || [], Number(String(formData.dailyAvailableHours).replace(',', '.')) || 8, absences, taskMemberAllocations
-                                    );
-
-                                    return daily.map(day => {
-                                       const total = day.plannedHours;
-                                       const isOverloaded = total > day.capacity;
-
-                                       return (
-                                          <div key={day.date} className="group relative">
-                                             <div
-                                                className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-default overflow-hidden ${isOverloaded ? 'ring-2 ring-red-500/20 shadow-sm' : ''}`}
-                                                style={{
-                                                   backgroundColor: (day as any).isHoliday ? 'rgba(245, 158, 11, 0.08)' :
-                                                      (day as any).isWeekend ? 'var(--surface-3)' :
-                                                         (day.isAbsent && !(day as any).isPartialAbsence) ? 'var(--status-absent-bg)' : 'var(--bg)',
-                                                   borderColor: isOverloaded ? 'var(--danger)' :
-                                                      (day as any).isHoliday ? '#F59E0B' :
-                                                         (day.isAbsent ? 'var(--status-absent)' : 'var(--border)')
-                                                }}
-                                             >
-                                                {/* Heatmap Bars */}
-                                                {!day.isAbsent && (
-                                                   <div className="w-full h-full flex flex-col-reverse">
-                                                      <div
-                                                         style={{
-                                                            height: `${Math.min(100, (day.plannedHours / Math.max(1, day.capacity)) * 100)}%`,
-                                                            backgroundColor: isOverloaded ? 'var(--danger)' : 'var(--status-occupied)'
-                                                         }}
-                                                         className="w-full transition-all duration-500"
-                                                      />
-                                                      <div
-                                                         style={{
-                                                            height: `${Math.min(100, (day.bufferHours / Math.max(1, day.capacity)) * 100)}%`,
-                                                            backgroundColor: 'var(--status-free)'
-                                                         }}
-                                                         className="w-full opacity-20 transition-all duration-500"
-                                                      />
-                                                   </div>
-                                                )}
-
-                                                {day.isAbsent && (
-                                                   <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--status-absent-bg)' }}>
-                                                      <AlertCircle size={14} style={{ color: 'var(--status-absent)', opacity: 0.4 }} />
-                                                   </div>
-                                                )}
-
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                   {(day as any).isHoliday && !isOverloaded && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />}
-                                                   <span className={`text-[10px] font-black tabular-nums group-hover:hidden ${(day as any).isWeekend ? 'opacity-30' : ''}`} style={{ color: isOverloaded ? 'var(--danger)' : (day.isAbsent ? 'var(--status-absent)' : (day as any).isHoliday ? '#F59E0B' : 'var(--text)') }}>
-                                                      {day.date.split('-')[2]}
-                                                   </span>
-                                                   <span className="text-[7px] font-black hidden group-hover:block uppercase" style={{ color: isOverloaded ? 'var(--danger)' : (day.isAbsent ? 'var(--status-absent)' : 'var(--text)') }}>
-                                                      {day.isAbsent ? (day as any).absenceType || 'AUS' : (day as any).isHoliday ? 'FER' : (day as any).isWeekend ? 'FDS' : `${total}h`}
-                                                   </span>
-                                                </div>
-                                             </div>
-
-                                             {/* Tooltip Detalhado */}
-                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-3 bg-slate-950 text-white rounded-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 shadow-2xl scale-90 group-hover:scale-100">
-                                                <p className="text-[9px] font-black text-center mb-2 border-b border-white/10 pb-1">
-                                                   {new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-                                                </p>
-                                                {day.isAbsent && !day.isPartialAbsence ? (
-                                                   <div className="text-[9px] font-black text-orange-400 uppercase text-center py-1">
-                                                      {day.absenceType || 'AUSÊNCIA'}
-                                                   </div>
-                                                ) : (
-                                                   <>
-                                                      {day.isPartialAbsence && (
-                                                         <div className="text-[8px] font-black text-orange-400 uppercase text-center pb-1 border-b border-white/10 mb-1">
-                                                            {day.absenceType || 'PARCIAL'}: -{day.deduction}h
-                                                         </div>
-                                                      )}
-                                                      <div className="flex justify-between items-center text-[8px] font-bold">
-                                                         <span style={{ color: 'var(--status-occupied)' }}>OCUPADO:</span>
-                                                         <span>{day.plannedHours}h</span>
-                                                      </div>
-
-                                                      <div className="flex justify-between items-center text-[8px] font-bold border-t border-white/5 pt-1.5 mt-1.5">
-                                                         <span style={{ color: 'var(--status-free)' }}>LIVRE:</span>
-                                                         <span>{day.bufferHours}h</span>
-                                                      </div>
-                                                      <div className={`flex justify-between items-center text-[9px] font-black pt-1 ${isOverloaded ? 'text-[var(--danger)]' : 'text-white'}`}>
-                                                         <span>CARGA TOTAL:</span>
-                                                         <span>{total}h</span>
-                                                      </div>
-                                                   </>
-                                                )}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-950"></div>
-                                             </div>
-                                          </div>
-                                       );
-                                    });
-                                 })()}
+                              <div className="flex items-center gap-1">
+                                 <div className="w-2 h-2 rounded-full bg-red-500" />
+                                 <span className="text-[8px] font-black uppercase text-[var(--muted)]">Ausência</span>
                               </div>
                            </div>
                         </div>
-                     )}
 
-                     <div className="ui-card p-6">
-                        <div className="flex items-center gap-3 mb-8">
-                           <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] flex items-center justify-center text-[var(--primary)]">
-                              <UserIcon className="w-5 h-5" />
-                           </div>
-                           <div>
-                              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--text)]">Dados Cadastrais</h3>
-                              <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider">Informações básicas e acesso ao sistema</p>
-                           </div>
-                        </div>
+                        {/* GRID DO CALENDÁRIO */}
+                        <div className="flex-1 grid grid-cols-7 gap-0.5">
+                           {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map(day => (
+                              <div key={day} className="text-center py-2 text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border-b border-[var(--border)] mb-1">
+                                 {day}
+                              </div>
+                           ))}
+                           
+                           {(() => {
+                              const [year, month] = capacityMonth.split('-').map(Number);
+                              const firstDayOfMonth = new Date(year, month - 1, 1).getDay(); // 0 = Domingo
+                              const daysInMonth = new Date(year, month, 0).getDate();
+                              const monthStart = new Date(year, month - 1, 1);
+                              const cells = [];
 
-                        <form onSubmit={handleSave} className="space-y-8">
-                           <fieldset disabled={!isEditing} className="disabled:opacity-100 space-y-8">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 <div className="space-y-1.5">
-                                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Nome Completo</label>
-                                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all disabled:bg-transparent disabled:px-0 disabled:border-none disabled:text-base" required />
-                                 </div>
+                              // Empty cells before the first day
+                              for (let i = 0; i < firstDayOfMonth; i++) {
+                                 cells.push(<div key={`empty-${i}`} className="aspect-square" />);
+                              }
 
-                                 <div className="space-y-1.5">
-                                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Email Profissional</label>
-                                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all disabled:bg-transparent disabled:px-0 disabled:border-none disabled:text-base" required />
-                                 </div>
+                              // Day cells
+                              for (let day = 1; day <= daysInMonth; day++) {
+                                 const dateStr = `${capacityMonth}-${String(day).padStart(2, '0')}`;
+                                 const dayOfWeek = (firstDayOfMonth + day - 1) % 7;
+                                 const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                                 
+                                 const occ = (capData?.dailyOccupancy || []).find((o: any) => o.date === dateStr);
+                                 const allocated = occ?.totalOccupancy || 0;
+                                 const totalMeta = capacityStats.dailyMeta;
+                                 
+                                 const isAbsence = capacityStats.userAbsences.some((a: any) => 
+                                    dateStr >= (a.startDate || a.start_date) && dateStr <= (a.endDate || a.end_date)
+                                 );
+                                 
+                                 // Determine color based on occupancy
+                                 let bgColor = 'var(--surface-2)';
+                                 let textColor = 'var(--text-muted)';
+                                 let borderColor = 'var(--border)';
+                                 let glow = '';
 
-                                 <div className="col-span-full pt-8 border-t border-[var(--border)]">
-                                    <div className="flex items-center gap-2 mb-6">
-                                       <LayoutGrid className="w-4 h-4 text-[var(--primary)]" />
-                                       <h3 className="text-[11px] font-black text-[var(--text)] uppercase tracking-widest">Enquadramento Funcional</h3>
-                                    </div>
+                                 if (isAbsence) {
+                                    bgColor = 'rgba(239, 68, 68, 0.1)';
+                                    textColor = '#ef4444';
+                                    borderColor = 'rgba(239, 68, 68, 0.3)';
+                                    glow = '0 0 10px rgba(239,68,68,0.1)';
+                                 } else if (!isWeekend) {
+                                    if (allocated > 0) {
+                                       bgColor = 'rgba(245, 158, 11, 0.1)';
+                                       textColor = '#f59e0b';
+                                       borderColor = 'rgba(245, 158, 11, 0.3)';
+                                    } else {
+                                       bgColor = 'rgba(16, 185, 129, 0.05)';
+                                       textColor = '#10b981';
+                                       borderColor = 'rgba(16, 185, 129, 0.2)';
+                                    }
+                                 }
 
-                                    <OrganizationalStructureSelector
-                                       initialCargo={formData.cargo}
-                                       initialLevel={formData.nivel}
-                                       initialTorre={formData.torre}
-                                       existingCargos={Array.from(new Set(users.map((u: User) => u.cargo).filter(Boolean)))}
-                                       isEditing={isEditing}
-                                       onChange={({ cargo, nivel, torre }) => setFormData(prev => ({ ...prev, cargo, nivel, torre }))}
-                                    />
-                                 </div>
-
-                                 <div className="space-y-1.5">
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Nível de Acesso</label>
-                                    <select
-                                       value={formData.role}
-                                       onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                                       disabled={!isEditing}
-                                       className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold focus:ring-2 focus:ring-[var(--primary)]/20 outline-none disabled:bg-transparent disabled:px-0 disabled:border-none disabled:appearance-none disabled:text-[var(--primary)]"
+                                 cells.push(
+                                    <div 
+                                       key={day} 
+                                       title={`${dateStr}: ${formatDecimalToTime(allocated)}h / ${formatDecimalToTime(totalMeta)}h`}
+                                       className={`aspect-square flex flex-col items-center justify-center rounded-lg border transition-all text-xs font-black font-mono relative group ${isWeekend ? 'opacity-30 grayscale-[0.5]' : ''}`}
+                                       style={{ backgroundColor: bgColor, color: textColor, borderColor: borderColor, boxShadow: glow }}
                                     >
-                                       <option value="developer">Padrão</option>
-                                       <option value="tech_lead">Tech Lead / Liderança</option>
-                                       <option value="pmo">Planejamento / PMO</option>
-                                       <option value="executive">Gestão Executiva / Executivo</option>
-                                       <option value="system_admin">Administrador TI (System Admin)</option>
-                                       <option value="ceo">Diretoria Geral / CEO</option>
-                                    </select>
-                                 </div>
-                              </div>
-
-                              <div className="border-t border-[var(--border)] pt-8 space-y-6">
-                                 <h4 className="text-[11px] font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2"><Shield className="w-4 h-4 text-emerald-500" /> Custos e Metas Meta (Restrito)</h4>
-                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="space-y-1.5">
-                                       <label className="block text-[10px] font-black text-[var(--muted)] uppercase">Custo Hora (IDL)</label>
-                                       <div className="relative">
-                                          {!isEditing && <span className="text-emerald-600 font-black">R$ {formData.hourlyCost}</span>}
-                                          {isEditing && (
-                                             <>
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">R$</span>
-                                                <input type="text" value={formData.hourlyCost || ''} onChange={(e) => handleNumberChange('hourlyCost', e.target.value)} placeholder="0,00" className="w-full pl-10 pr-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-emerald-600 font-black focus:ring-2 focus:ring-emerald-500/20 outline-none" />
-                                             </>
-                                          )}
+                                       <span className="z-10">{day}</span>
+                                       {!isWeekend && !isAbsence && allocated > 0 && (
+                                          <div className="absolute bottom-1 w-1 h-1 rounded-full" style={{ backgroundColor: textColor }} />
+                                       )}
+                                       {/* TOOLTIP COMPACTO AO PASSAR O MOUSE */}
+                                       <div className="absolute inset-0 bg-black/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20 pointer-events-none">
+                                          <span className="text-white text-[8px] font-black">{formatDecimalToTime(allocated)}h</span>
                                        </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                       <label className="block text-[10px] font-black text-[var(--muted)] uppercase">Hrs Meta Dia</label>
+                                 );
+                              }
+                              return cells;
+                           })()}
+                        </div>
+                        
+                        <div className="mt-4 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                           <p className="text-[9px] font-bold text-[var(--muted)] uppercase leading-relaxed italic">
+                             Sistema baseado em dias úteis, descontando feriados e ausências.
+                           </p>
+                        </div>
+                     </div>
+
+                     {/* FORMULÁRIO DE CADASTRO - COMPACTO E FUNCIONAL */}
+                     <div className="lg:col-span-12 xl:col-span-8 bg-[var(--surface)] border border-[var(--border)] rounded-[24px] p-5 shadow-sm">
+                        <form onSubmit={handleSave} className="space-y-4">
+                           <fieldset className="space-y-4" disabled={loading}>
+                              {/* IDENTIFICAÇÃO BÁSICA */}
+                              <div className="space-y-4">
+                                 <h4 className="text-[10px] font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-1.5">
+                                    <UserIcon className="w-3.5 h-3.5 text-[var(--primary)]" /> Registro de Identificação
+                                 </h4>
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                       <label className="block text-[9px] font-black text-[var(--muted)] uppercase">Nome Completo</label>
                                        <input
                                           type="text"
-                                          value={formData.dailyAvailableHours || ''}
-                                          onChange={(e) => handleNumberChange('dailyAvailableHours', e.target.value)}
-                                          placeholder="0"
-                                          className={`w-full px-4 py-3 border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-bold outline-none transition-all ${isEditing ? 'bg-[var(--surface-2)] focus:ring-2 focus:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0 disabled:text-[var(--text)]'}`}
+                                          value={formData.name || ''}
+                                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                          className={`w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm text-[var(--text)] font-bold outline-none transition-all ${isEditing ? 'bg-[var(--surface-2)] focus:ring-2 focus:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0 disabled:text-[var(--text)]'}`}
                                           disabled={!isEditing}
                                        />
                                     </div>
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1">
+                                       <label className="block text-[9px] font-black text-[var(--muted)] uppercase">E-mail Corporativo</label>
+                                       <input
+                                          type="email"
+                                          value={formData.email || ''}
+                                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                                          className={`w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm text-[var(--text)] font-bold outline-none transition-all ${isEditing ? 'bg-[var(--surface-2)] focus:ring-2 focus:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0 disabled:text-[var(--text)]'}`}
+                                          disabled={!isEditing}
+                                       />
+                                    </div>
+                                 </div>
+                              </div>
+
+                              {/* ALINHAMENTO FUNCIONAL (COMPONENTIZADO) */}
+                              <div className="space-y-4">
+                                 <h4 className="text-[10px] font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 text-[var(--primary)]" /> Alinhamento Operacional
+                                 </h4>
+                                 <OrganizationalStructureSelector
+                                    initialCargo={formData.cargo || ''}
+                                    initialLevel={formData.nivel || ''}
+                                    initialTorre={formData.torre || ''}
+                                    existingCargos={Array.from(new Set(users.map((u: User) => u.cargo).filter((c: string | undefined): c is string => !!c)))}
+                                    isEditing={isEditing}
+                                    onChange={({ cargo, nivel, torre }: { cargo: string; nivel: string; torre: string }) => {
+                                       setFormData(prev => ({ ...prev, cargo, nivel, torre }));
+                                    }}
+                                 />
+                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div className="space-y-1">
+                                       <label className="block text-[9px] font-black text-[var(--muted)] uppercase">Nível Acesso</label>
+                                       <select
+                                          value={formData.role || ''}
+                                          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as any }))}
+                                          className={`w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm text-[var(--text)] font-bold outline-none transition-all appearance-none ${isEditing ? 'bg-[var(--surface-2)] focus:ring-2 focus:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0 disabled:text-[var(--text)]'}`}
+                                          disabled={!isEditing}
+                                       >
+                                          <option value="user">Colaborador</option>
+                                          <option value="admin">Administrador</option>
+                                          <option value="manager">Gestor</option>
+                                       </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                       <label className="block text-[9px] font-black text-[var(--muted)] uppercase">Custo Hora</label>
+                                       <div className="relative">
+                                          {!isEditing && <span className="text-emerald-600 font-black block py-2">R$ {formData.hourlyCost}</span>}
+                                          {isEditing && (
+                                             <div className="relative flex items-center">
+                                                <span className="absolute left-3 text-emerald-600 font-bold text-xs">R$</span>
+                                                <input
+                                                   type="text"
+                                                   value={formData.hourlyCost || ''}
+                                                   onChange={(e) => handleNumberChange('hourlyCost', e.target.value)}
+                                                   placeholder="0,00"
+                                                   className="w-full pl-8 pr-3 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-sm text-emerald-600 font-black focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                                                />
+                                             </div>
+                                          )}
+                                       </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                       <label className="block text-[9px] font-black text-[var(--muted)] uppercase">Hrs Meta Dia</label>
+                                       <div className={`w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm text-[var(--text)] font-black flex justify-between items-center transition-all ${isEditing ? 'bg-[var(--surface-2)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0'}`}>
+                                          <input
+                                             type="text"
+                                             value={formData.dailyAvailableHours || '8'}
+                                             onChange={(e) => handleNumberChange('dailyAvailableHours', e.target.value)}
+                                             disabled={!isEditing}
+                                             className={`w-12 bg-transparent border-none outline-none font-black p-0 focus:ring-0 ${isEditing ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}
+                                          />
+                                          <span className="text-[8px] font-black uppercase opacity-40">H/Dia</span>
+                                       </div>
+                                    </div>
+                                    <div className="space-y-1">
                                        <div className="flex items-center justify-between">
-                                          <label className="block text-[10px] font-black text-[var(--muted)] uppercase">Hrs Meta Mês ({new Date(capacityMonth + '-02').toLocaleString('pt-BR', { month: 'short' }).toUpperCase()})</label>
+                                          <label className="block text-[9px] font-black text-[var(--muted)] uppercase">Hrs Meta Mês</label>
                                           {isEditing && (
                                              <button
                                                 type="button"
@@ -834,131 +806,98 @@ const TeamMemberDetail: React.FC = () => {
                                                    if (newMode === 'manual') {
                                                       setFormData(prev => ({
                                                          ...prev,
-                                                         monthlyAvailableHours: String(capacityStats.calculatedTotal).replace('.', ',')
+                                                          monthlyAvailableHours: String(capacityStats.calculatedTotal).replace('.', ',')
                                                       }));
                                                    }
                                                 }}
-                                                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${monthlyHoursMode === 'auto'
-                                                   ? 'bg-[var(--primary-soft)] text-[var(--primary)]'
-                                                   : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                                                   }`}
+                                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase transition-all ${monthlyHoursMode === 'auto' ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}
                                              >
-                                                {monthlyHoursMode === 'auto' ? <Clock className="w-3 h-3" /> : <Edit className="w-3 h-3" />}
-                                                {monthlyHoursMode === 'auto' ? 'Automático' : 'Manual'}
+                                                {monthlyHoursMode === 'auto' ? 'Auto' : 'Fixa'}
                                              </button>
                                           )}
                                        </div>
-                                       <div className="space-y-1">
-                                          <div className={`w-full px-4 py-3 border border-[var(--border)] rounded-xl text-sm text-[var(--text)] font-black flex justify-between items-center transition-all ${isEditing ? 'bg-[var(--surface-2)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0'}`}>
-                                             <input
-                                                type="text"
-                                                value={monthlyHoursMode === 'auto'
-                                                   ? formatDecimalToTime(capacityStats.calculatedTotal).replace(':', '.')
-                                                   : (formData.monthlyAvailableHours ?? '')}
-                                                onChange={(e) => handleNumberChange('monthlyAvailableHours', e.target.value)}
-                                                disabled={!isEditing || monthlyHoursMode === 'auto'}
-                                                className={`w-24 bg-transparent border-none outline-none font-black p-0 focus:ring-0 ${monthlyHoursMode === 'auto' ? 'text-[var(--text)] opacity-40' : 'text-[var(--primary)]'}`}
-                                             />
-                                             {capacityStats.isCurrentMonth && (
-                                                <span className="text-[10px] bg-purple-500/10 text-purple-600 px-2 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border border-purple-500/20">
-                                                   RESTAM: {formatDecimalToTime(capacityStats.calculatedResidual)}
-                                                </span>
-                                             )}
-                                          </div>
-                                          <p className="text-[8px] font-bold uppercase opacity-40 mt-1 cursor-help hover:text-[var(--primary)] transition-colors" onClick={() => openWorkingDaysBreakdown('total')}>
-                                             REF: {new Date(capacityMonth + '-02').toLocaleString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase()} |
-                                             META: <span className="underline decoration-dotted underline-offset-2">{capacityStats.totalWorkingDays} DIAS × {capacityStats.dailyMeta}H = {capacityStats.calculatedTotal}H</span> {capacityStats.isCurrentMonth ? <span onClick={(e) => { e.stopPropagation(); openWorkingDaysBreakdown('residual'); }}>| SALDO: <span className="underline decoration-dotted underline-offset-2">{capacityStats.finalResidualDays} DIAS ÚTEIS</span></span> : ''}
-                                          </p>
+                                       <div className={`w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm text-[var(--text)] font-black flex justify-between items-center transition-all ${isEditing && monthlyHoursMode === 'manual' ? 'bg-[var(--surface-2)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20 shadow-inner' : 'bg-transparent border-transparent px-0'}`}>
+                                          <input
+                                             type="text"
+                                             value={monthlyHoursMode === 'auto' ? formatDecimalToTime(capacityStats.calculatedTotal).replace(':', '.') : (formData.monthlyAvailableHours ?? '')}
+                                             onChange={(e) => handleNumberChange('monthlyAvailableHours', e.target.value)}
+                                             disabled={!isEditing || monthlyHoursMode === 'auto'}
+                                             className={`w-14 bg-transparent border-none outline-none font-black p-0 focus:ring-0 ${monthlyHoursMode === 'auto' ? 'text-[var(--text)] opacity-40' : 'text-[var(--primary)]'}`}
+                                          />
+                                          <span className="text-[8px] font-black uppercase opacity-40">H/Mês</span>
                                        </div>
                                     </div>
                                  </div>
                               </div>
 
-                              <div className="border-t border-[var(--border)] pt-8 space-y-6">
-                                 <h4 className="text-[11px] font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-2">
-                                    <Shield className="w-4 h-4 text-[var(--primary)]" /> Gestão de Status e Acesso
+                              {/* GESTÃO DE STATUS */}
+                              <div className="pt-4 border-t border-[var(--border)] space-y-4">
+                                 <h4 className="text-[10px] font-black uppercase text-[var(--text)] tracking-widest flex items-center gap-1.5">
+                                    <Shield className="w-3.5 h-3.5 text-[var(--primary)]" /> Governança
                                  </h4>
-
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* TOGGLE: PARTICIPAR DO FLUXO */}
-                                    <div className={`p-4 rounded-2xl border transition-all ${formData.torre !== 'N/A' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-500/5 border-slate-500/20'}`}>
-                                       <div className="flex items-center justify-between mb-4">
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className={`p-3.5 rounded-xl border transition-all ${formData.torre !== 'N/A' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-slate-500/5 border-slate-500/20'}`}>
+                                       <div className="flex items-center justify-between">
                                           <div className="flex items-center gap-3">
-                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.torre !== 'N/A' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
+                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.torre !== 'N/A' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/20 text-slate-500'}`}>
                                                 <Zap className="w-4 h-4" />
                                              </div>
                                              <div>
-                                                <p className="text-[10px] font-black uppercase text-[var(--muted)] tracking-widest">Operacional</p>
-                                                <p className="text-xs font-black text-[var(--text)]">Participação no Fluxo</p>
+                                                <p className="text-[9px] font-black uppercase text-[var(--muted)] opacity-60">Operacional</p>
+                                                <p className="text-xs font-black text-[var(--text)]">Participar do Fluxo</p>
                                              </div>
                                           </div>
                                           {isEditing && (
                                              <button
                                                 type="button"
                                                 onClick={() => setFormData(prev => ({ ...prev, torre: prev.torre === 'N/A' ? '' : 'N/A' }))}
-                                                className={`w-12 h-6 rounded-full relative transition-all ${formData.torre !== 'N/A' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                                className={`w-10 h-5 rounded-full relative transition-all ${formData.torre !== 'N/A' ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                              >
-                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${formData.torre !== 'N/A' ? 'left-7' : 'left-1'}`} />
+                                                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${formData.torre !== 'N/A' ? 'left-5.5' : 'left-0.5'}`} />
                                              </button>
                                           )}
                                        </div>
-                                       <div className="flex items-center justify-between">
-                                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${formData.torre !== 'N/A' ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'}`}>
-                                             {formData.torre !== 'N/A' ? 'Ativo no Board' : 'Oculto no Board'}
-                                          </span>
-                                       </div>
                                     </div>
-
-                                    {/* TOGGLE: STATUS DA CONTA (DESLIGAR) */}
-                                    <div className={`p-4 rounded-2xl border transition-all ${formData.active ? 'bg-blue-500/5 border-blue-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-                                       <div className="flex items-center justify-between mb-4">
+                                    <div className={`p-3.5 rounded-xl border transition-all ${formData.active ? 'bg-blue-500/5 border-blue-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                                       <div className="flex items-center justify-between">
                                           <div className="flex items-center gap-3">
-                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.active ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
+                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formData.active ? 'bg-blue-500/20 text-blue-500' : 'bg-red-500/20 text-red-500'}`}>
                                                 <Shield className="w-4 h-4" />
                                              </div>
                                              <div>
-                                                <p className="text-[10px] font-black uppercase text-[var(--muted)] tracking-widest">Controle de Acesso</p>
-                                                <p className="text-xs font-black text-[var(--text)]">Desligar Colaborador</p>
+                                                <p className="text-[9px] font-black uppercase text-[var(--muted)] opacity-60">Acesso</p>
+                                                <p className="text-xs font-black text-[var(--text)]">Status da Conta</p>
                                              </div>
                                           </div>
                                           {isEditing && (
                                              <button
                                                 type="button"
                                                 onClick={() => setFormData(prev => ({ ...prev, active: !prev.active }))}
-                                                className={`w-12 h-6 rounded-full relative transition-all ${formData.active ? 'bg-blue-500' : 'bg-red-500'}`}
+                                                className={`w-10 h-5 rounded-full relative transition-all ${formData.active ? 'bg-blue-500' : 'bg-red-500'}`}
                                              >
-                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${formData.active ? 'left-7' : 'left-1'}`} />
+                                                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${formData.active ? 'left-5.5' : 'left-0.5'}`} />
                                              </button>
                                           )}
                                        </div>
-                                       <div className="flex items-center justify-between">
-                                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${formData.active ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
-                                             {formData.active ? 'Conta Habilitada' : 'CONTA DESLIGADA'}
-                                          </span>
-                                       </div>
                                     </div>
                                  </div>
-
-                                 {isEditing && (
-                                    <div className="pt-6 border-t border-[var(--border)] flex items-center justify-between gap-6">
-                                       <div className="flex flex-col">
-                                          <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Ações Irreversíveis</p>
-                                          <p className="text-[11px] text-[var(--muted)] font-medium">Cuidado ao remover registros permanentes.</p>
-                                       </div>
-                                       <div className="flex items-center gap-3">
-                                          <button type="button" onClick={() => setDeleteModalOpen(true)} className="px-6 py-3 text-red-500 hover:bg-red-500/5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border border-red-500/20 hover:border-500">Excluir Colaborador</button>
-                                          <button type="submit" className="px-8 py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--primary)]/20 transition-all flex items-center gap-2">
-                                             <Save className="w-4 h-4" /> Salvar Alterações
-                                          </button>
-                                       </div>
-                                    </div>
-                                 )}
                               </div>
+
+                              {/* BOTÕES DE AÇÃO NO MODO EDIÇÃO */}
+                              {isEditing && (
+                                 <div className="flex items-center justify-end gap-2 pt-2">
+                                    <button type="button" onClick={() => setDeleteModalOpen(true)} className="px-4 py-2 text-red-500 hover:bg-red-500/5 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all">Excluir</button>
+                                    <button type="submit" className="px-6 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-lg font-black text-[9px] uppercase tracking-widest shadow-lg transition-all flex items-center gap-1.5">
+                                       <Save className="w-3.5 h-3.5" /> Salvar
+                                    </button>
+                                 </div>
+                              )}
                            </fieldset>
                         </form>
                      </div>
                   </div>
-               )}
+               </div>
+            )}
 
                {activeTab === 'projects' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1029,97 +968,9 @@ const TeamMemberDetail: React.FC = () => {
                               .filter((name): name is string => Boolean(name))
                               .join(', ');
 
-                           const alloc = taskMemberAllocations.find((a: TaskMemberAllocation) => String(a.taskId) === String(t.id) && String(a.userId) === String(user?.id));
-                           const hasAnyAllocationInTask = taskMemberAllocations.some((a: TaskMemberAllocation) => String(a.taskId) === String(t.id) && a.reservedHours > 0);
-
-                           let baseAllocated = 0;
-                           if (alloc && alloc.reservedHours > 0) {
-                              baseAllocated = alloc.reservedHours;
-                           } else if (!hasAnyAllocationInTask) {
-                              baseAllocated = (parseTimeToDecimal(String(t.estimatedHours || 0))) / (teamIds.length || 1);
-                           } else {
-                              const isMainDev = String(t.developerId) === String(user?.id);
-                              if (isMainDev) {
-                                 const totalAllocatedToOthers = taskMemberAllocations
-                                    .filter((a: TaskMemberAllocation) => String(a.taskId) === String(t.id) && String(a.userId) !== String(user?.id))
-                                    .reduce((sum: number, a: TaskMemberAllocation) => sum + (Number(a.reservedHours) || 0), 0);
-                                 baseAllocated = Math.max(0, parseTimeToDecimal(String(t.estimatedHours || 0)) - totalAllocatedToOthers);
-                              } else {
-                                 baseAllocated = 0;
-                              }
-                           }
-
-                           const reportedOnTask = timesheetEntries.reduce((sum: number, entry: TimesheetEntry) => {
-                              if (String(entry.taskId) === String(t.id) && String(entry.userId) === String(user.id)) {
-                                 return sum + (Number(entry.totalHours) || 0);
-                              }
-                              return sum;
-                           }, 0);
-
-                           let totalEffort = baseAllocated;
-                           if (t.status === 'Done') {
-                              totalEffort = reportedOnTask;
-                           } else if (reportedOnTask > baseAllocated) {
-                              totalEffort = reportedOnTask;
-                           }
-
-                           // --- CÁLCULO MENSAL NO MÊS SELECIONADO ---
-                           const startDate = `${capacityMonth}-01`;
-                           const todayStr = new Date().toISOString().split('T')[0];
-                           const [year, month] = capacityMonth.split('-').map(Number);
-                           const lastDay = new Date(year, month, 0).getDate();
-                           const endDate = `${capacityMonth}-${String(lastDay).padStart(2, '0')}`;
-                           const p = projects.find((proj: Project) => proj.id === t.projectId);
-                           const nominalEnd = t.actualDelivery || t.estimatedDelivery || p?.estimatedDelivery || endDate;
-                           const tStart = t.scheduledStart || t.actualStart || p?.startDate || startDate;
-
-                           const reportedHours = (timesheetEntries || []).reduce((sum: number, entry: TimesheetEntry) => {
-                              if (String(entry.taskId) === String(t.id) && String(entry.userId) === String(user.id)) {
-                                 return sum + (Number(entry.totalHours) || 0);
-                              }
-                              return sum;
-                           }, 0);
-
-                           const monthlyReportedHours = (timesheetEntries || []).reduce((sum: number, entry: TimesheetEntry) => {
-                              if (String(entry.taskId) === String(t.id) && String(entry.userId) === String(user.id)) {
-                                 if (entry.date.startsWith(capacityMonth)) {
-                                    return sum + (Number(entry.totalHours) || 0);
-                                 }
-                              }
-                              return sum;
-                           }, 0);
-
-                           let monthlyAllocatedHours = 0;
-                           if (t.status === 'Done') {
-                              // Regra de Saldo Real: Vale o que foi apontado no mês (Done Recouping)
-                              monthlyAllocatedHours = monthlyReportedHours;
-                           } else {
-                              // LÓGICA DE ESFORÇO REALISTA (PRESSÃO DE ENTREGA) - Sincronizada com CapacityUtils
-                              const remainingEffort = Math.max(0, totalEffort - reportedHours);
-
-                              if (nominalEnd < startDate) {
-                                 // Tarefa atrasada de meses anteriores
-                                 monthlyAllocatedHours = monthlyReportedHours + remainingEffort;
-                              } else {
-                                 // Tarefa ativa
-                                 const effectiveStart = (tStart > todayStr) ? tStart : todayStr;
-                                 const effectiveEnd = (nominalEnd > todayStr) ? nominalEnd : todayStr;
-
-                                 const remainingDaysTotal = CapacityUtils.getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays || [], capacityStats.userAbsences, capacityStats.dailyMeta) || 1;
-                                 const hoursPerDay = remainingEffort / remainingDaysTotal;
-
-                                 const intStart = effectiveStart > startDate ? effectiveStart : startDate;
-                                 const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
-
-                                 let predictedInPeriod = 0;
-                                 if (intStart <= intEnd) {
-                                    const bizDaysInMonth = CapacityUtils.getWorkingDaysInRange(intStart, intEnd, holidays || [], capacityStats.userAbsences, capacityStats.dailyMeta);
-                                    predictedInPeriod = bizDaysInMonth * hoursPerDay;
-                                 }
-
-                                 monthlyAllocatedHours = monthlyReportedHours + predictedInPeriod;
-                              }
-                           }
+                           const taskInBreakdown = capData?.breakdown?.tasks?.find((tb: any) => String(tb.id) === String(t.id));
+                           const monthlyAllocatedHours = taskInBreakdown?.hours || 0;
+                           const monthlyReportedHours = taskInBreakdown?.reported || 0;
 
                            const now = new Date();
                            now.setHours(12, 0, 0, 0);
@@ -1598,8 +1449,6 @@ const TeamMemberDetail: React.FC = () => {
                   </div>
                )}
             </div>
-         </div>
-
          <ConfirmationModal
             isOpen={deleteModalOpen}
             title="Excluir Colaborador"
@@ -1607,86 +1456,97 @@ const TeamMemberDetail: React.FC = () => {
             onConfirm={handleDeleteUser}
             onCancel={() => setDeleteModalOpen(false)}
          />
-         {
-            showBreakdown && capData && (
-               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'var(--overlay)' }}>
-                  <motion.div
-                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                     className="rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border"
-                     style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border)' }}
-                  >
-                     <div className={`p-8 ${showBreakdown === 'planned' ? 'bg-blue-600' : 'bg-amber-500'} text-white`}>
-                        <div className="flex items-center justify-between">
-                           <div>
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Distribuição de Carga</p>
-                              <h3 className="text-2xl font-black">{showBreakdown === 'planned' ? 'Projetos Planejados' : 'Atividades de Reserva'}</h3>
-                           </div>
-                           <button onClick={() => setShowBreakdown(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                              <LayoutGrid className="w-5 h-5 rotate-45" />
-                           </button>
+
+         {showBreakdown && capData && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md" style={{ backgroundColor: 'var(--overlay)' }}>
+               <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="rounded-[32px] shadow-2xl w-full max-w-xl overflow-hidden border flex flex-col max-h-[90vh]"
+                  style={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border)' }}
+               >
+                  <div className="p-8 bg-gradient-to-br from-[var(--primary)] to-indigo-700 text-white relative overflow-hidden shrink-0">
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none" />
+                     <div className="flex items-center justify-between relative z-10">
+                        <div>
+                           <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Capacidade Operacional</p>
+                           <h3 className="text-2xl font-black tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+                              Distribuição de Carga
+                           </h3>
                         </div>
-
-                        <div className="mt-6 p-4 bg-white/10 rounded-2xl backdrop-blur-md">
-                           <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Total no Mês</p>
-                           <p className="text-3xl font-black font-mono">
-                              {formatDecimalToTime(showBreakdown === 'planned' ? capData.plannedHours : capData.continuousHours)}h
-                           </p>
-                        </div>
-                     </div>
-
-                     <div className="p-8 max-h-[60vh] overflow-y-auto" style={{ backgroundColor: 'var(--surface)' }}>
-                        <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 opacity-40">Origem das Horas</p>
-
-                        <div className="space-y-4">
-                           {(showBreakdown === 'planned' ? capData.breakdown.planned : capData.breakdown.continuous).map((item: any, idx: number) => (
-                              <div key={item.id} className="flex items-center justify-between p-4 rounded-3xl bg-[var(--surface)] border border-[var(--border)] group hover:border-[var(--primary)] transition-all">
-                                 <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${showBreakdown === 'planned' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
-                                       {idx + 1}
-                                    </div>
-                                    <div>
-                                       <p className="font-black text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{item.name}</p>
-                                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase">ID: {item.id}</p>
-                                    </div>
-                                 </div>
-                                 <div className="text-right">
-                                    <p className="font-black text-[var(--text)] font-mono">{formatDecimalToTime(item.hours)}h</p>
-                                    <p className="text-[9px] font-bold text-[var(--muted)]">Calculado</p>
-                                 </div>
-                              </div>
-                           ))}
-
-                           {(showBreakdown === 'planned' ? capData.breakdown.planned : capData.breakdown.continuous).length === 0 && (
-                              <div className="text-center py-12 opacity-30">
-                                 <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-                                 <p className="font-black uppercase text-xs">Nenhum projeto identificado</p>
-                              </div>
-                           )}
-                        </div>
-                     </div>
-
-                     <div className="p-8 border-t border-[var(--border)] flex justify-end" style={{ backgroundColor: 'var(--surface-2)' }}>
-                        <button
-                           onClick={() => setShowBreakdown(null)}
-                           className="px-8 py-3 border border-[var(--border)] text-[var(--text)] rounded-2xl font-black text-xs uppercase transition-all active:scale-95 shadow-sm"
-                           style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
-                           onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
-                              e.currentTarget.style.borderColor = 'var(--primary)';
-                           }}
-                           onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--surface)';
-                              e.currentTarget.style.borderColor = 'var(--border)';
-                           }}
-                        >
-                           Fechar
+                        <button onClick={() => setShowBreakdown(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                           <LayoutGrid className="w-5 h-5 rotate-45" />
                         </button>
                      </div>
-                  </motion.div>
-               </div>
-            )
-         }
+
+                     <div className="mt-6 flex items-center gap-6 relative z-10">
+                        <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 flex-1">
+                           <p className="text-[9px] font-black opacity-60 uppercase tracking-widest mb-1">Total Alocado</p>
+                           <p className="text-3xl font-black font-mono">
+                              {formatDecimalToTime((capData.plannedHours || 0) + (capData.continuousHours || 0))}h
+                           </p>
+                        </div>
+                        <div className="flex-1 flex flex-col justify-center gap-2">
+                           <div className="flex items-center gap-2 text-xs font-bold text-white/80">
+                              <Shield size={14} /> {capData.breakdown.planned.length} Projetos
+                           </div>
+                           <div className="flex items-center gap-2 text-xs font-bold text-white/80">
+                              <Clock size={14} /> {capData.breakdown.continuous.length} Recorrentes
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="p-8 overflow-y-auto flex-1" style={{ backgroundColor: 'var(--surface)' }}>
+                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-4 opacity-50">Volume por Origem</p>
+
+                     <div className="space-y-3">
+                        {[
+                           ...capData.breakdown.planned.map((p: any) => ({ ...p, type: 'Projeto Planejado', color: 'bg-blue-50 text-blue-600 border-blue-100', dot: 'bg-blue-500' })),
+                           ...capData.breakdown.continuous.map((p: any) => ({ ...p, type: 'Reserva/Recorrente', color: 'bg-amber-50 text-amber-600 border-amber-100', dot: 'bg-amber-500' }))
+                        ].sort((a, b) => b.hours - a.hours).map((item: any, idx: number) => (
+                           <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] group hover:border-[var(--primary)] transition-all shadow-sm hover:shadow-md">
+                              <div className="flex items-center gap-4">
+                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${item.color} border shadow-sm`}>
+                                    {idx + 1}
+                                 </div>
+                                 <div>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                       <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`}></span>
+                                       <p className="font-black text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors line-clamp-1">{item.name}</p>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest ml-3.5 opacity-70 flex items-center gap-1">
+                                       <span className="opacity-50">ID: {item.id.slice(0,8)}...</span> • {item.type}
+                                    </p>
+                                 </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                 <p className="font-black text-[var(--text)] font-mono text-base">{formatDecimalToTime(item.hours)}h</p>
+                                 <p className="text-[8px] font-black uppercase tracking-widest text-[var(--muted)] opacity-50 mt-1">Alocado</p>
+                              </div>
+                           </div>
+                        ))}
+
+                        {capData.breakdown.planned.length === 0 && capData.breakdown.continuous.length === 0 && (
+                           <div className="text-center py-16 opacity-30">
+                              <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+                              <p className="font-black uppercase text-xs tracking-widest">Nenhuma alocação registrada</p>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+
+                  <div className="p-6 border-t border-[var(--border)] flex justify-end shrink-0" style={{ backgroundColor: 'var(--surface-2)' }}>
+                     <button
+                        onClick={() => setShowBreakdown(false)}
+                        className="px-8 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm"
+                     >
+                        Fechar Janela
+                     </button>
+                  </div>
+               </motion.div>
+            </div>
+         )}
 
          <WorkingDaysModal
             isOpen={workingDaysModal.isOpen}
@@ -1694,7 +1554,7 @@ const TeamMemberDetail: React.FC = () => {
             title={workingDaysModal.title}
             details={workingDaysModal.details}
          />
-      </div >
+      </div>
    );
 };
 

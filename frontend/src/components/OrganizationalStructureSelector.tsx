@@ -87,17 +87,29 @@ const OrganizationalStructureSelector: React.FC<OrganizationalStructureSelectorP
 
     if (!isEditing) {
         return (
-            <div className="p-4 rounded-2xl border bg-[var(--surface-2)] border-[var(--border)] flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--surface)] flex items-center justify-center text-[var(--primary)] border border-[var(--border)] shadow-sm">
-                        <LayoutGrid className="w-5 h-5" />
+            <div className="group relative overflow-hidden p-6 rounded-[24px] border border-[var(--border)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] shadow-sm hover:shadow-md transition-all duration-500">
+                {/* Background Pattern */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)] opacity-[0.03] rounded-full -mr-16 -mt-16 blur-3xl group-hover:opacity-[0.06] transition-opacity" />
+                
+                <div className="flex items-center gap-5 relative z-10">
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--primary)] border border-[var(--border)] shadow-sm group-hover:scale-110 transition-transform duration-500">
+                        <LayoutGrid className="w-6 h-6" />
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-xs font-black uppercase tracking-wider">
-                        <span className="text-[var(--text)]">{cargo || 'Cargo'}</span>
-                        <ChevronRight className="w-4 h-4 text-[var(--muted)] opacity-30" />
-                        <span className="text-[var(--text)]">{nivel || 'Nível'}</span>
-                        <ChevronRight className="w-4 h-4 text-[var(--muted)] opacity-30" />
-                        <span className="text-[var(--text-2)]">{torre || 'Especialidade'}</span>
+                    
+                    <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--muted)] opacity-60">
+                            <span>{cargo || 'Sem Cargo'}</span>
+                            <ChevronRight className="w-3 h-3 opacity-40 shrink-0" />
+                            <span>{nivel || 'Sem Nível'}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase">
+                                {torre || 'Não Vinculado'}
+                            </h3>
+                            <div className="h-0.5 flex-1 bg-gradient-to-r from-[var(--border)] to-transparent opacity-30" />
+                            <ChevronRight className="w-5 h-5 text-[var(--primary)] opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500" />
+                        </div>
                     </div>
                 </div>
             </div>

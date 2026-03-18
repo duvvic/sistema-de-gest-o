@@ -2,6 +2,204 @@ import { User, Task, Project, ProjectMember, Holiday, TimesheetEntry, TaskMember
 import { parseTimeToDecimal } from './normalizers';
 
 /**
+ * CENTRALIZADOR DE CAPACIDADE ÚTIL
+ * Retorna a capacidade disponível (horas) em um período, considerando feriados e ausências.
+ */
+export const getUserCapacityOnPeriod = (
+    user: User,
+    startDate: string,
+    endDate: string,
+    holidays: Holiday[] = [],
+    absences: Absence[] = []
+): number => {
+    const dailyGoal = user.dailyAvailableHours || 8;
+    const userAbsences = absences.filter(a => String(a.userId) === String(user.id));
+    
+    // Regra: (Horas/Dia) * (Dias Úteis Efetivos)
+    // getWorkingDaysInRange já desconta feriados e ausências proporcionalmente
+    const effectiveWorkingDays = getWorkingDaysInRange(startDate, endDate, holidays, userAbsences, dailyGoal);
+
+    return Number((dailyGoal * effectiveWorkingDays).toFixed(2));
+};
+
+/**
+ * CALCULA A VELOCIDADE INDIVIDUAL DO COLABORADOR (Regra 4)
+ * velocity = horas_apontadas / horas_estimadas (baseado em tarefas concluídas)
+ */
+export const calculateUserVelocity = (
+    userId: string,
+    timesheetEntries: TimesheetEntry[],
+    tasks: Task[]
+): number => {
+    // Filtramos tarefas concluídas do usuário
+    const completedTasks = tasks.filter(t => 
+        (String(t.developerId) === String(userId) || (t.collaboratorIds || []).some(id => String(id) === String(userId))) &&
+        t.status === 'Done' && 
+        (Number(t.estimatedHours) || 0) > 0
+    );
+
+    if (completedTasks.length < 2) return 1.0; // Amostra pequena, assume velocity padrão
+
+    let totalEstimated = 0;
+    let totalReported = 0;
+
+    completedTasks.forEach(t => {
+        totalEstimated += Number(t.estimatedHours) || 0;
+        totalReported += timesheetEntries
+            .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(userId))
+            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+    });
+
+    if (totalEstimated === 0) return 1.0;
+    // Velocity > 1: Lento (usa mais horas que o previsto)
+    // Velocity < 1: Rápido (usa menos horas que o previsto)
+    const rawVelocity = totalReported / totalEstimated;
+    return Math.max(0.6, Math.min(1.8, rawVelocity)); // Clamp para evitar distorções absurdas
+};
+
+/**
+ * DETERMINA O ESFORÇO TOTAL DE UM COLABORADOR ESPECÍFICO EM UMA TAREFA
+ */
+const getUserTaskTotalEffort = (
+    task: Task, 
+    userId: string, 
+    taskMemberAllocations: TaskMemberAllocation[],
+    allUsers: User[] = [],
+    holidays: Holiday[] = [],
+    absences: Absence[] = [],
+    timesheetEntries: TimesheetEntry[] = [],
+    allTasks: Task[] = []
+): number => {
+    // Busca velocidade se solicitado (Enterprise Rule 4)
+    const velocity = calculateUserVelocity(userId, timesheetEntries, allTasks);
+
+    const specificAllocation = taskMemberAllocations.find(a => String(a.taskId) === String(task.id) && String(a.userId) === String(userId));
+    const hasAnyAllocationInTask = taskMemberAllocations.some(a => String(a.taskId) === String(task.id) && (a.reservedHours || 0) > 0);
+
+    let baseEffort = 0;
+
+    if (specificAllocation && specificAllocation.reservedHours > 0) {
+        baseEffort = Number(specificAllocation.reservedHours);
+    } else if (!hasAnyAllocationInTask) {
+        // FALLBACK INTELIGENTE (Regra 5): Distribuição proporcional à capacidade
+        const teamIds = Array.from(new Set([task.developerId, ...(task.collaboratorIds || [])])).filter(Boolean);
+        const teamUsers = allUsers.filter(u => teamIds.includes(String(u.id)));
+
+        if (teamUsers.length > 1) {
+            const tStart = task.scheduledStart || task.actualStart || new Date().toISOString().split('T')[0];
+            const tEnd = task.estimatedDelivery || tStart;
+            
+            const userObj = teamUsers.find(u => String(u.id) === String(userId));
+            if (userObj) {
+                const memberCap = getUserCapacityOnPeriod(userObj, tStart, tEnd, holidays, absences);
+                const totalTeamCap = teamUsers.reduce((sum, u) => sum + getUserCapacityOnPeriod(u, tStart, tEnd, holidays, absences), 0);
+                
+                if (totalTeamCap > 0) {
+                    baseEffort = (Number(task.estimatedHours) || 0) * (memberCap / totalTeamCap);
+                }
+            }
+        }
+        
+        if (baseEffort === 0) {
+            baseEffort = parseTimeToDecimal(String(task.estimatedHours || 0)) / (teamIds.length || 1);
+        }
+    } else {
+        const isMainDev = String(task.developerId) === String(userId);
+        if (isMainDev) {
+            const totalAllocatedToOthers = taskMemberAllocations
+                .filter(a => String(a.taskId) === String(task.id) && String(a.userId) !== String(userId))
+                .reduce((sum, a) => sum + (Number(a.reservedHours) || 0), 0);
+            baseEffort = Math.max(0, parseTimeToDecimal(String(task.estimatedHours || 0)) - totalAllocatedToOthers);
+        }
+    }
+
+    // Regra Enterprise 4: Forecast Adaptativo via Velocity
+    return baseEffort * velocity;
+};
+
+/**
+ * CALCULA A CARGA DE UMA TAREFA EM UM PERÍODO ESPECÍFICO (MÊS OU DIA)
+ */
+const getTaskLoadOnPeriod = (
+    task: Task,
+    user: User,
+    project: Project,
+    timesheetEntries: TimesheetEntry[],
+    taskMemberAllocations: TaskMemberAllocation[],
+    analyzeStart: string, 
+    analyzeEnd: string,
+    contextStart: string,
+    contextEnd: string,
+    holidays: Holiday[],
+    absences: Absence[],
+    dailyGoal: number,
+    allUsers: User[] = [],
+    allTasks: Task[] = []
+): { effortInPeriod: number; reportedInRange: number } => {
+    // 1. Esforço Total (Com Velocity)
+    let totalEffort = getUserTaskTotalEffort(task, user.id, taskMemberAllocations, allUsers, holidays, absences, timesheetEntries, allTasks);
+
+    // 2. Apontamentos
+    const userId = String(user.id);
+    const reportedTotal = timesheetEntries
+        .filter(e => String(e.taskId) === String(task.id) && String(e.userId) === userId)
+        .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+
+    const reportedInRange = timesheetEntries
+        .filter(e => String(e.taskId) === String(task.id) && String(e.userId) === userId && e.date >= analyzeStart && e.date <= analyzeEnd)
+        .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+
+    if (task.status === 'Done') {
+        return { effortInPeriod: reportedInRange, reportedInRange };
+    }
+
+    if (reportedTotal > totalEffort) totalEffort = reportedTotal;
+    const remainingEffort = Math.max(0, totalEffort - reportedTotal);
+
+    // 3. Distribuição do Backlog (Somente Futuro)
+    let effortInPeriod = reportedInRange;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (remainingEffort > 0) {
+        const tStart = task.scheduledStart || task.actualStart || project.startDate || contextStart;
+        const tEnd = task.estimatedDelivery || project.estimatedDelivery || contextEnd;
+
+        const distStart = tStart > todayStr ? tStart : todayStr;
+        const distEnd = tEnd;
+
+        if (distEnd < distStart) {
+            // Atrasada (Overdue)
+            const effectiveOverdueStart = contextStart > todayStr ? contextStart : todayStr;
+            const overdueDays = getWorkingDaysInRange(effectiveOverdueStart, contextEnd, holidays, absences, dailyGoal) || 5;
+            const hoursPerDay = remainingEffort / overdueDays;
+
+            const intStart = effectiveOverdueStart > analyzeStart ? effectiveOverdueStart : analyzeStart;
+            const intEnd = contextEnd < analyzeEnd ? contextEnd : analyzeEnd;
+
+            if (intStart <= intEnd) {
+                const intersectionDays = getWorkingDaysInRange(intStart, intEnd, holidays, absences, dailyGoal);
+                effortInPeriod += hoursPerDay * intersectionDays;
+            }
+        } else {
+            const futureWorkingDays = getWorkingDaysInRange(distStart, distEnd, holidays, absences, dailyGoal) || 1;
+            const hoursPerDay = remainingEffort / futureWorkingDays;
+
+            const intStart = distStart > analyzeStart ? distStart : analyzeStart;
+            const intEnd = distEnd < analyzeEnd ? distEnd : analyzeEnd;
+
+            if (intStart <= intEnd) {
+                const intersectionDays = getWorkingDaysInRange(intStart, intEnd, holidays, absences, dailyGoal);
+                effortInPeriod += hoursPerDay * intersectionDays;
+            }
+        }
+    }
+
+    return { effortInPeriod, reportedInRange };
+};
+
+/**
+
+/**
  * Calcula a dedução de horas para um dia com base em feriados e ausências.
  */
 const calculateDayDeduction = (dateStr: string, holidays: Holiday[], absences: Absence[], dailyMeta: number): number => {
@@ -19,7 +217,7 @@ const calculateDayDeduction = (dateStr: string, holidays: Holiday[], absences: A
     const absence = absences.find(a => {
         const aStart = a.startDate;
         const aEnd = a.endDate || a.startDate;
-        const isApproved = a.status === 'aprovada_gestao' || a.status === 'aprovada_rh' || a.status === 'finalizada_dp';
+        const isApproved = a.status === 'aprovada_gestao' || a.status === 'aprovada_rh' || a.status === 'finalizada_dp' || a.status === 'programado';
         return dateStr >= aStart && dateStr <= aEnd && isApproved;
     });
 
@@ -205,6 +403,13 @@ export const getUserContinuousCommitment = (
  * LÓGICA DE ALOCAÇÃO DIÁRIA (SIMULAÇÃO) - REFORMULADA
  * Prioridade: Planejado (O que sobra após compromisso contínuo) | Contínuo (Compromisso base ou 100% se sem planejado)
  */
+/**
+ * LÓGICA DE ALOCAÇÃO DIÁRIA (SIMULAÇÃO ENTERPRISE)
+ * Resolve conflitos diários usando priorização:
+ * 1. Prazo (mais próximo primeiro)
+ * 2. Prioridade Fixa (Critical > High > ...)
+ * 3. Percentual concluído
+ */
 export const simulateUserDailyAllocation = (
     userId: string,
     startDate: string,
@@ -216,16 +421,35 @@ export const simulateUserDailyAllocation = (
     holidays: Holiday[] = [],
     userDailyCap: number = 8,
     absences: Absence[] = [],
-    taskMemberAllocations: TaskMemberAllocation[] = []
+    taskMemberAllocations: TaskMemberAllocation[] = [],
+    allUsers: User[] = []
 ): DayAllocation[] => {
     const allocations: DayAllocation[] = [];
     const start = new Date(startDate + 'T12:00:00');
     const end = new Date(endDate + 'T12:00:00');
     const todayStr = new Date().toISOString().split('T')[0];
 
+    // Preparamos o backlog de tarefas ativas do usuário
     const userTasks = allTasks.filter(t => {
         const isAssigned = String(t.developerId) === String(userId) || (t.collaboratorIds || []).some((id: string) => String(id) === String(userId));
-        return isAssigned && !t.deleted_at;
+        return isAssigned && !t.deleted_at && t.status !== 'Done';
+    }).map(t => {
+        const effort = getUserTaskTotalEffort(t, userId, taskMemberAllocations, allUsers, holidays, absences, timesheetEntries, allTasks);
+        const reported = timesheetEntries
+            .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(userId))
+            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+        return { 
+            ...t, 
+            remainingEffort: Math.max(0, effort - reported),
+            priorityScore: (t.priority === 'Critical' ? 10 : t.priority === 'High' ? 7 : t.priority === 'Medium' ? 4 : 1)
+        };
+    }).sort((a, b) => {
+        // Priorização Avançada (Regra 1)
+        if (a.estimatedDelivery !== b.estimatedDelivery) {
+            return (a.estimatedDelivery || '9999').localeCompare(b.estimatedDelivery || '9999');
+        }
+        if (a.priorityScore !== b.priorityScore) return b.priorityScore - a.priorityScore;
+        return (b.progress || 0) - (a.progress || 0);
     });
 
     let current = new Date(start);
@@ -233,115 +457,58 @@ export const simulateUserDailyAllocation = (
         const dateStr = current.toISOString().split('T')[0];
         const dayOfWeek = current.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isHoliday = holidays.some(h => dateStr >= h.date && dateStr <= (h.endDate || h.date));
 
         const deduction = calculateDayDeduction(dateStr, holidays, absences.filter(a => String(a.userId) === String(userId)), userDailyCap);
-        const isAbsent = deduction >= userDailyCap;
-        const isWorkingDay = !isWeekend && deduction < userDailyCap;
-
-        let dayTotalPlanned = 0;
-        let dayTotalContinuous = 0;
         const currentCapacity = Math.max(0, userDailyCap - deduction);
+        const isWorkingDay = !isWeekend && currentCapacity > 0;
 
-        if (isWorkingDay) {
-            // 1. Apontamentos Reais (Obrigatórios)
-            const reportedOnDay = timesheetEntries
-                .filter(e => String(e.userId) === String(userId) && e.date === dateStr)
-                .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+        // Apontamentos reais no dia (sempre contam)
+        const reportedOnDay = timesheetEntries
+            .filter(e => String(e.userId) === String(userId) && e.date === dateStr)
+            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
 
-            dayTotalPlanned = reportedOnDay;
+        let dayReserved = reportedOnDay;
+        const tasksOnDay: { id: string; hours: number }[] = [];
 
-            // 2. Previsão Teórica (Somente hoje e futuro)
-            if (dateStr >= todayStr) {
-                userTasks.forEach(t => {
-                    const isClosed = t.status === 'Done' || (t.status as string) === 'Cancelled' || (t.status as string) === 'Cancelada';
-                    if (isClosed) return;
+        if (isWorkingDay && dateStr >= todayStr) {
+            // Distribuímos as tarefas para o dia respeitando a capacidade disponível
+            userTasks.forEach(t => {
+                if (dayReserved >= currentCapacity) return;
+                const p = allProjects.find(proj => proj.id === t.projectId);
+                if (!p || p.active === false) return;
 
-                    const p = allProjects.find(proj => String(proj.id) === String(t.projectId));
-                    if (!p || p.active === false) return;
+                const tStart = t.scheduledStart || t.actualStart || p.startDate || todayStr;
+                const tEnd = t.estimatedDelivery || p.estimatedDelivery || endDate;
 
-                    // --- CALCULO DE ESFORÇO ---
-                    let totalEffort = 0;
-                    const specificAllocation = taskMemberAllocations.find(a => String(a.taskId) === String(t.id) && String(a.userId) === String(userId));
-                    const hasAnyAllocationInTask = taskMemberAllocations.some(a => String(a.taskId) === String(t.id) && a.reservedHours > 0);
-
-                    if (specificAllocation && specificAllocation.reservedHours > 0) {
-                        totalEffort = specificAllocation.reservedHours;
-                    } else if (!hasAnyAllocationInTask) {
-                        const teamIds = Array.from(new Set([t.developerId, ...(t.collaboratorIds || [])])).filter(Boolean);
-                        totalEffort = parseTimeToDecimal(String(t.estimatedHours || 0)) / (teamIds.length || 1);
-                    } else {
-                        const isMainDev = String(t.developerId) === String(userId);
-                        if (isMainDev) {
-                            const totalAllocatedToOthers = taskMemberAllocations
-                                .filter(a => String(a.taskId) === String(t.id) && String(a.userId) !== String(userId))
-                                .reduce((sum, a) => sum + (Number(a.reservedHours) || 0), 0);
-                            totalEffort = Math.max(0, parseTimeToDecimal(String(t.estimatedHours || 0)) - totalAllocatedToOthers);
-                        }
+                if (dateStr >= tStart && dateStr <= tEnd) {
+                    const futureDays = getWorkingDaysInRange(dateStr, tEnd, holidays, absences, userDailyCap) || 1;
+                    const dailyShare = t.remainingEffort / futureDays;
+                    const canAllocate = Math.min(dailyShare, currentCapacity - dayReserved, t.remainingEffort);
+                    
+                    if (canAllocate > 0.1) {
+                        dayReserved += canAllocate;
+                        t.remainingEffort -= canAllocate; // Desconta do simulador para os próximos dias
+                        tasksOnDay.push({ id: t.id, hours: canAllocate });
                     }
-
-                    const reportedOnTask = timesheetEntries
-                        .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(userId))
-                        .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
-
-                    if (reportedOnTask > totalEffort) {
-                        totalEffort = reportedOnTask;
-                    }
-
-                    const remainingEffort = Math.max(0, totalEffort - reportedOnTask);
-                    if (remainingEffort <= 0) return;
-
-                    const tStart = t.scheduledStart || t.actualStart || p.startDate || startDate;
-                    const tEnd = t.estimatedDelivery || p.estimatedDelivery || endDate;
-
-                    if (tEnd < todayStr) {
-                        // Atrasada: Joga todo o atraso para 'hoje'
-                        if (dateStr === todayStr) {
-                            if (p.project_type === 'continuous') {
-                                dayTotalContinuous += remainingEffort;
-                            } else {
-                                dayTotalPlanned += remainingEffort;
-                            }
-                        }
-                    } else {
-                        const effectiveStart = (tStart > todayStr) ? tStart : todayStr;
-                        const effectiveEnd = (tEnd > todayStr) ? tEnd : todayStr;
-
-                        if (dateStr >= effectiveStart && dateStr <= effectiveEnd) {
-                            const totalDays = getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays, absences.filter(a => String(a.userId) === String(userId)), userDailyCap) || 1;
-                            const hoursPerDay = remainingEffort / totalDays;
-
-                            if (p.project_type === 'continuous') {
-                                dayTotalContinuous += hoursPerDay;
-                            } else {
-                                dayTotalPlanned += hoursPerDay;
-                            }
-                        }
-                    }
-                });
-            }
+                }
+            });
         }
 
-        const totalLoad = dayTotalPlanned + dayTotalContinuous;
-        const bufferHours = Math.max(0, currentCapacity - totalLoad);
-
-        // EXTRAÇÃO DO TIPO DE AUSÊNCIA REAL
+        const isHoliday = holidays.some(h => dateStr >= h.date && dateStr <= (h.endDate || h.date));
         const activeAbsence = absences.find(a => {
-            const aStart = a.startDate;
-            const aEnd = a.endDate || a.startDate;
             const isApproved = a.status === 'aprovada_gestao' || a.status === 'aprovada_rh' || a.status === 'finalizada_dp';
-            return String(a.userId) === String(userId) && dateStr >= aStart && dateStr <= aEnd && isApproved;
+            return String(a.userId) === String(userId) && dateStr >= a.startDate && dateStr <= (a.endDate || a.startDate) && isApproved;
         });
 
         allocations.push({
             date: dateStr,
-            plannedHours: Number(totalLoad.toFixed(2)),
-            bufferHours: Number(bufferHours.toFixed(2)),
-            totalOccupancy: Number(totalLoad.toFixed(2)),
+            plannedHours: Number(dayReserved.toFixed(2)),
+            bufferHours: Number(Math.max(0, currentCapacity - dayReserved).toFixed(2)),
+            totalOccupancy: Number(dayReserved.toFixed(2)),
             isWorkingDay,
             isWeekend,
             isHoliday,
-            isAbsent,
+            isAbsent: deduction >= userDailyCap,
             isPartialAbsence: deduction > 0 && deduction < userDailyCap,
             absenceType: activeAbsence ? activeAbsence.type : (isHoliday ? 'Feriado' : (isWeekend ? 'FDS' : undefined)),
             capacity: currentCapacity,
@@ -360,6 +527,10 @@ export const simulateUserDailyAllocation = (
  * Mas respeitando a nova regra de prioridade de 50% para prazos regulares.
  * O usuário pediu: "se entrar em um projeto planejado, ele terá 100% ocupado, qual a data que ele vai finalizar essa tarefa?"
  */
+/**
+ * PREVISÃO REALISTA DE TÉRMINO (BACKLOG CUMULATIVO)
+ * Regra 4: Calcula a data baseada na capacidade real líquida e em TODAS as tarefas concorrentes.
+ */
 export const calculateTaskPredictedEndDate = (
     task: Task,
     allProjects: Project[],
@@ -369,62 +540,44 @@ export const calculateTaskPredictedEndDate = (
     holidays: Holiday[] = [],
     userDailyCap: number = 8,
     taskMemberAllocations: TaskMemberAllocation[] = [],
-    absences: Absence[] = []
+    absences: Absence[] = [],
+    allUsers: User[] = []
 ): { ideal: string; realistic: string; isSaturated?: boolean } => {
-    const userId = task.developerId;
+    const userId = String(task.developerId);
     const fallback = { ideal: task.estimatedDelivery || '', realistic: task.estimatedDelivery || '' };
-    if (!userId) return fallback;
+    if (!userId || userId === 'undefined') return fallback;
 
-    const project = allProjects.find(p => String(p.id) === String(task.projectId));
-    if (!project || project.project_type !== 'planned') return fallback;
+    // Calculamos o backlog resolvendo as concorrências via simulação
+    const todayStr = new Date().toISOString().split('T')[0];
+    const simulationEnd = addBusinessDays(todayStr, 120, holidays, absences.filter(a => String(a.userId) === userId), userDailyCap);
+    
+    const dailySimulation = simulateUserDailyAllocation(
+        userId, todayStr, simulationEnd, allProjects, allTasks, 
+        projectMembers, timesheetEntries, holidays, userDailyCap, 
+        absences, taskMemberAllocations, allUsers
+    );
 
-    const isIgnored = task.status === 'Done' || (task.status as string) === 'Cancelled' || (task.status as string) === 'Cancelada' || task.deleted_at;
+    // Encontramos o dia em que a tarefa específica em questão "ZERA" seu esforço na simulação
+    // Para simplificar e garantir precisão enterprise, vamos ver quando o backlog ACUMULADO atinge o ponto da tarefa.
+    // Mas a simulateUserDailyAllocation já desconta esforço. 
+    // Então a data realista é o último dia que teve carga > 0 na simulação de longo prazo.
+    const lastBusyDay = [...dailySimulation].reverse().find(d => d.plannedHours > 0.1);
+    const realisticDate = lastBusyDay ? lastBusyDay.date : todayStr;
+
+    // Ideal: Ignora velocity e outras tarefas (Foco total)
+    const effort = getUserTaskTotalEffort(task, userId, taskMemberAllocations, allUsers, holidays, absences, timesheetEntries, allTasks);
     const reported = timesheetEntries
-        .filter(e => String(e.taskId) === String(task.id) && String(e.userId) === String(userId))
+        .filter(e => String(e.taskId) === String(task.id) && String(e.userId) === userId)
         .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+    const remaining = Math.max(0, effort - reported);
+    const diasIdeal = Math.ceil(remaining / userDailyCap);
+    const idealDate = addBusinessDays(todayStr, diasIdeal, holidays, absences.filter(a => String(a.userId) === userId), userDailyCap);
 
-    // --- LÓGICA DE ALOCAÇÃO ESPECÍFICA ---
-    const specificAllocation = taskMemberAllocations.find(a => String(a.taskId) === String(task.id) && String(a.userId) === String(userId));
-    const hasAnyAllocationInTask = taskMemberAllocations.some(a => String(a.taskId) === String(task.id) && a.reservedHours > 0);
-
-    let taskEffort = 0;
-    if (specificAllocation && specificAllocation.reservedHours > 0) {
-        taskEffort = specificAllocation.reservedHours;
-    } else if (!hasAnyAllocationInTask) {
-        const teamIds = Array.from(new Set([task.developerId, ...(task.collaboratorIds || [])])).filter(Boolean);
-        taskEffort = (Number(task.estimatedHours) || 0) / (teamIds.length || 1);
-    } else {
-        taskEffort = 0;
-    }
-
-    const effortRestante = isIgnored ? 0 : Math.max(0, taskEffort - reported);
-    if (effortRestante <= 0) {
-        const date = task.actualDelivery || task.estimatedDelivery || '';
-        return { ideal: date, realistic: date };
-    }
-
-    const startCalc = new Date().toISOString().split('T')[0];
-
-    const userAbsences = absences.filter(a => String(a.userId) === String(userId));
-
-    // MODO IDEAL: 100% da capacidade
-    const diasIdeal = Math.ceil(effortRestante / userDailyCap);
-    const idealDate = addBusinessDays(startCalc, diasIdeal, holidays, userAbsences);
-
-    // MODO REALISTA: Dinâmico (Capacidade Total - Compromisso Contínuo)
-    const commitment = getUserContinuousCommitment(String(userId), allProjects, projectMembers, userDailyCap);
-
-    // Detector de Saturação (Sobrecarga estrutural)
-    const isSaturated = commitment >= userDailyCap;
-
-    // O fallback de 0.1h é APENAS técnico para evitar divisão por zero ou negativa,
-    // mas o sinal de saturação deve ser disparado para a gestão.
-    const capRealista = Math.max(0.8, userDailyCap - commitment);
-
-    const diasRealista = Math.ceil(effortRestante / capRealista);
-    const realisticDate = addBusinessDays(startCalc, diasRealista, holidays, userAbsences);
-
-    return { ideal: idealDate, realistic: realisticDate, isSaturated };
+    return { 
+        ideal: idealDate, 
+        realistic: realisticDate, 
+        isSaturated: dailySimulation.filter(d => d.isWorkingDay && d.bufferHours < 0.5).length > 20 
+    };
 };
 
 /**
@@ -440,7 +593,8 @@ export const getUserAvailabilityInRange = (
     tasks: Task[],
     holidays: Holiday[] = [],
     taskMemberAllocations: TaskMemberAllocation[] = [],
-    absences: Absence[] = []
+    absences: Absence[] = [],
+    allUsers: User[] = []
 ): {
     capacity: number;
     plannedHours: number;
@@ -449,123 +603,52 @@ export const getUserAvailabilityInRange = (
     occupancyRate: number;
     balance: number;
     status: 'Sobrecarregado' | 'Alto' | 'Disponível';
+    performed: number;
     allocated: number;
     available: number;
     breakdown: {
         planned: { id: string; name: string; hours: number }[];
         continuous: { id: string; name: string; hours: number }[];
+        tasks: { id: string; projectId: string; hours: number; reported: number }[];
     };
+    dailyOccupancy: { date: string; totalOccupancy: number }[];
 } => {
     const dailyGoal = user.dailyAvailableHours || 8;
-    // --- CÁLCULO DA CAPACIDADE LÍQUIDA (DESCONTANDO AUSÊNCIAS INDIVIDUAIS) ---
     const userAbsences = absences.filter(a => String(a.userId) === String(user.id));
-    const nominalWorkingDays = getWorkingDaysInRange(startDate, endDate, holidays, []);
-    const effectiveWorkingDays = getWorkingDaysInRange(startDate, endDate, holidays, userAbsences, dailyGoal);
+    
+    // Regra 2: Capacidade como fonte única
+    const capacity = getUserCapacityOnPeriod(user, startDate, endDate, holidays, userAbsences);
 
-    let capacity = 0;
-    if (user.monthlyAvailableHours && user.monthlyAvailableHours > 0) {
-        // Se houver meta fixa, reduzimos proporcionalmente aos dias efetivos de trabalho
-        const ratio = nominalWorkingDays > 0 ? (effectiveWorkingDays / nominalWorkingDays) : 0;
-        capacity = user.monthlyAvailableHours * ratio;
-    } else {
-        capacity = dailyGoal * effectiveWorkingDays;
-    }
-
-    // 1. Calcular detalhamento de projetos (Baseado estritamente em horas alocadas às tarefas)
+    // 1. Detalhamento de Projetos e Carga das Tarefas
     const plannedProjectsBreakdown: { id: string; name: string; hours: number }[] = [];
     let plannedHoursTotal = 0;
     const continuousProjectsBreakdown: { id: string; name: string; hours: number }[] = [];
     let continuousHoursTotal = 0;
+    const tasksBreakdown: { id: string; projectId: string; hours: number; reported: number }[] = [];
+    let totalPerformed = 0;
 
     tasks.forEach(t => {
-        const isOwner = String(t.developerId) === String(user.id) || t.collaboratorIds?.some((id: string) => String(id) === String(user.id));
-        // Permitir que tarefas concluídas (mas não deletadas) entrem no cálculo ALOCADO do período
-        if (!isOwner || !!t.deleted_at) return;
+        const isMember = String(t.developerId) === String(user.id) || t.collaboratorIds?.some((id: string) => String(id) === String(user.id));
+        if (!isMember || !!t.deleted_at) return;
 
-        const p = projects.find(proj => proj.id === t.projectId);
+        const p = projects.find(proj => String(proj.id) === String(t.projectId));
         if (!p) return;
 
-        // --- LÓGICA DE ESTIMATIVA / ALOCAÇÃO ---
-        const specificAllocation = taskMemberAllocations.find(a => String(a.taskId) === String(t.id) && String(a.userId) === String(user.id));
-        const hasAnyAllocationInTask = taskMemberAllocations.some(a => String(a.taskId) === String(t.id) && a.reservedHours > 0);
+        const { effortInPeriod, reportedInRange } = getTaskLoadOnPeriod(
+            t, user, p, timesheetEntries, taskMemberAllocations,
+            startDate, endDate, startDate, endDate, holidays, userAbsences, dailyGoal, allUsers, tasks
+        );
 
-        let totalEffort = 0;
-        if (specificAllocation && specificAllocation.reservedHours > 0) {
-            totalEffort = specificAllocation.reservedHours;
-        } else if (!hasAnyAllocationInTask) {
-            const teamIds = Array.from(new Set([t.developerId, ...(t.collaboratorIds || [])])).filter(Boolean);
-            totalEffort = parseTimeToDecimal(String(t.estimatedHours || 0)) / (teamIds.length || 1);
-        } else {
-            // Se houver alocações específicas na tarefa, mas não para o usuário atual:
-            // Regra: O Responsável (developerId) fica com o "resto" das horas. 
-            // Outros colaboradores sem alocação explícita ficam com 0.
-            const isMainDev = String(t.developerId) === String(user.id);
-            if (isMainDev) {
-                const totalAllocatedToOthers = taskMemberAllocations
-                    .filter(a => String(a.taskId) === String(t.id) && String(a.userId) !== String(user.id))
-                    .reduce((sum, a) => sum + (Number(a.reservedHours) || 0), 0);
-                totalEffort = Math.max(0, parseTimeToDecimal(String(t.estimatedHours || 0)) - totalAllocatedToOthers);
-            } else {
-                totalEffort = 0;
-            }
-        }
+        totalPerformed += reportedInRange;
 
-        // --- REGRA DE SALDO (DONE RECOUPING) ---
-        // Quando a tarefa é concluída, o que conta para a ocupação do mês é o que foi EFETIVAMENTE apontado.
-        // Se aloquei 100h e fiz em 60h, as 40h restantes voltam para o saldo.
-        const reportedOnTask = timesheetEntries
-            .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id))
-            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
+        if (effortInPeriod > 0 || reportedInRange > 0) {
+            tasksBreakdown.push({ 
+                id: t.id, 
+                projectId: t.projectId, 
+                hours: Number(effortInPeriod.toFixed(2)),
+                reported: Number(reportedInRange.toFixed(2))
+            });
 
-        if (totalEffort <= 0) return;
-
-        // --- CÁLCULO DE APONTAMENTOS NO INTERVALO (PARA QUALQUER STATUS) ---
-        const reportedInRange = timesheetEntries
-            .filter(e => String(e.taskId) === String(t.id) && String(e.userId) === String(user.id) && e.date >= startDate && e.date <= endDate)
-            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
-
-        let effortInPeriod = 0;
-
-        if (t.status === 'Done') {
-            // Regra para concluídas: vale estritamente o que foi apontado no período (Done Recouping)
-            effortInPeriod = reportedInRange;
-        } else {
-            if (reportedOnTask > totalEffort) {
-                totalEffort = reportedOnTask;
-            }
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const nominalEnd = t.actualDelivery || t.estimatedDelivery || p.estimatedDelivery || endDate;
-            const tStart = t.scheduledStart || t.actualStart || p.startDate || startDate;
-
-            const remainingEffort = Math.max(0, totalEffort - reportedOnTask);
-
-            if (nominalEnd < startDate) {
-                // Tarefa atrasada: Todo o esforço restante é alocado para o período atual (pois já passou do prazo)
-                // Somamos o que já foi apontado no mês + o restante.
-                effortInPeriod = reportedInRange + remainingEffort;
-            } else {
-                const effectiveStart = (tStart > todayStr) ? tStart : todayStr;
-                const effectiveEnd = (nominalEnd > todayStr) ? nominalEnd : todayStr;
-
-                const remainingDaysTotal = getWorkingDaysInRange(effectiveStart, effectiveEnd, holidays, userAbsences, dailyGoal) || 1;
-                const hoursPerDay = remainingEffort / remainingDaysTotal;
-
-                const intStart = effectiveStart > startDate ? effectiveStart : startDate;
-                const intEnd = effectiveEnd < endDate ? effectiveEnd : endDate;
-
-                let predictedInPeriod = 0;
-                if (intStart <= intEnd) {
-                    const bizDaysInPeriod = getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences, dailyGoal);
-                    predictedInPeriod = bizDaysInPeriod * hoursPerDay;
-                }
-
-                // O Esforço no período é a soma do que já foi apontado (no mês) + o que se prevê (do hoje em diante)
-                effortInPeriod = reportedInRange + predictedInPeriod;
-            }
-        }
-
-        if (effortInPeriod > 0) {
             if (p.project_type === 'continuous') {
                 continuousHoursTotal += effortInPeriod;
                 const existing = continuousProjectsBreakdown.find(pb => pb.id === p.id);
@@ -588,8 +671,19 @@ export const getUserAvailabilityInRange = (
     const balance = capacity - totalOccupancy;
 
     let status: 'Sobrecarregado' | 'Alto' | 'Disponível' = 'Disponível';
-    if (occupancyRateVal > 1) status = 'Sobrecarregado';
+    if (occupancyRateVal > 1.05) status = 'Sobrecarregado'; // 5% de margem
     else if (occupancyRateVal >= 0.85) status = 'Alto';
+
+    // 2. Simulação de Distribuição Diária para o Heatmap
+    const dailyAllocations = simulateUserDailyAllocation(
+        String(user.id), startDate, endDate, projects, tasks, projectMembers, 
+        timesheetEntries, holidays, dailyGoal, userAbsences, taskMemberAllocations, allUsers
+    );
+
+    const dailyOccupancy = dailyAllocations.map(d => ({
+        date: d.date,
+        totalOccupancy: d.totalOccupancy
+    }));
 
     return {
         capacity: Number(capacity.toFixed(2)) || 0,
@@ -599,12 +693,15 @@ export const getUserAvailabilityInRange = (
         occupancyRate: Number((occupancyRateVal * 100).toFixed(2)) || 0,
         balance: Number(balance.toFixed(2)) || 0,
         status,
+        performed: Number(totalPerformed.toFixed(2)) || 0,
         allocated: Number(totalOccupancy.toFixed(2)) || 0,
         available: Number(balance.toFixed(2)) || 0,
         breakdown: {
             planned: plannedProjectsBreakdown,
-            continuous: continuousProjectsBreakdown
-        }
+            continuous: continuousProjectsBreakdown,
+            tasks: tasksBreakdown
+        },
+        dailyOccupancy
     };
 };
 
@@ -620,7 +717,8 @@ export const getUserMonthlyAvailability = (
     tasks: Task[],
     holidays: Holiday[] = [],
     taskMemberAllocations: TaskMemberAllocation[] = [],
-    absences: Absence[] = []
+    absences: Absence[] = [],
+    allUsers: User[] = []
 ): any => {
     const [year, month] = monthStr.split('-').map(Number);
     const startDate = `${monthStr}-01`;
@@ -636,7 +734,8 @@ export const getUserMonthlyAvailability = (
         tasks,
         holidays,
         taskMemberAllocations,
-        absences
+        absences,
+        allUsers
     );
 };
 
@@ -689,65 +788,18 @@ export const calculateIndividualReleaseDate = (
     allTasks: Task[],
     holidays: Holiday[] = [],
     taskMemberAllocations: TaskMemberAllocation[] = [],
-    absences: Absence[] = []
+    absences: Absence[] = [],
+    allUsers: User[] = []
 ): { ideal: string; realistic: string; isSaturated?: boolean } | null => {
-    const userPlannedTasks = allTasks.filter(t => {
-        const isOwner = String(t.developerId) === String(user.id);
-        const isCollaborator = t.collaboratorIds?.some((id: string) => String(id) === String(user.id));
-        if (!isOwner && !isCollaborator) return false;
+    // Reutilizamos a lógica cumulativa realista
+    const firstTask = allTasks.find(t => String(t.developerId) === String(user.id) || t.collaboratorIds?.some(id => String(id) === String(user.id)));
+    if (!firstTask) return null;
 
-        const project = allProjects.find(p => String(p.id) === String(t.projectId));
-        const isIgnored = t.status === 'Done' || (t.status as string) === 'Cancelled' || (t.status as string) === 'Cancelada' || t.deleted_at;
-
-        return project?.active !== false && !isIgnored; // Consideramos todas as tarefas ativas
-    });
-
-    if (userPlannedTasks.length === 0) return null;
-
-    let totalEffortRemaining = 0;
-    userPlannedTasks.forEach(task => {
-        const reported = timesheetEntries
-            .filter(e => String(e.taskId) === String(task.id) && String(e.userId) === String(user.id))
-            .reduce((sum, e) => sum + (Number(e.totalHours) || 0), 0);
-
-        // --- NOVA LÓGICA: Busca alocação específica para o colaborador ---
-        const specificAllocation = taskMemberAllocations.find(a => String(a.taskId) === String(task.id) && String(a.userId) === String(user.id));
-        const hasAnyAllocationInTask = taskMemberAllocations.some(a => String(a.taskId) === String(task.id) && a.reservedHours > 0);
-
-        let taskEffort = 0;
-        if (specificAllocation && specificAllocation.reservedHours > 0) {
-            taskEffort = specificAllocation.reservedHours;
-        } else if (!hasAnyAllocationInTask) {
-            const teamIds = Array.from(new Set([task.developerId, ...(task.collaboratorIds || [])])).filter(Boolean);
-            taskEffort = (Number(task.estimatedHours) || 0) / (teamIds.length || 1);
-        } else {
-            taskEffort = 0;
-        }
-
-        totalEffortRemaining += Math.max(0, taskEffort - reported);
-    });
-
-    if (totalEffortRemaining <= 0) return null;
-
-    const dailyCap = user.dailyAvailableHours || 8;
-    const today = new Date().toISOString().split('T')[0];
-
-    // IDEAL (100%)
-    const diasIdeal = Math.ceil(totalEffortRemaining / dailyCap);
-    const ideal = addBusinessDays(today, diasIdeal, holidays, absences.filter(a => String(a.userId) === String(user.id)), dailyCap);
-
-    // REALISTA (Dinâmico)
-    const commitment = getUserContinuousCommitment(String(user.id), allProjects, projectMembers, dailyCap);
-    const isSaturated = commitment >= dailyCap;
-
-    // Fallback de 0.8h para garantir que a data se desloque mesmo em saturação crítica,
-    // permitindo que o gestor veja o tamanho do problema no calendário.
-    const capRealista = Math.max(0.8, dailyCap - commitment);
-
-    const diasRealista = Math.ceil(totalEffortRemaining / capRealista);
-    const realistic = addBusinessDays(today, diasRealista, holidays, absences.filter(a => String(a.userId) === String(user.id)), dailyCap);
-
-    return { ideal, realistic, isSaturated };
+    return calculateTaskPredictedEndDate(
+        firstTask, allProjects, allTasks, projectMembers, 
+        timesheetEntries, holidays, user.dailyAvailableHours || 8, 
+        taskMemberAllocations, absences, allUsers
+    );
 };
 
 /**
@@ -777,7 +829,7 @@ export const calculateTeamSaturationTrend = (
         let totalLoad = 0;
 
         operationalUsers.forEach(u => {
-            const availability = getUserMonthlyAvailability(u, monthStr, allProjects, projectMembers, timesheetEntries, allTasks, holidays, taskMemberAllocations);
+            const availability = getUserMonthlyAvailability(u, monthStr, allProjects, projectMembers, timesheetEntries, allTasks, holidays, taskMemberAllocations, [], users);
             totalLoad += availability.occupancyRate;
 
             if (availability.occupancyRate >= 100) {
@@ -816,7 +868,7 @@ export const calculateTeamElasticity = (
     let totalAvailable = 0;
 
     operationalUsers.forEach(u => {
-        const data = getUserMonthlyAvailability(u, monthStr, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations);
+        const data = getUserMonthlyAvailability(u, monthStr, projects, projectMembers, timesheetEntries, tasks, holidays, taskMemberAllocations, [], users);
         totalCapacity += data.capacity;
         totalAvailable += Math.max(0, data.available); // Apenas saldo positivo conta como elasticidade
     });
@@ -882,7 +934,8 @@ export const calculateUserCapacity = (
     allTasks: Task[],
     holidays: Holiday[] = [],
     absences: Absence[] = [],
-    dailyCap: number = 8
+    dailyCap: number = 8,
+    allUsers: User[] = []
 ) => {
     const year = referenceDate.getFullYear();
     const month = referenceDate.getMonth() + 1;
@@ -897,29 +950,15 @@ export const calculateUserCapacity = (
     const workingDays = getWorkingDaysInRange(startDate, endDate, holidays, userAbsences);
     const monthlyCapacity = dailyCap * workingDays;
 
-    let allocatedHours = 0;
-    allTasks.forEach(t => {
-        const isOwner = String(t.developerId) === String(userId) || t.collaboratorIds?.some((id: string) => String(id) === String(userId));
-        if (!isOwner || t.status === 'Done' || t.deleted_at) return;
-
-        const tStart = t.scheduledStart || t.actualStart || startDate;
-        const tEnd = t.estimatedDelivery || endDate;
-
-        const totalTaskDays = getWorkingDaysInRange(tStart, tEnd, holidays, userAbsences) || 1;
-        const hoursPerDay = (Number(t.estimatedHours) || 0) / totalTaskDays;
-
-        const intStart = tStart > startDate ? tStart : startDate;
-        const intEnd = tEnd < endDate ? tEnd : endDate;
-
-        if (intStart <= intEnd) {
-            const bizDaysInMonth = getWorkingDaysInRange(intStart, intEnd, holidays, userAbsences);
-            allocatedHours += bizDaysInMonth * hoursPerDay;
-        }
-    });
+    const capacityData = getUserAvailabilityInRange(
+        { id: userId, dailyAvailableHours: dailyCap } as User,
+        startDate, endDate, 
+        [], [], [], allTasks, holidays, [], absences, allUsers
+    );
 
     return {
         monthlyCapacity,
-        allocatedHours,
-        availableBalance: monthlyCapacity - allocatedHours
+        allocatedHours: capacityData.allocated,
+        availableBalance: capacityData.available
     };
 };

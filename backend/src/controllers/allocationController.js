@@ -24,7 +24,21 @@ export const allocationController = {
         try {
             const { task_id, user_id, reserved_hours } = req.body;
 
-            // Delete first to simulate clean upsert if needed or just use database logic
+            // 1. Validar se a soma não excede estimated_hours
+            const task = await taskRepository.findById(task_id);
+            if (!task) throw new Error('Task not found');
+
+            const currentAllocations = await dbFindAll('task_member_allocations', { filters: { task_id } });
+            const otherAllocationsSum = currentAllocations
+                .filter(a => String(a.user_id) !== String(user_id))
+                .reduce((sum, a) => sum + (Number(a.reserved_hours) || 0), 0);
+
+            const totalProposed = otherAllocationsSum + (Number(reserved_hours) || 0);
+            if (totalProposed > (Number(task.estimated_hours) || 0) + 0.01) { // margem de erro técnica
+                throw new Error(`Soma das alocações (${totalProposed.toFixed(1)}h) excede o esforço estimado da tarefa (${task.estimated_hours}h)`);
+            }
+
+            // 2. Delete first to simulate clean upsert if needed
             await dbDelete('task_member_allocations', { task_id, user_id });
 
             if (reserved_hours > 0) {
@@ -49,18 +63,28 @@ export const allocationController = {
             const { taskId, allocations } = req.body;
             if (!taskId) throw new Error('taskId is required');
 
-            // 1. Delete all existing allocations for this task
+            // 1. Validar esforço total
+            const task = await taskRepository.findById(taskId);
+            if (!task) throw new Error('Task not found');
+
+            const validAllocations = (allocations || []).filter(a => Number(a.reservedHours) > 0);
+            const totalRequested = validAllocations.reduce((sum, a) => sum + (Number(a.reservedHours) || 0), 0);
+
+            if (totalRequested > (Number(task.estimated_hours) || 0) + 0.01) {
+                throw new Error(`A soma das alocações (${totalRequested.toFixed(1)}h) não pode exceder o esforço estimado da tarefa (${task.estimated_hours}h)`);
+            }
+
+            // 2. Transação simulada (Delete followed by multi-insert)
+            // No Supabase JS, o insert de array é atômico.
             await dbDelete('task_member_allocations', { task_id: taskId });
 
-            // 2. Insert new ones
-            const validAllocations = (allocations || []).filter(a => Number(a.reservedHours) > 0);
-
-            for (const a of validAllocations) {
-                await dbInsert('task_member_allocations', {
+            if (validAllocations.length > 0) {
+                const inserts = validAllocations.map(a => ({
                     task_id: taskId,
                     user_id: a.userId,
                     reserved_hours: a.reservedHours
-                });
+                }));
+                await dbInsert('task_member_allocations', inserts, { select: false });
             }
 
             // 3. Notify once

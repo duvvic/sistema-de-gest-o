@@ -199,7 +199,7 @@ export interface Absence {
   type: 'férias' | 'atestado' | 'day-off' | 'feriado_local';
   startDate: string;
   endDate: string;
-  status: 'sugestao' | 'aprovada_gestao' | 'aprovada_rh' | 'finalizada_dp' | 'cancelado' | 'rejeitado';
+  status: 'sugestao' | 'aprovada_gestao' | 'aprovada_rh' | 'finalizada_dp' | 'cancelado' | 'rejeitado' | 'programado';
   observations?: string;
   period?: 'integral' | 'manha' | 'tarde' | 'noite';
   endTime?: string;

@@ -222,46 +222,110 @@ const WorkingDaysModal: React.FC<WorkingDaysModalProps> = ({
                             </div>
                         ))}
 
-                        {/* Detalhamento de Eventos (User Request: Mostrar todas ausências de dias e horas) */}
-                        {(summary.absences > 0 || summary.holidays > 0 || summary.partials > 0) && (
-                            <div className="mt-12 pt-8 border-t border-[var(--border)]">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--muted)] mb-6 flex items-center gap-2">
-                                    <FileText size={14} className="text-purple-500" /> Eventos no Período
-                                </h4>
-                                <div className="space-y-3">
-                                    {details
-                                        .filter(d => d.holiday || d.absence)
-                                        .map((d, idx) => (
-                                            <div
-                                                key={`event-${idx}`}
-                                                className="flex items-center justify-between p-4 rounded-2xl border bg-[var(--surface-2)] border-[var(--border)] hover:border-purple-500/30 transition-all group"
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d.holiday ? 'bg-orange-500/10 text-orange-500' : 'bg-purple-500/10 text-purple-500'}`}>
-                                                        {d.holiday ? <Palmtree size={18} /> : <Umbrella size={18} />}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[11px] font-black text-[var(--text)] uppercase tracking-tight">
-                                                            {d.holiday ? d.holiday.name : d.absence?.type}
-                                                        </p>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <Calendar size={10} className="text-[var(--muted)]" />
-                                                            <span className="text-[9px] font-bold text-[var(--muted)]">
-                                                                {new Date(d.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                                            </span>
+                        {/* Detalhamento de Eventos — agrupados por período contínuo */}
+                        {(summary.absences > 0 || summary.holidays > 0 || summary.partials > 0) && (() => {
+                            // Agrupa eventos consecutivos do mesmo tipo/nome em um único período
+                            type EventGroup = {
+                                name: string;
+                                type: 'holiday' | 'absence';
+                                startDate: string;
+                                endDate: string;
+                                totalDeduction: number;
+                                days: number;
+                            };
+
+                            // Apenas dias úteis com ausência (deduction > 0) entram na lista
+                            const eventDays = details.filter(d =>
+                                (d.holiday || d.absence) && !d.isWeekend && (d.deduction ?? 0) > 0
+                            );
+                            const groups: EventGroup[] = [];
+
+                            // Agrupa por tipo+nome: permite que fins de semana não quebrem o período
+                            // Para detectar continuidade, usamos todos os dias do details (incluindo FDS)
+                            // mas só contamos working days no badge
+                            details.forEach(d => {
+                                const isEvent = d.holiday || d.absence;
+                                if (!isEvent) return;
+
+                                const name = d.holiday ? d.holiday.name : (d.absence?.type ?? '');
+                                const type: 'holiday' | 'absence' = d.holiday ? 'holiday' : 'absence';
+                                const deduction = d.isWeekend ? 0 : (d.deduction ?? 0);
+                                const isWorkingDay = !d.isWeekend && deduction > 0;
+                                const last = groups[groups.length - 1];
+
+                                if (last && last.name === name && last.type === type) {
+                                    // Estende o período (FDS aparece no range mas não conta como dia útil)
+                                    last.endDate = d.date;
+                                    last.totalDeduction += deduction;
+                                    if (isWorkingDay) last.days += 1;
+                                } else {
+                                    groups.push({
+                                        name, type,
+                                        startDate: d.date,
+                                        endDate: d.date,
+                                        totalDeduction: deduction,
+                                        days: isWorkingDay ? 1 : 0
+                                    });
+                                }
+                            });
+
+                            // Remove grupos sem nenhum dia útil (ex: ausência só em FDS)
+                            const validGroups = groups.filter(g => g.days > 0 || g.totalDeduction > 0);
+
+                            const fmt = (dateStr: string) =>
+                                new Date(dateStr + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+                            return (
+                                <div className="mt-12 pt-8 border-t border-[var(--border)]">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--muted)] mb-6 flex items-center gap-2">
+                                        <FileText size={14} className="text-purple-500" /> Eventos no Período
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {validGroups.map((g, idx) => {
+                                            const isPeriod = g.startDate !== g.endDate;
+                                            const Icon = g.type === 'holiday' ? Palmtree : Umbrella;
+                                            const iconBg = g.type === 'holiday' ? 'bg-orange-500/10 text-orange-500' : 'bg-purple-500/10 text-purple-500';
+
+                                            return (
+                                                <div
+                                                    key={`event-${idx}`}
+                                                    className="flex items-center justify-between p-4 rounded-2xl border bg-[var(--surface-2)] border-[var(--border)] hover:border-purple-500/30 transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
+                                                            <Icon size={18} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[11px] font-black text-[var(--text)] uppercase tracking-tight">
+                                                                {g.name}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <Calendar size={10} className="text-[var(--muted)]" />
+                                                                <span className="text-[9px] font-bold text-[var(--muted)]">
+                                                                    {isPeriod
+                                                                        ? `${fmt(g.startDate)} → ${fmt(g.endDate)}`
+                                                                        : fmt(g.startDate)
+                                                                    }
+                                                                </span>
+                                                                {isPeriod && (
+                                                                    <span className="text-[8px] font-black text-[var(--muted)] bg-white/5 px-2 py-0.5 rounded-lg">
+                                                                        {g.days}d
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs font-black text-red-500">-{g.totalDeduction}h</p>
+                                                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--muted)] mt-0.5">Dedução de Capacidade</p>
+                                                    </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-xs font-black text-red-500">-{d.deduction} horas</p>
-                                                    <p className="text-[8px] font-black uppercase tracking-widest text-[var(--muted)] mt-0.5">Dedução de Capacidade</p>
-                                                </div>
-                                            </div>
-                                        ))
-                                    }
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     {/* Footer */}

@@ -20,13 +20,13 @@ export const organizationRepository = {
             select: 'organization_id',
             filters: { id: userIdOrEmail },
             maybeSingle: true
-        }) || await dbFindAll('v_colaboradores', {
+        }) ?? await dbFindAll('v_colaboradores', {
             select: 'organization_id',
             filters: { email: userIdOrEmail },
             maybeSingle: true
         });
 
-        if (!colab || !colab.organization_id) return null;
+        if (!colab?.organization_id) return null;
         
         return await this.findById(colab.organization_id);
     },

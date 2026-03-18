@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useTransition, useDeferredValue } from "react";
 
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataController } from '../controllers/useDataController';
 import { Project, Task, Role, TimesheetEntry, ProjectMember, Client, User, TaskMemberAllocation, Absence } from '../types';
-import { Plus, Building2, Search as SearchIcon, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronDown, Filter, Clock, AlertCircle, AlertTriangle, ArrowUp, Trash2, DollarSign, Target, TrendingUp, BarChart, Users, User as UserIcon, Calendar, PieChart, ArrowRight, Layers, FileSpreadsheet, X, HelpCircle, Info, Handshake, ArrowLeft, Mail, Phone, ExternalLink, Activity, Zap, FolderKanban, UserCheck, FileText, FileCheck } from "lucide-react";
+import { Plus, Building2, Search, ArrowDownAZ, Briefcase, LayoutGrid, List, Edit2, CheckSquare, ChevronLeft, ChevronRight, ChevronDown, Filter, Clock, AlertCircle, AlertTriangle, ArrowUp, Trash2, DollarSign, Target, TrendingUp, BarChart, Users, User as UserIcon, Calendar, PieChart, ArrowRight, Layers, FileSpreadsheet, X, HelpCircle, Info, Handshake, ArrowLeft, Mail, Phone, ExternalLink, Activity, Zap, FolderKanban, UserCheck, FileText, FileCheck } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,9 +16,9 @@ import { WorkingDayDetail } from '../utils/capacity';
 
 type SortOption = 'recent' | 'alphabetical' | 'creation';
 
-const InfoTooltip: React.FC<{ title: string; content: string }> = ({ title, content }) => (
-  <div className="group/tooltip relative inline-block ml-1">
-    <HelpCircle className="w-2.5 h-2.5 text-current opacity-40 hover:opacity-100 cursor-help" />
+const InfoTooltip: React.FC<{ title: string; content: string; children?: React.ReactNode }> = ({ title, content, children }) => (
+  <div className="group/tooltip relative inline-block">
+    {children}
     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-950/95 text-[10px] text-white rounded-xl opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[60] shadow-2xl border border-white/10 backdrop-blur-md">
       <div className="flex items-center gap-1.5 mb-1.5 border-b border-white/10 pb-1.5">
         <Info className="w-3 h-3 text-blue-400" />
@@ -183,6 +183,78 @@ const ExecutiveRow = React.memo(({ p, idx, safeClients, users, groupedData, navi
   );
 });
 
+const CapacityRow = React.memo<{
+  res: any;
+  navigate: (path: string) => void;
+  selectedCapacityMonth: string;
+  users: User[];
+  openWorkingDaysBreakdown: (user: User) => void;
+}>(({ res, navigate, selectedCapacityMonth, users, openWorkingDaysBreakdown }) => {
+  return (
+    <tr
+      onClick={() => {
+        navigate(`/admin/team/${res.id}?tab=details&month=${selectedCapacityMonth}`);
+      }}
+      className="group cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
+    >
+      <td className="py-3 px-3 border-b border-r border-[var(--border)]">
+        <div className="flex flex-col">
+          <span className="text-[12px] font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors line-clamp-1">{res.name}</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-tighter opacity-70 leading-none">{res.cargo || 'Sem Cargo'}</span>
+            <span className="text-[7px] text-[var(--border)]">•</span>
+            <span className="text-[8px] font-black text-[var(--primary)] uppercase tracking-tighter opacity-60 leading-none">{res.torre || 'Geral'}</span>
+          </div>
+        </div>
+      </td>
+      <td className="py-3 px-2 text-center border-b border-r border-[var(--border)]">
+        <span className={`text-[13px] font-black px-2 py-1 rounded border ${res.load > 100 ? 'bg-red-500/10 text-red-500 border-red-500/20' : res.load > 80 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
+          {Math.round(res.load)}%
+        </span>
+      </td>
+      <td className="py-3 px-2 text-center text-[13px] font-bold text-[var(--text)] border-b border-r border-[var(--border)]">
+        {formatDecimalToTime(res.performed)}
+      </td>
+      <td className="py-3 px-2 text-center text-[13px] font-bold text-blue-500 border-b border-r border-[var(--border)]">
+        {formatDecimalToTime(res.assigned)}
+      </td>
+      <td
+        className="py-3 px-2 text-center border-b border-r border-[var(--border)] cursor-pointer hover:bg-blue-500/5 transition-all active:scale-95"
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          const userObj = users.find((u: User) => String(u.id) === String(res.id));
+          if (userObj) openWorkingDaysBreakdown(userObj);
+        }}
+      >
+        <div className="flex flex-col items-center">
+          <span className="text-[13px] font-black text-[var(--text)]">
+            {formatDecimalToTime(res.capacity)}
+          </span>
+          {res.absenceTypes && res.absenceTypes.length > 0 && (
+            <div className="flex flex-col gap-0 items-center">
+              <span className="text-[7px] font-black text-purple-500 uppercase tracking-widest leading-none mt-1">
+                {res.absenceTypes.join(' & ')}
+              </span>
+            </div>
+          )}
+        </div>
+      </td>
+      <td
+        className="py-3 px-3 text-right font-black border-b border-[var(--border)] cursor-pointer hover:bg-[var(--surface-hover)] transition-all active:scale-95"
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          const userObj = users.find((u: User) => String(u.id) === String(res.id));
+          if (userObj) openWorkingDaysBreakdown(userObj);
+        }}
+      >
+        <span className={`text-[14px] ${res.available < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+          {formatDecimalToTime(res.available)}
+        </span>
+      </td>
+    </tr>
+  );
+});
+
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -262,7 +334,7 @@ const AdminDashboard: React.FC = () => {
 
   const openWorkingDaysBreakdown = (user: User) => {
     // Pegar o range do mês atual da capacidade
-    const [year, month] = capacityMonth.split('-');
+    const [year, month] = selectedCapacityMonth.split('-');
     const firstDay = `${year}-${month}-01`;
     const lastDayDate = new Date(Number(year), Number(month), 0);
     const lastDay = `${year}-${month}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
@@ -665,10 +737,14 @@ const AdminDashboard: React.FC = () => {
   }, [partnerMetrics, partnerSearchTerm]);
 
   // --- CONTROLE DE MÊS DA CAPACIDADE ---
-  const [capacityMonth, setCapacityMonth] = useState(() => {
+  const [selectedCapacityMonth, setSelectedCapacityMonth] = useState<string>(() => {
     const now = new Date();
     return now.toISOString().slice(0, 7); // YYYY-MM
   });
+
+  const [resourceSearchTerm, setResourceSearchTerm] = useState('');
+  const [capacitySortBy, setCapacitySortBy] = useState<'alphabetical' | 'least_occupied' | 'most_occupied'>('alphabetical');
+  const deferredCapacityMonth = useDeferredValue(selectedCapacityMonth);
 
   const resourceMetrics = useMemo(() => {
     if (!users || !portfolioTimesheets) return [];
@@ -682,44 +758,71 @@ const AdminDashboard: React.FC = () => {
       const torre = (u.torre || '').toUpperCase().trim();
       return torre !== 'N/A';
     }).map(u => {
-      // 1. Apontado (Realizado - Timesheet)
-      const [yearStr, monthStr] = capacityMonth.split('-');
-      const year = parseInt(yearStr);
-      const month = parseInt(monthStr);
+      // 1. Cálculos centralizados no CapacityUtils (Single Source of Truth)
+      const capData = CapacityUtils.getUserMonthlyAvailability(u, selectedCapacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences, users);
 
-      const userMonthEntries = (timesheetEntries || []).filter(entry => {
-        if (!entry.userId || String(entry.userId) !== String(u.id)) return false;
-        if (!entry.date) return false;
+      // 2. Data de Disponibilidade (Preditivo - Baseado em Backlog Total)
+      const releaseDate = CapacityUtils.calculateIndividualReleaseDate(u, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences, users);
 
-        const entryDate = new Date(entry.date + 'T12:00:00');
-        return entryDate.getFullYear() === year && (entryDate.getMonth() + 1) === month;
+      // 3. Tipos de Ausência no mês (Regra: Mostrar se for específico do colaborador)
+      const monthStart = `${selectedCapacityMonth}-01`;
+      const [year, month] = selectedCapacityMonth.split('-').map(Number);
+      const monthEnd = new Date(year, month, 0).toISOString().split('T')[0];
+
+      const userAbsencesInMonth = (absences || []).filter(a => {
+        const isUser = String(a.userId) === String(u.id);
+        const isApproved = ['aprovada_gestao', 'aprovada_rh', 'finalizada_dp', 'programado'].includes(a.status);
+        const start = a.startDate;
+        const end = a.endDate || a.startDate;
+        const overlaps = start <= monthEnd && end >= monthStart;
+        return isUser && isApproved && overlaps;
       });
 
-      const performedHours = Math.round(userMonthEntries.reduce((acc, entry) => {
-        const h = Number(entry.totalHours || 0);
-        return acc + (isNaN(h) ? 0 : h);
-      }, 0) * 100) / 100;
-
-      // 2. Alocado (Previsto - Via Nova Lógica de Projetos e Membros)
-      // Agora espera: user, monthStr, projects, projectMembers, timesheets, tasks, holidays, taskMemberAllocations, absences
-      const capData = CapacityUtils.getUserMonthlyAvailability(u, capacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences);
-
-      // 3. Data de Disponibilidade (Preditivo - Baseado em Backlog Total)
-      const releaseDate = CapacityUtils.calculateIndividualReleaseDate(u, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences);
+      const uniqueTypes = Array.from(new Set(userAbsencesInMonth.map(a => a.type.toUpperCase())))
+        .filter(type => type !== 'FERIADO' && type !== 'FERIADO_LOCAL'); // Filtra tipos genéricos/feriados se necessário
 
       return {
         id: u.id,
         name: u.name,
         torre: u.torre,
+        cargo: u.cargo,
         capacity: capData.capacity,
-        assigned: capData.allocated, // Horas planejadas
-        performed: performedHours, // Horas já trabalhadas (agora sem round para permitir HH:MM preciso)
-        available: capData.available, // SALDO = Hrs Meta Mês
-        load: capData.capacity > 0 ? (capData.allocated / capData.capacity) * 100 : 0,
-        releaseDate
+        assigned: capData.allocated,
+        performed: capData.performed,
+        available: capData.available,
+        load: capData.occupancyRate,
+        releaseDate,
+        absenceTypes: uniqueTypes
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [users, portfolioTimesheets, capacityMonth, safeTasks, safeProjects, projectMembers, timesheetEntries, holidays, taskMemberAllocations, absences]);
+  }, [users, portfolioTimesheets, deferredCapacityMonth, safeTasks, safeProjects, projectMembers, timesheetEntries, holidays, taskMemberAllocations, absences]);
+
+  const filteredResourceMetrics = useMemo(() => {
+    let result = [...resourceMetrics];
+    
+    // 1. Filtragem por busca
+    if (resourceSearchTerm.trim()) {
+      const term = resourceSearchTerm.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+      result = result.filter(r =>
+        r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").includes(term) ||
+        (r.torre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").includes(term)
+      );
+    }
+
+    // 2. Ordenação
+    return result.sort((a, b) => {
+      if (capacitySortBy === 'alphabetical') {
+        return a.name.localeCompare(b.name);
+      }
+      if (capacitySortBy === 'least_occupied') {
+        return a.load - b.load;
+      }
+      if (capacitySortBy === 'most_occupied') {
+        return b.load - a.load;
+      }
+      return 0;
+    });
+  }, [resourceMetrics, resourceSearchTerm, capacitySortBy]);
 
   const systemicMetrics = useMemo(() => {
     if (!resourceMetrics || resourceMetrics.length === 0) return null;
@@ -756,25 +859,29 @@ const AdminDashboard: React.FC = () => {
 
   // --- ANÁLISE PROATIVA E TENDÊNCIAS ---
   const teamElasticity = useMemo(() => {
-    return CapacityUtils.calculateTeamElasticity(users || [], capacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations);
-  }, [users, capacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations]);
+    return CapacityUtils.calculateTeamElasticity(users || [], deferredCapacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations);
+  }, [users, deferredCapacityMonth, safeProjects, projectMembers, timesheetEntries, safeTasks, holidays, taskMemberAllocations, absences]);
 
   const saturationTrend = useMemo(() => {
     return CapacityUtils.calculateTeamSaturationTrend(users || [], safeProjects, projectMembers, safeTasks, timesheetEntries, holidays, taskMemberAllocations);
-  }, [users, safeProjects, projectMembers, safeTasks, timesheetEntries, holidays, taskMemberAllocations]);
+  }, [users, safeProjects, projectMembers, safeTasks, timesheetEntries, holidays, taskMemberAllocations, absences]);
 
   const [simulationHours, setSimulationHours] = useState<number>(0);
   const simulationImpact = useMemo(() => {
     if (simulationHours <= 0) return [];
     return CapacityUtils.simulateNewProjectImpact(simulationHours, users || [], safeProjects, projectMembers, safeTasks, timesheetEntries, holidays, taskMemberAllocations);
-  }, [simulationHours, users, safeProjects, projectMembers, safeTasks, timesheetEntries, holidays, taskMemberAllocations]);
+  }, [simulationHours, users, safeProjects, projectMembers, safeTasks, timesheetEntries, holidays, taskMemberAllocations, absences]);
 
+
+  const [isPending, startTransition] = useTransition();
 
   const changeMonth = (delta: number) => {
-    const [year, month] = capacityMonth.split('-').map(Number);
+    const [year, month] = selectedCapacityMonth.split('-').map(Number);
     const newDate = new Date(year, month - 1 + delta, 1);
     const newMonthStr = newDate.toISOString().slice(0, 7);
-    setCapacityMonth(newMonthStr);
+    startTransition(() => {
+      setSelectedCapacityMonth(newMonthStr);
+    });
   };
 
 
@@ -851,15 +958,9 @@ const AdminDashboard: React.FC = () => {
               Capacidade
             </button>
             {activeTab === 'capacidade' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCapDoc(true);
-                }}
-                className="w-5 h-5 mr-1.5 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 hover:scale-110 transition-all active:scale-95"
-              >
-                <HelpCircle className="w-3 h-3" />
-              </button>
+              <div className="flex items-center ml-1.5 opacity-50">
+                <Info size={14} className="text-blue-500" />
+              </div>
             )}
           </div>
         </div>
@@ -875,42 +976,47 @@ const AdminDashboard: React.FC = () => {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 lg:grid-cols-6 gap-6 flex-1">
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
-                      Vendido Total
-                      <InfoTooltip title="Vendido Total" content="Soma dos orçamentos (Valor Total R$) de todos os projetos visíveis no filtro atual." />
-                    </div>
+                    <InfoTooltip title="Vendido Total" content="Soma dos orçamentos (Valor Total R$) de todos os projetos visíveis no filtro atual.">
+                      <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center cursor-help border-b border-dotted border-[var(--muted)]/30 w-fit" style={{ color: 'var(--muted)' }}>
+                        Vendido Total
+                      </div>
+                    </InfoTooltip>
                     <p className="text-xl font-black text-[var(--text)] font-mono">{executiveMetrics.totalBudgeted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
                   </div>
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
-                      Custo Real
-                      <InfoTooltip title="Custo Operacional" content="Soma das horas apontadas multiplicadas pelo custo/hora de cada colaborador alocado." />
-                    </div>
+                    <InfoTooltip title="Custo Operacional" content="Soma das horas apontadas multiplicadas pelo custo/hora de cada colaborador alocado.">
+                      <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center cursor-help border-b border-dotted border-[var(--muted)]/30 w-fit" style={{ color: 'var(--muted)' }}>
+                        Custo Real
+                      </div>
+                    </InfoTooltip>
                     <p className="text-xl font-black text-amber-500 font-mono">{executiveMetrics.totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</p>
                   </div>
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
-                      Resultado Est.
-                      <InfoTooltip title="ROI (Previsão)" content="Cálculo do saldo previsto: Valor Vendido (-) Custo Realizado (-) Previsão de custo para finalizar tarefas." />
-                    </div>
+                    <InfoTooltip title="ROI (Previsão)" content="Cálculo do saldo previsto: Valor Vendido (-) Custo Realizado (-) Previsão de custo para finalizar tarefas.">
+                      <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center cursor-help border-b border-dotted border-[var(--muted)]/30 w-fit" style={{ color: 'var(--muted)' }}>
+                        Resultado Est.
+                      </div>
+                    </InfoTooltip>
                     <p className={`text-xl font-black font-mono ${executiveMetrics.totalEstimatedROI < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                       {executiveMetrics.totalEstimatedROI.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
                     </p>
                   </div>
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
-                      Margem Est.
-                      <InfoTooltip title="Margem de Lucro" content="Percentual de lucro previsto sobre o valor total vendido." />
-                    </div>
+                    <InfoTooltip title="Margem de Lucro" content="Percentual de lucro previsto sobre o valor total vendido.">
+                      <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center cursor-help border-b border-dotted border-[var(--muted)]/30 w-fit" style={{ color: 'var(--muted)' }}>
+                        Margem Est.
+                      </div>
+                    </InfoTooltip>
                     <p className={`text-xl font-black font-mono ${executiveMetrics.averageMargin < 15 ? 'text-red-500' : executiveMetrics.averageMargin < 30 ? 'text-amber-500' : 'text-emerald-500'}`}>
                       {Math.round(executiveMetrics.averageMargin)}%
                     </p>
                   </div>
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
-                      Progresso Médio
-                      <InfoTooltip title="Progresso do Portfólio" content="Média aritmética simples da evolução real (input manual) dos projetos." />
-                    </div>
+                    <InfoTooltip title="Progresso do Portfólio" content="Média aritmética simples da evolução real (input manual) dos projetos.">
+                      <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center cursor-help border-b border-dotted border-[var(--muted)]/30 w-fit" style={{ color: 'var(--muted)' }}>
+                        Progresso Médio
+                      </div>
+                    </InfoTooltip>
                     <div className="flex items-center gap-2">
                       <p className="text-xl font-black text-blue-500 font-mono">{Math.round(executiveMetrics.globalProgress)}%</p>
                       <div className="w-12 h-1.5 rounded-full overflow-hidden hidden xl:block" style={{ backgroundColor: 'var(--surface-hover)' }}>
@@ -919,10 +1025,11 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center" style={{ color: 'var(--muted)' }}>
-                      Status Operação
-                      <InfoTooltip title="Saúde do Portfólio" content="Projetos ativos e tarefas com atraso." />
-                    </div>
+                    <InfoTooltip title="Saúde do Portfólio" content="Projetos ativos e tarefas com atraso.">
+                      <div className="text-[9px] font-black uppercase tracking-widest mb-1.5 flex items-center cursor-help border-b border-dotted border-[var(--muted)]/30 w-fit" style={{ color: 'var(--muted)' }}>
+                        Status Operação
+                      </div>
+                    </InfoTooltip>
                     <p className="text-xl font-black text-[var(--text)]">
                       {executiveMetrics.activeProjectsCount} <span className="text-[10px] text-slate-400 font-bold">Ativos</span>
                       {executiveMetrics.delayedTasksCount > 0 && (
@@ -1050,44 +1157,74 @@ const AdminDashboard: React.FC = () => {
                     {/* SCROLLABLE COLUMNS */}
                     {/* SEÇÃO PREVISTO */}
                     <th className="p-3 w-[130px] border-r border-white/10 bg-blue-500/5 text-blue-400">
-                      Status P.
-                      <InfoTooltip title="Status de Planejamento" content="Fase teórica baseada no tempo decorrido do cronograma (Entendimento, Análise, Desenvolv., etc)." />
+                      <InfoTooltip title="Status de Planejamento" content="Fase teórica baseada no tempo decorrido do cronograma (Entendimento, Análise, Desenvolv., etc).">
+                        <span className="cursor-help border-b border-dotted border-blue-400/30">Status P.</span>
+                      </InfoTooltip>
                     </th>
                     <th className="p-3 w-[100px] bg-blue-500/5 text-blue-400">Início P.</th>
                     <th className="p-3 w-[100px] bg-blue-500/5 text-blue-400 text-center">Fim P.</th>
                     <th className="p-3 w-[110px] border-r border-white/10 bg-blue-500/5 text-blue-400">
-                      Progresso P.
-                      <InfoTooltip title="Evolução Teórica" content="Percentual matemático de onde o projeto deveria estar hoje de acordo com as datas cadastradas." />
+                      <InfoTooltip title="Evolução Teórica" content="Percentual matemático de onde o projeto deveria estar hoje de acordo com as datas cadastradas.">
+                        <span className="cursor-help border-b border-dotted border-blue-400/30">Progresso P.</span>
+                      </InfoTooltip>
                     </th>
 
                     {/* SEÇÃO REAL */}
-                    <th className="p-3 w-[110px] bg-emerald-500/5 text-emerald-400">Status R.</th>
-                    <th className="p-3 w-[100px] bg-emerald-500/5 text-emerald-400">Início R.</th>
-                    <th className="p-3 w-[100px] bg-emerald-500/5 text-emerald-400">Fim R.</th>
+                    <th className="p-3 w-[110px] bg-emerald-500/5 text-emerald-400">
+                      <InfoTooltip title="Status Real" content="Fase atual do projeto baseada no progresso real (Input Manual).">
+                        <span className="cursor-help border-b border-dotted border-emerald-400/30">Status R.</span>
+                      </InfoTooltip>
+                    </th>
+                    <th className="p-3 w-[100px] bg-emerald-500/5 text-emerald-400">
+                      <InfoTooltip title="Início Real" content="Data de início real do projeto.">
+                        <span className="cursor-help border-b border-dotted border-emerald-400/30">Início R.</span>
+                      </InfoTooltip>
+                    </th>
+                    <th className="p-3 w-[100px] bg-emerald-500/5 text-emerald-400">
+                      <InfoTooltip title="Fim Real" content="Data de término real do projeto.">
+                        <span className="cursor-help border-b border-dotted border-emerald-400/30">Fim R.</span>
+                      </InfoTooltip>
+                    </th>
                     <th className="p-3 w-[110px] border-r border-white/10 bg-emerald-500/5 text-emerald-400">
-                      Progresso R.
-                      <InfoTooltip title="Evolução Real" content="Média de progresso das tarefas inseridas pelos colaboradores (Input Manual)." />
+                      <InfoTooltip title="Evolução Real" content="Média de progresso das tarefas inseridas pelos colaboradores (Input Manual).">
+                        <span className="cursor-help border-b border-dotted border-emerald-400/30">Progresso R.</span>
+                      </InfoTooltip>
                     </th>
 
                     {/* SEÇÃO ANÁLISE */}
                     {/* SEÇÃO TEMPO (NOVAS COLUNAS) */}
-                    <th className="p-3 w-[80px] bg-amber-500/5 text-amber-400 font-bold border-l border-white/5">Horas P.</th>
-                    <th className="p-3 w-[80px] bg-amber-500/5 text-amber-400 font-bold border-r border-white/5">Horas R.</th>
+                    <th className="p-3 w-[80px] bg-amber-500/5 text-amber-400 font-bold border-l border-white/5">
+                      <InfoTooltip title="Horas Planejadas" content="Total de horas previstas para o projeto.">
+                        <span className="cursor-help border-b border-dotted border-amber-400/30">Horas P.</span>
+                      </InfoTooltip>
+                    </th>
+                    <th className="p-3 w-[80px] bg-amber-500/5 text-amber-400 font-bold border-r border-white/5">
+                      <InfoTooltip title="Horas Reais" content="Total de horas apontadas no projeto até o momento.">
+                        <span className="cursor-help border-b border-dotted border-amber-400/30">Horas R.</span>
+                      </InfoTooltip>
+                    </th>
 
                     {/* SEÇÃO ANÁLISE (FINANCEIRO) */}
-                    <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400">Vendido</th>
                     <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400">
-                      Custo Real
-                      <InfoTooltip title="Custo Operacional" content="Soma das horas apontadas x custo/hora dos colaboradores envolvidos." />
+                      <InfoTooltip title="Valor Vendido" content="Valor total do orçamento do projeto.">
+                        <span className="cursor-help border-b border-dotted border-amber-400/30">Vendido</span>
+                      </InfoTooltip>
+                    </th>
+                    <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400">
+                      <InfoTooltip title="Custo Operacional" content="Soma das horas apontadas x custo/hora dos colaboradores envolvidos.">
+                        <span className="cursor-help border-b border-dotted border-amber-400/30">Custo Real</span>
+                      </InfoTooltip>
                     </th>
                     {/* <th className="p-3 w-[140px] bg-amber-500/5 text-amber-400">Custo Proj.</th> */}
                     <th className="p-3 w-[120px] bg-amber-500/5 text-amber-400 font-black">
-                      Resultado
-                      <InfoTooltip title="Resultado Financeiro" content="Saldo atual da operação (Valor Vendido - Custo Apontado até agora)." />
+                      <InfoTooltip title="Resultado Financeiro" content="Saldo atual da operação (Valor Vendido - Custo Apontado até agora).">
+                        <span className="cursor-help border-b border-dotted border-amber-400/30">Resultado</span>
+                      </InfoTooltip>
                     </th>
                     <th className="p-3 w-[70px] border-l bg-amber-500/5 text-amber-400" style={{ borderColor: 'var(--border)' }}>
-                      %
-                      <InfoTooltip title="Margem Atual" content="Percentual de lucratividade atual da operação." />
+                      <InfoTooltip title="Margem Atual" content="Percentual de lucratividade atual da operação.">
+                        <span className="cursor-help border-b border-dotted border-amber-400/30">%</span>
+                      </InfoTooltip>
                     </th>
                   </tr>
                 </thead>
@@ -1109,63 +1246,140 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </motion.div>
-      )
-      }
+      )}
 
       {activeTab === 'capacidade' && resourceMetrics && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
-          <div className="p-8 rounded-[32px] border shadow-xl transition-all" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-6 gap-4">
-              <div className="flex items-center gap-4">
-                <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--muted)' }}>
-                  <Users className="w-4 h-4 text-[var(--primary)]" /> Mapa de Ocupação
-                </h3>
-
-                <button
-                  onClick={() => setShowCapDoc(true)}
-                  className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg hover:scale-110 transition-all group relative shadow-blue-500/20"
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+          <div className="p-8 rounded-[40px] border shadow-2xl transition-all relative overflow-hidden" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+            
+            {/* OVERLAY DE CARREGAMENTO (ESTILO ORGÂNICO) */}
+            <AnimatePresence>
+              {selectedCapacityMonth !== deferredCapacityMonth && (
+                <motion.div 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-50 backdrop-blur-[2px] bg-[var(--surface)]/40 flex items-center justify-center"
                 >
-                  <HelpCircle className="w-4 h-4" />
-                  <span className="absolute left-full ml-3 px-2 py-1 rounded-md bg-slate-900 border border-white/10 text-[8px] font-black uppercase tracking-widest whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50">
-                    Entenda as Regras
-                  </span>
-                </button>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Atualizando Mapa...</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                <div className="h-4 w-px bg-[var(--border)]" />
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 flex-1 w-full lg:w-auto">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)] shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[var(--text)]">
+                      Mapa de Ocupação
+                    </h3>
+                    <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">Visão Mensal de Capacidade</p>
+                  </div>
+                </div>
 
-                <div className="flex items-center gap-2">
-                  <button onClick={() => changeMonth(-1)} className="p-1 hover:text-[var(--primary)] transition-colors">
-                    <ChevronDown className="w-4 h-4 rotate-90" />
+                <div className="hidden sm:block h-6 w-px bg-[var(--border)] opacity-30" />
+
+                {/* SELETOR DE MÊS COMPACTO */}
+                <div className="flex items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm p-0.5">
+                  <button
+                    onClick={() => changeMonth(-1)}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-hover)] rounded-lg transition-all text-[var(--muted)] hover:text-[var(--text)] active:scale-95"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-sm font-bold font-mono uppercase" style={{ color: 'var(--text)' }}>
-                    {new Date(capacityMonth + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                  </span>
-                  <button onClick={() => changeMonth(1)} className="p-1 hover:text-[var(--primary)] transition-colors">
-                    <ChevronDown className="w-4 h-4 -rotate-90" />
+                  
+                  <div className="relative px-4 min-w-[160px] text-center flex items-center justify-center gap-2 hover:bg-[var(--surface-hover)] rounded-lg transition-all cursor-pointer group/month h-8">
+                    <input 
+                      type="month" 
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20"
+                      value={selectedCapacityMonth}
+                      onChange={(e) => startTransition(() => setSelectedCapacityMonth(e.target.value))}
+                      onClick={(e) => (e.target as any).showPicker?.()}
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text)] font-mono">
+                      {new Date(selectedCapacityMonth + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <Calendar className="w-2.5 h-2.5 text-[var(--primary)] opacity-40 group-hover/month:opacity-100 transition-opacity" />
+                  </div>
+
+                  <button
+                    onClick={() => changeMonth(1)}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-[var(--surface-hover)] rounded-lg transition-all text-[var(--muted)] hover:text-[var(--text)] active:scale-95"
+                  >
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex gap-4 opacity-70 scale-90 origin-right">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>&lt;80%</span>
+              <div className="flex items-center gap-3 w-full lg:w-auto">
+                <div className="relative group min-w-[140px]">
+                  <button
+                    onClick={() => setShowSortMenu(!showSortMenu)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-[9px] font-black uppercase tracking-widest text-[var(--text)] hover:border-[var(--primary)]/50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <ArrowDownAZ size={12} className="text-[var(--primary)]" />
+                      <span>{capacitySortBy === 'least_occupied' ? 'Menos Ocupado' : capacitySortBy === 'most_occupied' ? 'Mais Ocupado' : 'Alfabético'}</span>
+                    </div>
+                    <ChevronDown size={12} className={`transition-transform duration-300 ${showSortMenu ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showSortMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className="absolute top-full right-0 mt-2 w-48 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-2xl z-50 overflow-hidden"
+                      >
+                        {(['alphabetical', 'least_occupied', 'most_occupied'] as const).map(option => (
+                          <button
+                            key={option}
+                            onClick={() => {
+                              setCapacitySortBy(option);
+                              setShowSortMenu(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-[9px] font-black uppercase tracking-widest transition-colors ${capacitySortBy === option ? 'bg-[var(--primary)] text-white' : 'text-[var(--text)] hover:bg-[var(--surface-hover)]'}`}
+                          >
+                            {option === 'least_occupied' ? 'Menos Ocupado' : option === 'most_occupied' ? 'Mais Ocupado' : 'Alfabético'}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>80-100%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>&gt;100%</span>
+
+                <div className="relative flex-1 lg:w-48">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] w-3 h-3" />
+                  <input
+                    type="text"
+                    placeholder="PESQUISAR..."
+                    value={resourceSearchTerm}
+                    onChange={(e) => setResourceSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-[10px] font-bold text-[var(--text)] outline-none focus:ring-2 focus:ring-[var(--primary)]/10 focus:border-[var(--primary)]/50 transition-all placeholder:opacity-30 placeholder:uppercase placeholder:tracking-widest"
+                  />
+                  {resourceSearchTerm && (
+                    <button
+                      onClick={() => setResourceSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-red-500 transition-colors p-1"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-12">
+            <div className={`grid grid-cols-1 xl:grid-cols-2 gap-x-16 transition-all duration-500 ${selectedCapacityMonth !== deferredCapacityMonth ? 'grayscale-[0.5] opacity-40 scale-[0.99] blur-sm' : ''}`}>
               {[0, 1].map(colIdx => {
-                const half = Math.ceil(resourceMetrics.length / 2);
-                const subset = colIdx === 0 ? resourceMetrics.slice(0, half) : resourceMetrics.slice(half);
+                const half = Math.ceil(filteredResourceMetrics.length / 2);
+                const subset = colIdx === 0 ? filteredResourceMetrics.slice(0, half) : filteredResourceMetrics.slice(half);
                 if (subset.length === 0) return null;
 
                 return (
@@ -1178,75 +1392,22 @@ const AdminDashboard: React.FC = () => {
                           <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">APONTADO</th>
                           <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">ALOCADO</th>
                           <th className="py-2.5 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-center border-b border-r border-[var(--border)]">
-                            HORAS MÊS
-                            <InfoTooltip title="Carga Meta Mês" content="Total de horas disponíveis do colaborador no mês selecionado, descontando feriados e ausências/férias." />
+                            <InfoTooltip title="Carga Meta Mês" content="Total de horas disponíveis do colaborador no mês selecionado, descontando feriados e ausências/férias.">
+                              <span className="cursor-help border-b border-dotted border-[var(--muted)]/30">HORAS MÊS</span>
+                            </InfoTooltip>
                           </th>
                           <th className="py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-[var(--muted)] text-right border-b border-[var(--border)]">SALDO</th>
                         </tr>
                       </thead>
                       <tbody>
                         {subset.map((res: any) => (
-                          <tr
-                            key={res.id}
-                            onClick={() => {
-                              navigate(`/admin/team/${res.id}?tab=tasks`);
-                            }}
-                            className="group cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
-                          >
-                            <td className="py-3 px-3 border-b border-r border-[var(--border)]">
-                              <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors line-clamp-1">{res.name}</span>
-                                <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-tighter opacity-70 leading-none">{res.torre || 'N/A'}</span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 text-center border-b border-r border-[var(--border)]">
-                              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${res.load > 100 ? 'bg-red-500/10 text-red-500 border-red-500/20' : res.load > 80 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
-                                {Math.round(res.load)}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-2 text-center text-[10px] font-bold text-blue-500 border-b border-r border-[var(--border)]">
-                              {formatDecimalToTime(res.performed)}
-                            </td>
-                            <td className="py-3 px-2 text-center text-[10px] font-bold text-blue-500 border-b border-r border-[var(--border)]">
-                              {formatDecimalToTime(res.assigned)}
-                            </td>
-                            <td
-                              className="py-3 px-2 text-center border-b border-r border-[var(--border)] cursor-pointer hover:bg-blue-500/5 transition-all active:scale-95"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation();
-                                const userObj = users.find((u: User) => String(u.id) === String(res.id));
-                                if (userObj) openWorkingDaysBreakdown(userObj);
-                              }}
-                            >
-                              <div className="flex flex-col items-center">
-                                <span className="text-[10px] font-black text-[var(--text)]">
-                                  {formatDecimalToTime(res.capacity)}
-                                </span>
-                                {res.releaseDate && (
-                                  <div className="flex flex-col gap-0 items-center">
-                                    <span className={`text-[7px] font-black uppercase tracking-tighter leading-none ${res.releaseDate.isSaturated ? 'text-red-500' : 'text-amber-500'}`}>
-                                      {res.releaseDate.isSaturated ? 'SATURADO' : 'Previsão Realista'}
-                                    </span>
-                                    {res.releaseDate.ideal !== res.releaseDate.realistic && (
-                                      <span className="text-[6px] font-bold text-slate-400 uppercase tracking-tighter">Ideal: {formatDateBR(res.releaseDate.ideal)}</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td
-                              className="py-3 px-3 text-right font-black border-b border-[var(--border)] cursor-pointer hover:bg-[var(--surface-hover)] transition-all active:scale-95"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation();
-                                const userObj = users.find((u: User) => String(u.id) === String(res.id));
-                                if (userObj) openWorkingDaysBreakdown(userObj);
-                              }}
-                            >
-                              <span className={`text-[11px] ${res.available < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                {formatDecimalToTime(res.available)}
-                              </span>
-                            </td>
-                          </tr>
+                              <CapacityRow 
+                                res={res} 
+                                navigate={navigate} 
+                                selectedCapacityMonth={selectedCapacityMonth} 
+                                users={users} 
+                                openWorkingDaysBreakdown={openWorkingDaysBreakdown} 
+                              />
                         ))}
                       </tbody>
                     </table>
@@ -1303,7 +1464,7 @@ const AdminDashboard: React.FC = () => {
               <div className="flex flex-wrap items-center gap-3">
                 {!selectedPartnerId && (
                   <div className="relative group/search">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within/search:text-emerald-500 transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within/search:text-emerald-500 transition-colors" />
                     <input
                       type="text"
                       value={partnerSearchTerm}
@@ -1700,7 +1861,7 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center gap-2 flex-1 justify-end">
                 {/* BUSCADOOR COMPACTA */}
                 <div className="relative shrink hidden md:block">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchTerm}
@@ -2712,7 +2873,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 <div className="relative group">
-                  <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 transition-transform group-focus-within:scale-110" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 transition-transform group-focus-within:scale-110" />
                   <input
                     type="text"
                     placeholder="Filtrar por nome ou CNPJ..."

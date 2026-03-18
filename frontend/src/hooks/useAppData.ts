@@ -184,8 +184,8 @@ export function useAppData(): AppData {
       const holidaysMapped: Holiday[] = (holidaysData || []).map((r: any) => ({
         id: String(r.id),
         name: r.nome,
-        date: r.data,
-        endDate: r.data_fim || r.data,
+        date: formatDate(r.data),
+        endDate: formatDate(r.data_fim || r.data),
         type: r.tipo,
         observations: r.observacoes,
         period: r.periodo,
